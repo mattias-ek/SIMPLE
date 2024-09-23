@@ -1,0 +1,21 @@
+site_name: SIMPLE
+
+plugins:
+- mkdocstrings:
+    handlers:
+      python:
+        options:
+          show_source: false
+          show_root_heading: false
+
+theme:
+  name: readthedocs
+
+nav:
+    - Home: index.md
+    - User Guide: user-guide.md
+    - API:
+      - simple: api/simple.md
+      - simple.ccsne: api/ccsne.md
+    - About:
+          - License: license.md
