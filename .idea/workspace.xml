@@ -4,32 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="dde2cd7c-f5ab-46eb-9da4-32ec711928be" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/SIMPLE.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/api.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/api/ccsne.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/api/simple.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/index.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/license.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/user-guide.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mkdocs.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/notebooks/create_simple_db.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/notebooks/simple_mattias_version.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simple/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simple/ccsne/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simple/ccsne/load.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simple/ccsne/plotting.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simple/database.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simple/norm.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/simple/utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_database.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_norm.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_utils.py" afterDir="false" />
+    <list default="true" id="dde2cd7c-f5ab-46eb-9da4-32ec711928be" name="Changes" comment="Simple Mattias version v1">
+      <change afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/simple/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/simple/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_database.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_database.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,6 +26,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "mattias-ek"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/mattias-ek/SIMPLE",
+    "accountId": "8405dee3-8ddc-41e3-8142-4967371f124f"
+  }
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
 }</component>
@@ -56,37 +47,37 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python tests.Python tests for test_database.TestModel.test_names.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_database.TestModel.test_ref.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_database.TestModel.test_save_load1.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_database.test_models.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_norm.test_intnorm_largest_offset.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_norm.test_intnorm_largest_offset1.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_norm.test_intnorm_largest_offset2.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_norm.test_intnorm_largest_offset3.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_utils.test_asarray.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_utils.test_asisolist.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_utils.test_asisotope.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_utils.test_asisotopes.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_utils.test_askeyarray.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_utils.test_asratio.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_utils.test_model_eval.executor&quot;: &quot;Coverage&quot;,
-    &quot;Python tests.Python tests for test_utils.test_select_isolist.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.pytest in /tests/.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/mattias/Library/CloudStorage/Dropbox/Python2/SIMPLE&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyIntegratedToolsModulesConfigurable&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python tests.Python tests for test_database.TestModel.test_names.executor": "Run",
+    "Python tests.Python tests for test_database.TestModel.test_ref.executor": "Run",
+    "Python tests.Python tests for test_database.TestModel.test_save_load1.executor": "Debug",
+    "Python tests.Python tests for test_database.test_models.executor": "Run",
+    "Python tests.Python tests for test_norm.test_intnorm_largest_offset.executor": "Run",
+    "Python tests.Python tests for test_norm.test_intnorm_largest_offset1.executor": "Run",
+    "Python tests.Python tests for test_norm.test_intnorm_largest_offset2.executor": "Run",
+    "Python tests.Python tests for test_norm.test_intnorm_largest_offset3.executor": "Run",
+    "Python tests.Python tests for test_utils.test_asarray.executor": "Run",
+    "Python tests.Python tests for test_utils.test_asisolist.executor": "Run",
+    "Python tests.Python tests for test_utils.test_asisotope.executor": "Run",
+    "Python tests.Python tests for test_utils.test_asisotopes.executor": "Run",
+    "Python tests.Python tests for test_utils.test_askeyarray.executor": "Run",
+    "Python tests.Python tests for test_utils.test_asratio.executor": "Run",
+    "Python tests.Python tests for test_utils.test_model_eval.executor": "Coverage",
+    "Python tests.Python tests for test_utils.test_select_isolist.executor": "Run",
+    "Python tests.pytest in /tests/.executor": "Coverage",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "/Users/mattias/Library/CloudStorage/Dropbox/Python2/SIMPLE",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "org.jetbrains.plugins.github.ui.GithubSettingsConfigurable",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/notebooks" />
@@ -94,20 +85,20 @@
       <recent name="$PROJECT_DIR$/simple" />
     </key>
   </component>
-  <component name="RunManager" selected="Python tests.Python tests for test_norm.test_intnorm_largest_offset3">
-    <configuration name="Python tests for test_database.TestModel.test_ref" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python tests.pytest in /tests/">
+    <configuration name="Python tests for test_database.TestModel.test_save_load1" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="SIMPLE" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;test_database.TestModel.test_ref&quot;" />
+      <option name="_new_target" value="&quot;test_database.TestModel.test_save_load1&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
@@ -195,7 +186,7 @@
     </configuration>
     <list>
       <item itemvalue="Python tests.pytest in /tests/" />
-      <item itemvalue="Python tests.Python tests for test_database.TestModel.test_ref" />
+      <item itemvalue="Python tests.Python tests for test_database.TestModel.test_save_load1" />
       <item itemvalue="Python tests.Python tests for test_norm.test_intnorm_largest_offset" />
       <item itemvalue="Python tests.Python tests for test_norm.test_intnorm_largest_offset1" />
       <item itemvalue="Python tests.Python tests for test_norm.test_intnorm_largest_offset2" />
@@ -203,11 +194,11 @@
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python tests.Python tests for test_database.TestModel.test_save_load1" />
         <item itemvalue="Python tests.Python tests for test_norm.test_intnorm_largest_offset3" />
         <item itemvalue="Python tests.Python tests for test_norm.test_intnorm_largest_offset2" />
         <item itemvalue="Python tests.Python tests for test_norm.test_intnorm_largest_offset1" />
         <item itemvalue="Python tests.Python tests for test_norm.test_intnorm_largest_offset" />
-        <item itemvalue="Python tests.Python tests for test_database.TestModel.test_ref" />
       </list>
     </recent_temporary>
   </component>
@@ -237,12 +228,25 @@
       <workItem from="1726052003608" duration="32238000" />
       <workItem from="1726571755797" duration="11552000" />
       <workItem from="1726735669383" duration="78938000" />
-      <workItem from="1726999947208" duration="28882000" />
+      <workItem from="1726999947208" duration="30819000" />
     </task>
+    <task id="LOCAL-00001" summary="Simple Mattias version v1">
+      <option name="closed" value="true" />
+      <created>1727080412730</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1727080412730</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Simple Mattias version v1" />
+    <option name="LAST_COMMIT_MESSAGE" value="Simple Mattias version v1" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -259,7 +263,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="jupyter-line">
           <url>notebook:///Users/ekm/Library/CloudStorage/Dropbox/Python2/SIMPLE/notebooks/simple_mattias_version.ipynb</url>
-          <line>62</line>
+          <line>46</line>
           <option name="timeStamp" value="38" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -287,16 +291,11 @@
           <line>212</line>
           <option name="timeStamp" value="42" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/simple/norm.py</url>
-          <line>294</line>
-          <option name="timeStamp" value="45" />
-        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/SIMPLE$.coverage" NAME=" Coverage Results" MODIFIED="1727078589468" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
-    <SUITE FILE_PATH="coverage/SIMPLE$pytest_in__tests_.coverage" NAME="pytest in /tests/ Coverage Results" MODIFIED="1726132947851" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/SIMPLE$.coverage" NAME=" Coverage Results" MODIFIED="1727080743835" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/" />
+    <SUITE FILE_PATH="coverage/SIMPLE$pytest_in__tests_.coverage" NAME="pytest in /tests/ Coverage Results" MODIFIED="1727080920184" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
   </component>
 </project>

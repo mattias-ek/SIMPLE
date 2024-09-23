@@ -164,22 +164,13 @@ class TestModel:
 
         assert_equal(loaded_model.data, data)
 
-    def test_ccsne(self):
-        filename = 'tests/testzn.hdf5'
-        if os.path.exists(filename):
-            os.remove(filename)
-
-
-
-        mc = database.load_models(filename, 'data/SIMPLE_CCSNeV1.hdf5')
-
 
     def test_ref(self):
         keys = utils.asisotopes('101Ru,102Ru,104Ru,103Rh,102Pd,104Pd,105Pd,106Pd,108Pd,110Pd,107Ag,109Ag')
         stdabu = np.array([0.304, 0.562, 0.332, 0.37, 0.0139, 0.1513, 0.3032, 0.371, 0.359, 0.159, 0.254, 0.236])
 
         collection = database.ModelCollection()
-        ref_abu = collection.new_model('IsoRef', 'abu', type='ABU', citation='', values=stdabu, keys=keys)
+        ref_abu = collection.new_model('IsoRef', 'abu', type='ABU', citation='', data_values=stdabu, data_keys=keys)
         model = collection.new_model('Test', 'testing',
                                      refid_isoabu='abu',
                                      )

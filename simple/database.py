@@ -79,9 +79,9 @@ class ModelCollection:
     def __getitem__(self, key):
         if type(key) is int:
             return self.models[tuple(self.models.keys())[key]]
-        elif str in self.models:
+        elif key in self.models:
             return self.models[key]
-        elif str in self.refs:
+        elif key in self.refs:
             return self.refs[key]
         else:
             raise ValueError(f"No model or reference called '{key}' exists")
@@ -206,7 +206,7 @@ class ModelCollection:
         else:
             raise ValueError(f"No model called '{name}' exists")
 
-    def get_ref(self, name, attr):
+    def get_ref(self, name, attr=None):
         if name in self.refs:
             ref = self.refs[name]
 
