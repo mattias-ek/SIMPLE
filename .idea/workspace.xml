@@ -4,11 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="dde2cd7c-f5ab-46eb-9da4-32ec711928be" name="Changes" comment="Simple Mattias version v1">
-      <change afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+    <list default="true" id="dde2cd7c-f5ab-46eb-9da4-32ec711928be" name="Changes" comment="Added pyproject.toml">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/simple/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/simple/database.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_database.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/notebooks/simple_mattias_version.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/notebooks/simple_mattias_version.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -228,7 +226,7 @@
       <workItem from="1726052003608" duration="32238000" />
       <workItem from="1726571755797" duration="11552000" />
       <workItem from="1726735669383" duration="78938000" />
-      <workItem from="1726999947208" duration="30819000" />
+      <workItem from="1726999947208" duration="31817000" />
     </task>
     <task id="LOCAL-00001" summary="Simple Mattias version v1">
       <option name="closed" value="true" />
@@ -238,7 +236,23 @@
       <option name="project" value="LOCAL" />
       <updated>1727080412730</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Added pyproject.toml">
+      <option name="closed" value="true" />
+      <created>1727082259244</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1727082259244</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Added pyproject.toml">
+      <option name="closed" value="true" />
+      <created>1727082508306</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1727082508306</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -246,7 +260,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Simple Mattias version v1" />
-    <option name="LAST_COMMIT_MESSAGE" value="Simple Mattias version v1" />
+    <MESSAGE value="Added pyproject.toml" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added pyproject.toml" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -263,7 +278,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="jupyter-line">
           <url>notebook:///Users/ekm/Library/CloudStorage/Dropbox/Python2/SIMPLE/notebooks/simple_mattias_version.ipynb</url>
-          <line>46</line>
+          <line>54</line>
           <option name="timeStamp" value="38" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
