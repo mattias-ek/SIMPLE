@@ -54,6 +54,9 @@ def intnorm_linear(abu_i, abu_j, abu_k,
             to ``np.nan``
         largest_offset_rtol (): The relative tolerance for convergence of largest offset calculation.
 
+    **Notes**
+    Enrichment factors will have no impact on the the results from this method.
+
     Returns: A dictionary containing the results of the normalisation.
 
     The dictionary contains the following items:
