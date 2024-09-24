@@ -192,5 +192,59 @@ def test_intnorm_largest_offset3():
     assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4, equal_nan=True)
 
 
+def test_intnorm_better_linear1():
+    abu = sabu
+
+    collection = simple.ModelCollection()
+    collection.new_model('IsoRef', 'mass', type='MASS', citation='', data_values = isomass, data_keys=isokeys)
+    collection.new_model('IsoRef', 'abu', type='ABU', citation='', data_values=std_abu, data_keys=isokeys)
+    model = collection.new_model('Test', 'testing',
+                                 refid_isomass='mass', refid_isoabu='abu',
+                                 abundance=simple.askeyarray(abu, isokeys2), abundance_keys = isokeys2,
+                                )
+    # If the test suddenly start failing it could be float point issues. Maybe the tolerances are to high?
+    # The default rtol of the largest offset is 1E-4 and the atol on the eps values is 1E-4 (0.01 ppm)
+
+    # Test 1 - Pd
+    result = model.internal_normalisation('108pd/105pd', method='better_linear')
+
+    correct = np.array([37612.60223, 44386.86262, 0, 19968.47493, 0, -85421.07743])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # Test 2 - Mo, Ru, Pd
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*','108pd/105pd'))
+
+    correct = 15745.78012
+    assert np.allclose(result['dilution_factor'], correct, rtol=1e-3, atol=0)
+
+    correct = np.array([-1.000000019, -0.440821659, 0, -0.236455613, 0, -0.258723091,
+                        -0.259895723, 0, 0.536812512, 0, 0.253259338, 0.046613434,
+                        0.285285122, 0.799814409, 0, 0.145468255, 0, -0.698579925])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # Test 3 - Mo1, Ru2, Pd3
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*', '108pd/105pd'), enrichment_factor=(1, 2, 3))
+
+    correct = 37780.97147
+    assert np.allclose(result['dilution_factor'], correct, rtol=1e-3, atol=0)
+
+    correct = np.array([-0.416787848, -0.183727891, 0, -0.098550241, 0, -0.107827139,
+                        -0.21663168, 0, 0.447450333, 0, 0.211099444, 0.038853899,
+                        0.356688389, 1.000003237, 0, 0.18187762, 0, -0.873417299])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # Test 4 - abs Mo1, Ru2, Pd3
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*', '108pd/105pd'), enrichment_factor=(1, 2, 3), relative_enrichment=False)
+
+    correct = 52413.23777
+    assert np.allclose(result['dilution_factor'], correct, rtol=1e-3, atol=0)
+
+    correct = np.array([-0.204177996, -0.090005268, 0, -0.048277974, 0, -0.052821885,
+                        -0.235022799, 0, 0.485437284, 0, 0.229021171, 0.042152404,
+                        0.356687204, 0.999999913, 0, 0.181877016, 0, -0.873414396])
+
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+
 
 

@@ -1,15 +1,14 @@
 site_name: SIMPLE
 
 plugins:
-- mkdocstrings:
-    handlers:
-      python:
-        options:
-          show_source: false
-          show_root_heading: false
-
-theme:
-  name: readthedocs
+  - mkdocs-jupyter:
+    include_source: True
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: false
 
 nav:
     - Home: index.md

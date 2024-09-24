@@ -8,20 +8,80 @@ import logging
 
 logger = logging.getLogger('SIMPLE.norm')
 
-def intnorm_linear(abu_up, abu_down, abu_norm,
-                   mass_up, mass_down, mass_norm,
-                   solar_up, solar_down, solar_norm,
+def intnorm_linear(abu_i, abu_j, abu_k,
+                   mass_i, mass_j, mass_k,
+                   std_i, std_j, std_k,
                    mass_coef = 'better'):
+    """
+    Normalise the data using the linearised internal normalisation procedure.
 
-    rho_ij = ((abu_up / abu_down) / (solar_up / solar_down)) - 1
-    rho_kj = ((abu_norm/abu_down) / (solar_norm/solar_down)) - 1
+
+    The internal normalisation procedure uses Equation 7 from
+    [Lugaro et al. 2023](https://doi.org/10.1140/epja/s10050-023-00968-y),
+
+    $$
+    \\epsilon R^{\\mathrm{ABU}}_{ij} = {\\left[{\\left(\\frac{r^{\\mathrm{ABU}}_{ij}}{R^{\\mathrm{STD}}_{ij}}-1\\right)}
+    -{Q}_{i} \\times {\\left(\\frac{r^{\\mathrm{ABU}}_{kj}}{R^{\\mathrm{STD}}_{kj}}-1\\right)}
+    \\right]} \\times 10^4 $$
+
+    Where, $Q$ is the difference of the masses calculated in one of two ways. If ``mass_coeff="better"`` the
+    definition from Lugaro et al. (2023) is used,
+
+    $$
+    {Q}^{\\mathrm{better}} = \\frac{\\ln{(m_i)} - \\ln{(m_j)}}{\\ln{(m_k)} - \\ln{(m_j)}}
+    $$
+
+    if ``mass_coeff="simplified"`` the definition from e.g. Dauphas et al. (2004) is used,
+
+    $$
+    {Q}^{\\rm{simplified}} = \\frac{(m_i) - (m_j)}{(m_k) - (m_j)}
+    $$
+
+    Args:
+        abu_i (): Abundance of the numerator isotopes.
+        abu_j (): Abundance of the denominator isotopes
+        abu_k (): Abundance of the normalising numerators.
+        mass_i (): The mass of each isotope in ``abu_i``.
+        mass_j (): The mass of each isotope in ``abu_j``.
+        mass_k (): The mass of each isotope in ``abu_k``.
+        std_i (): The reference abundance of each isotope in ``abu_i``.
+        std_j (): The reference abundance of each isotope in ``abu_j``.
+        std_k (): The reference abundance of each isotope in ``abu_k``.
+        largest_offset (): The absolute value of the largest offset for each row finished calculation in epsilon units.
+        min_dilution_factor (): The smallest dilution factor considered in the calcualtion. If the largest offset found
+            at this dilution factor is smaller than ``largest_offset`` the result is set to ``np.nan``.
+        max_iterations (): Any row for which the results have not converged after this number of iterations is set
+            to ``np.nan``
+        largest_offset_rtol (): The relative tolerance for convergence of largest offset calculation.
+
+    Returns: A dictionary containing the results of the normalisation.
+
+    The dictionary contains the following items:
+        - ``eRi_values``: An 2dim array containing the eRi values for each isotope.
+        - ``dilution_factor``: The dilution factor for each row in ``eRi_values``.
+        - ``largest_offset``: The ``largest_offset`` argument.
+        - ``min_dilution_factor``: The ``min_dilution_factor`` argument.
+    """
+
+    abu_i, abu_j, abu_k = np.atleast_2d(abu_i), np.atleast_2d(abu_j), np.atleast_2d(abu_k)
+    mass_i, mass_j, mass_k = np.atleast_2d(mass_i), np.atleast_2d(mass_j), np.atleast_2d(mass_k)
+    std_i, std_j, std_k = np.atleast_2d(std_i), np.atleast_2d(std_j), np.atleast_2d(std_k)
+
+    rho_ij = ((abu_i / abu_j) / (std_i / std_j)) - 1.0
+    rho_kj = ((abu_k / abu_j) / (std_k / std_j)) - 1.0
 
     if mass_coef.lower() == 'better':
-        mass_diff = (np.log(mass_up) - np.log(mass_down)) / (np.log(mass_norm) - np.log(mass_down))
+        Q = (np.log(mass_i) - np.log(mass_j)) / (np.log(mass_k) - np.log(mass_j))
     elif mass_coef.lower() == 'simplified':
-        mass_diff = (mass_up - mass_down) / (mass_norm - mass_down)
+        Q = (mass_i - mass_j) / (mass_k - mass_j)
+    else:
+        raise ValueError('``mass_coef`` must be either "better" or "simplified"')
 
-    return rho_ij - rho_kj * mass_diff
+    # Equation 7 in Lugaro et al., 2023
+    eR_smp_ij = (rho_ij - Q * rho_kj) * 10_000
+    return dict(eRi_values=eR_smp_ij,
+                method='linear', mass_coeff=mass_coef)
+
 
 
 def intnorm_largest_offset(abu_i, abu_j, abu_k,
@@ -58,12 +118,12 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
         abu_i (): Abundance of the numerator isotopes.
         abu_j (): Abundance of the denominator isotopes
         abu_k (): Abundance of the normalising numerators.
-        mass_i (): The mass of each isotope in ``abu_up``.
-        mass_j (): The mass of each isotope in ``abu_down``.
-        mass_k (): The mass of each isotope in ``abu_norm``.
-        std_i (): The reference abundance of each isotope in ``abu_up``.
-        std_j (): The reference abundance of each isotope in ``abu_down``.
-        std_k (): The reference abundance of each isotope in ``abu_norm``.
+        mass_i (): The mass of each isotope in ``abu_i``.
+        mass_j (): The mass of each isotope in ``abu_j``.
+        mass_k (): The mass of each isotope in ``abu_k``.
+        std_i (): The reference abundance of each isotope in ``abu_i``.
+        std_j (): The reference abundance of each isotope in ``abu_j``.
+        std_k (): The reference abundance of each isotope in ``abu_k``.
         largest_offset (): The absolute value of the largest offset for each row finished calculation in epsilon units.
         min_dilution_factor (): The smallest dilution factor considered in the calcualtion. If the largest offset found
             at this dilution factor is smaller than ``largest_offset`` the result is set to ``np.nan``.
@@ -83,22 +143,15 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
 
 
     # Make sure everything is at least 2d
-    abu_i = np.atleast_2d(abu_i)
-    abu_j = np.atleast_2d(abu_j)
-    abu_k = np.atleast_2d(abu_k)
-    mass_i = np.atleast_2d(mass_i)
-    mass_j = np.atleast_2d(mass_j)
-    mass_k = np.atleast_2d(mass_k)
-    std_i = np.atleast_2d(std_i)
-    std_j = np.atleast_2d(std_j)
-    std_k = np.atleast_2d(std_k)
+    abu_i,  abu_j, abu_k = np.atleast_2d(abu_i), np.atleast_2d(abu_j), np.atleast_2d(abu_k)
+    mass_i, mass_j, mass_k = np.atleast_2d(mass_i), np.atleast_2d(mass_j), np.atleast_2d(mass_k)
+    std_i, std_j, std_k  = np.atleast_2d(std_i), np.atleast_2d(std_j), np.atleast_2d(std_k)
 
     negQ = ((np.log(mass_i / mass_j) /
              np.log(mass_k / mass_j))) * -1 # Needs to be negative later
 
     R_solar_ij = std_i / std_j
     R_solar_kj = std_k / std_j
-
 
     # Has to begin at largest offset or it might accidentally ignore rows
     dilution_factor = np.full((abu_i.shape[0], 1), min_dilution_factor, dtype=np.float64)
@@ -142,7 +195,7 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
 
     return dict(eRi_values = eR_smp_ij, dilution_factor = dilution_factor,
                 largest_offset=largest_offset, min_dilution_factor=min_dilution_factor,
-                )
+                method='largest_offset')
 
 
 def intnorm_precision(abu_up, abu_down, abu_norm,
@@ -214,11 +267,13 @@ def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment
     elif method.lower() == 'simplified_linear':
         methodfunc = intnorm_linear
         method_kwargs['mass_coef'] = 'simplified'
-    elif method.lower() == 'better_linear' or  method.lower() == 'linear':
+    elif method.lower() == 'better_linear':
         methodfunc = intnorm_linear
         method_kwargs['mass_coef'] = 'better'
+    elif method.lower() == 'linear':
+        methodfunc = intnorm_linear
     else:
-        raise ValueError('``method`` must be one of "largest_offset", "precision", "simplified_linear", "better_linear"')
+        raise ValueError('``method`` must be one of "largest_offset", "precision", "linear", "simplified_linear", "better_linear"')
 
     if isinstance(normrat, (list, tuple)):
         if not isinstance(numerators, (list, tuple)) or len(numerators) != len(normrat):
