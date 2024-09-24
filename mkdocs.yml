@@ -13,6 +13,9 @@ plugins:
 nav:
     - Home: index.md
     - User Guide: user-guide.md
+    - Examples:
+        - Create CCSNe database: examples/create_simple_db.ipynb
+        - CCSNE Exmple: simple_mattias_version.ipynb
     - API:
       - simple: api/simple.md
       - simple.ccsne: api/ccsne.md
