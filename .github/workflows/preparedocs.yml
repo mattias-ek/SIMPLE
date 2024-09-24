@@ -1,4 +1,4 @@
-name: Copy notebooks and push to docs branch
+name: Prepare docs branch
 on:
   push:
     branches:
@@ -13,6 +13,7 @@ jobs:
       - name: Commit
         run: git commit -a
       - name: Push
-        uses: ad-m/github-push-action@docs
+        uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: docs
