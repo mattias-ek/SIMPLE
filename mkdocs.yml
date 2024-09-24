@@ -2,7 +2,8 @@ site_name: SIMPLE
 
 plugins:
   - mkdocs-jupyter:
-    include_source: True
+      include_source: true
+
   - mkdocstrings:
       handlers:
         python:
