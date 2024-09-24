@@ -12,3 +12,7 @@ jobs:
         run: cp ./notebooks/*ipynb ./docs/examples/
       - name: Commit
         run: git commit -a
+      - name: Push
+        uses: ad-m/github-push-action@docs
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
