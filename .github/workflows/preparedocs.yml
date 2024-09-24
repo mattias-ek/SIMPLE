@@ -11,7 +11,10 @@ jobs:
       - name: Copy examples
         run: cp ./notebooks/*ipynb ./docs/examples/
       - name: Commit
-        run: git commit -a
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -a -m "Moved notebooks"
       - name: Push
         uses: ad-m/github-push-action@master
         with:
