@@ -198,7 +198,7 @@ def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment
 
     """
     # iso_slope is not done here. This should be done later.
-    # That way you know the direction of the slope and you dont have to rerun for different slopes.
+    # That way you know the direction of the slope and you don't have to rerun for different slopes.
 
     if abu.dtype.names is None:
         raise ValueError('``abu`` must be a keyarray')
