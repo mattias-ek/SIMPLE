@@ -1,0 +1,17 @@
+name: Deploy MkDocs
+on:
+  push:
+    branches:
+      - master
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+      - run: pip install mkdocs mkdocs-gen-files pymdown-extensions mkdocstrings-python
+      - run: mkdocs gh-deploy --force --clean --verbose
