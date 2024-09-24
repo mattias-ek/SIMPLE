@@ -10,31 +10,44 @@ __all__ = ['load_defaults',
            'asisotope', 'asisotopes', 'asratio', 'asratios',
            'asisolist', 'select_isolist', 'get_isotopes_of_element']
 
-def load_defaults(filename):
+def load_defaults(filename: str):
+    """
+    Loads default arguments for functions from a YAML formatted file.
+
+    Return a dictionary containing a dictionary with the default arguments mapped to the argument name. To use unpack
+    the arguments in the function call (See example).
+
+    You can still pass normal arguments and keyword arguments as long as they are not included in the default dictionary.
+
+    Examples
+    >>> defaults = simple.load_defaults('defaults.yaml')
+    >>> somefunction(**defaults['somefunction']) # Unpack arguments
+    """
     return yaml.safe_load(open(filename, 'r').read())
 
 
 def askeyarray(array, keys, dtype=None):
     """
-    Returns a structured numpy array where the columns can be accessed by the column key.
+    Returns a numpy array where the columns can be accessed by the column key.
 
     Args:
         array (): An array like object containing at most 2 dimensions. The first dimension is the row and the second
-        dimension is the column. If ``array`` has less then 2 dimensions then they are assumed to represent a single
-        row of data.
+        dimension is the column.
         keys (): The columns keys to be associated with the data. Must be the same length as the second dimension
         of ``array``.
         dtype (): The data type of the returned array. All columns will have the same dtype.
 
+    **Notes**
+    If ``array`` has less then 2 dimensions then it is assumed to represent a single row of data.
+
+    It is not possible to save this type of array in hdf5 files if they have more than a few hundred columns.
+
     Examples:
-        >>> data = [[1,2,3],[4,5,6]]
-        >>> keys = asisotopes(data, ['Pd-104','Pd-105','Pd-106'])
-        >>> a = simple.askeyarray(data, keys); a
+        >>> a = simple.askeyarray([[1,2,3],[4,5,6]], ['Pd-104','Pd-105','Pd-106']); a
         array([(1, 2, 3), (4, 5, 6)],
               dtype=[('Pd-104', '<i8'), ('Pd-105', '<i8'), ('Pd-106', '<i8')])
         >>> a['Pd-104']
         array([1, 4])
-
 
     """
     if type(keys) is str:

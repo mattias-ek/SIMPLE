@@ -17,5 +17,14 @@ nav:
     - API:
       - simple: api/simple.md
       - simple.ccsne: api/ccsne.md
+      - simple.norm: api/norm.md
     - About:
           - License: license.md
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
