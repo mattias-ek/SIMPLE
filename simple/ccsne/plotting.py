@@ -5,7 +5,7 @@ import simple
 
 
 class EndlessList:
-    # Index will never go out of bounds. It will just start from the beginning if larger than the inital list.
+    # Index will never go out of bounds. It will just start from the beginning if larger than the initial list.
     def __init__(self, items):
         self.list = list(items)
 
@@ -17,6 +17,16 @@ linestyles = EndlessList(['-', '--', ':', '-.'])
 markers = EndlessList(["o", "s", "^", "D", "P"])
 
 def plot_slopes(models, ratio, where=None, where_kwargs={}):
+    """
+    Plots the slope of two internally normalised eRi compositions.
+
+    Args:
+        models (): The collection of models to be plotted.
+        ratio (): Can either be a single ratio or multiple ratios.
+        where (): Can be used to select only a subset of the models to plot.
+        where_kwargs ():
+
+    """
     if where is not None:
         models = models.where(where, **where_kwargs)
 
