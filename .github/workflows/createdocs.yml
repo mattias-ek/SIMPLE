@@ -1,4 +1,4 @@
-name: Prepare docs branch
+name: Create docs
 on:
   push:
     branches:
