@@ -1,0 +1,12 @@
+name: Deploy MkDocs
+on:
+  push:
+    branches:
+      - master
+jobs:
+  copyexamples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy examples
+        run: cp ./SIMPLE/examples/*ipynb ./docs/examples/
