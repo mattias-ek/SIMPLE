@@ -1,4 +1,4 @@
-name: Prepare docs
+name: Copy notebooks and push to docs branch
 on:
   push:
     branches:
