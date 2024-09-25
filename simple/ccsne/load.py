@@ -54,11 +54,15 @@ def Ri18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
         if divide_by_isomass:
             abu = np.asarray(abu) / np.array([float(iso.mass) if type(iso) is utils.Isotope else 1.0
                                               for iso in keys])
+            unit = 'mol'
+        else:
+            unit = 'wt'
 
         models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                    refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
                                                    mass=int(emass), masscoord=masscoord,
-                                                   abundance_values=abu, abundance_keys=keys)
+                                                   abundance_values=abu, abundance_keys=keys,
+                                                   abundance_unit=unit)
     return models
 
 def Pi16(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
@@ -97,11 +101,15 @@ def Pi16(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
         if divide_by_isomass:
             abu = np.asarray(abu) / np.array([float(iso.mass) if type(iso) is utils.Isotope else 1.0
                                               for iso in keys])
+            unit = 'mol'
+        else:
+            unit = 'wt'
 
         models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                    refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
                                                    mass=int(emass), masscoord=masscoord,
-                                                   abundance_values=abu, abundance_keys=keys)
+                                                   abundance_values=abu, abundance_keys=keys,
+                                                   abundance_unit=unit)
     return models
 
 def La22(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
@@ -165,11 +173,15 @@ def La22(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
         if divide_by_isomass:
             abu = np.asarray(abu) / np.array([float(iso.mass) if type(iso) is utils.Isotope else 1.0
                                               for iso in keys])
+            unit = 'mol'
+        else:
+            unit = 'wt'
 
         models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                    refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
                                                    mass=int(emass), masscoord=masscoord,
-                                                   abundance_values=abu, abundance_keys=keys)
+                                                   abundance_values=abu, abundance_keys=keys,
+                                                   abundance_unit=unit)
     return models
 
 def Si18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True, decayed=False):
@@ -204,11 +216,15 @@ def Si18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True, decayed=Fa
         if divide_by_isomass:
             abu = np.asarray(abu) / np.array([float(iso.mass) if type(iso) is utils.Isotope else 1.0
                                               for iso in keys])
+            unit = 'mol'
+        else:
+            unit = 'wt'
 
         models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                    refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
                                                    mass=int(emass), masscoord=masscoord,
-                                                   abundance_values=abu, abundance_keys=keys)
+                                                   abundance_values=abu, abundance_keys=keys,
+                                                   abundance_unit=unit)
     return models
 
 def Ra02(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
@@ -243,13 +259,17 @@ def Ra02(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
             if divide_by_isomass:
                 abu = np.asarray(abu) / np.array([float(iso.mass) if type(iso) is utils.Isotope else 1.0
                                                   for iso in keys])
+                unit = 'mol'
+            else:
+                unit = 'wt'
 
             masscoord = np.array([float(ii.split()[1]) / 1.989e+33 for ii in data])
 
             models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                        refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
                                                        mass=int(emass), masscoord=masscoord,
-                                                       abundance_values=abu, abundance_keys=keys)
+                                                       abundance_values=abu, abundance_keys=keys,
+                                                   abundance_unit=unit)
 
     return models
 
@@ -295,9 +315,13 @@ def LC18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
             if divide_by_isomass:
                 abu = np.asarray(abu) / np.array([float(iso.mass) if type(iso) is utils.Isotope else 1.0
                                                   for iso in keys])
+                unit = 'mol'
+            else:
+                unit = 'wt'
 
             models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                        refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
                                                        mass=int(emass), masscoord=masscoord,
-                                                       abundance_values=abu, abundance_keys=keys)
+                                                       abundance_values=abu, abundance_keys=keys,
+                                                   abundance_unit=unit)
     return models
