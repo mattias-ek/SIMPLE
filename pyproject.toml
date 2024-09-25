@@ -2,8 +2,8 @@
 requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["simple"]
+[tool.setuptools.packages.find]
+include = ["simple*"]
 
 [project]
 name = "SIMPLE"
