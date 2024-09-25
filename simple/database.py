@@ -36,7 +36,7 @@ class ArrayAttrs(Attrs):
         value = utils.asarray(value)
         super().__setitem__(name, value)
 
-def load_models(filename, dbfilename, default_isolist=None, where=None, **where_kwargs):
+def load_models(filename, dbfilename, default_isolist=None, where=None, overwrite=False, **where_kwargs):
     """
     Loads a selection of models from a file.
 
@@ -373,6 +373,7 @@ class Model:
 
 class Test(Model):
     def internal_normalisation(self, normrat, enrichment_factor=1, relative_enrichment=True,
+                               attrname = 'intnorm',
                                method='largest_offset', **method_kwargs):
         normrat = utils.asratios(normrat)
 
@@ -397,7 +398,7 @@ class Test(Model):
         for k, v in result.items():
             if isinstance(v, np.ndarray) and v.ndim == 2 and v.shape[1] == 1:
                 result[k] = v.squeeze()
-        self.add_attr(f'intnorm', Attrs(result), save=False, overwrite=True)
+        self.add_attr(attrname, Attrs(result), save=False, overwrite=True)
         return result
 
 class IsoRef(Model):
@@ -432,6 +433,7 @@ class CCSNe(Model):
         self.add_attr('abundance', utils.askeyarray(abu, keys), save=False, overwrite=True)
 
     def internal_normalisation(self, normrat, enrichment_factor=1, relative_enrichment=True,
+                               attrname='intnorm',
                                method='largest_offset', **method_kwargs):
         normrat = utils.asratios(normrat)
 
@@ -456,10 +458,10 @@ class CCSNe(Model):
         for k, v in result.items():
             if isinstance(v, np.ndarray) and v.ndim == 2 and v.shape[1] == 1:
                 result[k] = v.squeeze()
-        self.add_attr(f'intnorm', Attrs(result), save=False, overwrite=True)
+        self.add_attr(attrname, Attrs(result), save=False, overwrite=True)
         return result
 
-    def simple_normalisation(self, normiso, enrichment_factor = 1, relative_enrichment=True):
+    def simple_normalisation(self, normiso, enrichment_factor = 1, relative_enrichment=True, attrname='simplenorm',):
         normiso = utils.asisotopes(normiso)
 
         numerators = []
@@ -476,7 +478,7 @@ class CCSNe(Model):
             if isinstance(v, np.ndarray) and v.ndim == 2 and v.shape[1] == 1:
                 result[k] = v.squeeze()
 
-        self.add_attr('simplenorm', result, save=False, overwrite=True)
+        self.add_attr(attrname, result, save=False, overwrite=True)
         return result
 
 
