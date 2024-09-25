@@ -2,7 +2,7 @@ import simple.utils as utils
 import numpy as np
 import h5py
 import re
-
+from nugridpy import nugridse as mp
 import logging
 
 logger = logging.getLogger('SIMPLE.CCSNe.load')
@@ -18,7 +18,6 @@ def AGB_test(data_dir):
     pt_3 = mp.se(data_dir + 'agb_surf_m3z2m3/', '96101.surf.h5', rewrite=True)
 
 def Ri18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
-    from nugridpy import nugridse as mp
     # loading Ritter+18 model
     fol2mod = data_dir + 'R18/'
     # load instances of models
@@ -66,7 +65,6 @@ def Ri18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
     return models
 
 def Pi16(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
-    from nugridpy import nugridse as mp
     # loading Pignatari+16 model
     fol2mod = data_dir + 'P16/'
     # load instances of models
