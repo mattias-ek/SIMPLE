@@ -1,9 +1,13 @@
 import logging
 
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 from matplotlib.ticker import AutoMinorLocator
 import numpy as np
 import simple
+import logging
+
+logger = logging.getLogger('SIMPLE.CCSNe.plotting')
 
 
 class EndlessList:
@@ -136,12 +140,18 @@ def plot_slopes(models, ratio, axes = None, where=None, where_kwargs={}):
     """
     if axes is None:
         axes = plt.gca()
+    elif isinstance(axes, Axes):
+        pass
+    elif hasattr(axes, 'gca'):
+        axes = axes.gca()
+    else:
+        raise ValueError('axes must be an Axes, Axes instance or have a gca() method that return an Axes')
 
     if where is not None:
         models = models.where(where, **where_kwargs)
 
     if len(models) == 0:
-        print('No models to plot')
+        logger.warning('No models to plot')
         return
 
     ratios = simple.asratios(ratio)
@@ -155,8 +165,6 @@ def plot_slopes(models, ratio, axes = None, where=None, where_kwargs={}):
         ylabel = f'Slope of A/B'
         simple_legend = False
 
-    plt.figure(figsize=(9, 6))
-
     masscut = []
     for rat in ratios:
         for i, model in enumerate(models):
@@ -167,20 +175,16 @@ def plot_slopes(models, ratio, axes = None, where=None, where_kwargs={}):
                 d = models[0].intnorm.label_latex[rat.denom]
                 legend = f'{n}/{d} {model.name}'
 
-            plt.plot(model.masscoord, model.intnorm.eRi[rat.numer] / model.intnorm.eRi[rat.denom],
+            axes.plot(model.masscoord, model.intnorm.eRi[rat.numer] / model.intnorm.eRi[rat.denom],
                      color=colours[i], markersize=4, ls='-', label=legend)  # label=label_for_legend+ ' '+label_models[i]
             masscut.append(np.min(model.masscoord))
 
-    plt.ylabel(ylabel, fontsize=15)
-    plt.xlabel('Mass coordinate M$_{\odot}$', fontsize=15)
+    axes.set_ylabel(ylabel, fontsize=15)
+    axes.set_xlabel('Mass coordinate M$_{\odot}$', fontsize=15)
 
-    plt.legend(loc='upper right')
-    plt.xlim(np.min(masscut), 9)
-    plt.ylim(-10, 15)
-    plt.tick_params(left=True, right=True, top=True, labelleft=True, which='both')  # ,labelright=True)
+    axes.legend(loc='upper right')
+    axes.set_xlim(np.min(masscut), 9)
+    axes.tick_params(left=True, right=True, top=True, labelleft=True, which='both')  # ,labelright=True)
 
-    plt.gca().xaxis.set_minor_locator(AutoMinorLocator())
-    plt.gca().yaxis.set_minor_locator(AutoMinorLocator())
-    plt.gcf().subplots_adjust(left=0.25)
-
-    return plt
+    axes.xaxis.set_minor_locator(AutoMinorLocator())
+    axes.yaxis.set_minor_locator(AutoMinorLocator())

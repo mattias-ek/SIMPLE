@@ -1,4 +1,4 @@
-import re, datetime, os, csv, operator
+import re, datetime, os, csv, operator, inspect
 import numpy as np
 import h5py
 from nugridpy import nugridse as mp
@@ -48,14 +48,15 @@ def load_models(filename, dbfilename, default_isolist=None, where=None, overwrit
         dbfilename (): Name of the raw database file
         default_isolist (): Isolist applied to loaded models from ``dbfilename``.
         where (): Used to select which models to load.
+        overwrite (): If ``True`` a new file will be created even if ``filename`` already exists.
         **where_kwargs (): Values used together with ``where``.
 
     Returns:
     """
     mc = ModelCollection()
-    if os.path.exists(filename):
+    if os.path.exists(filename) and not overwrite:
         mc.load_file(filename, where=where, **where_kwargs)
-    elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5'):
+    elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5') and not overwrite:
         mc.load_file(f'{filename}.hdf5', where=where, **where_kwargs)
     elif os.path.exists(dbfilename):
         mc.load_file(dbfilename, isolist=default_isolist, where=where, **where_kwargs)
@@ -66,6 +67,25 @@ def load_models(filename, dbfilename, default_isolist=None, where=None, overwrit
 
 
 class ModelCollection:
+    def __repr__(self):
+        models = ", ".join([f'{k}: <{v.__class__.__name__}>' for k, v in self.models.items()])
+        refs = ", ".join([f'{k}: <{v.__class__.__name__}>' for k, v in self.refs.items()])
+        return f'{self.__class__.__name__}(models={{{models}}}, refs={{{refs}}})'
+
+    def _repr_markdown_(self):
+        models = "\n".join([f'- [{i}] {k} ({v.__class__.__name__})' for i, (k, v) in enumerate(self.models.items())])
+        refs = "\n".join([f'- {k} ({v.__class__.__name__})' for k, v in self.refs.items()])
+        return f"""
+Models in collection:
+
+{models}
+
+References in collection:
+
+{refs}
+
+""".strip()
+
     def __init__(self):
         self.refs = {}
         self.models = {}
@@ -234,7 +254,6 @@ class ModelCollection:
         """
         return Model(self, name, clsname=clsname, **attrs)
 
-
     def select_isolist(self, isolist=None):
         for model in self.models.values():
             model.select_isolist(isolist)
@@ -292,7 +311,8 @@ class Model:
             obj = super().__new__(cls)
             obj.__init__(collection, name, **kwargs)
             return obj
-
+    def __repr__(self):
+        return f"{self.__class__.__name__}(name='{self.name}')"
     def __init__(self, collection, name, **saved_attrs):
         super().__setattr__('collection', collection)
         super().__setattr__('name', name)
@@ -343,7 +363,9 @@ class Model:
         return self.collection.get_ref(name, attr)
 
     def change_name(self, name):
+        self.collection.models.pop(self.name)
         super().__setattr__('name', name)
+        self.collection.models[self.name] = self
 
     def copy(self, to_models, include_unsaved_attrs=True):
         new_model = Model(to_models, self.name, **self.saved_attrs)
@@ -410,21 +432,45 @@ class IsoRef(Model):
                       overwrite=True)
         self.add_attr('data', utils.askeyarray(self.data_values, self.data_keys), save=False)
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}(name={self.name}, type={self.type})'
+
+    def _repr_markdown_(self):
+        attrs = ['*name*'] + [f"*{name}*" for name in self.saved_attrs] + [f"*{name}*" for name in self.unsaved_attrs]
+        return f"""
+**Name**: {self.name}\\
+**Class Name**: {self.__class__.__name__}\\
+**Type**: {self.type}\\
+**Attributes**: {", ".join(sorted(attrs))}
+        """.strip()
 
 class CCSNe(Model):
     def __init__(self, collection, name, *,
                  type, dataset, citation,
-                 masscoord, abundance_values, abundance_keys,
+                 mass, masscoord, abundance_values, abundance_keys,
                  refid_isoabu, refid_isomass,
                  **attrs):
         super().__init__(collection, name, type=type, dataset=dataset, citation=citation,
-                         masscoord=masscoord, abundance_values=abundance_values, abundance_keys=abundance_keys,
+                        mass=mass, masscoord=masscoord, abundance_values=abundance_values, abundance_keys=abundance_keys,
                          refid_isoabu=refid_isoabu, refid_isomass=refid_isomass,
                          **attrs)
         self.add_attr('abundance_keys', utils.asisotopes(self.abundance_keys, allow_invalid=True), save=True,
                       overwrite=True)
         self.add_attr('abundance', utils.askeyarray(self.abundance_values, self.abundance_keys), save=False)
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}(name={self.name}, type={self.type}, dataset={self.dataset}, mass={self.mass})'
+
+    def _repr_markdown_(self):
+        attrs = ['*name*'] + [f"*{name}*" for name in self.saved_attrs] + [f"*{name}*" for name in self.unsaved_attrs]
+        return f"""
+**Name**: {self.name}\\
+**Class Name**: {self.__class__.__name__}\\
+**Type**: {self.type}\\
+**Dataset**: {self.dataset}\\
+**Mass**: {self.mass}\\
+**Attributes**: {", ".join(sorted(attrs))}
+        """.strip()
     def select_isolist(self, isolist):
         abu, keys = utils.select_isolist(isolist, self.abundance_values, self.abundance_keys)
 
@@ -480,7 +526,6 @@ class CCSNe(Model):
 
         self.add_attr(attrname, result, save=False, overwrite=True)
         return result
-
 
 
 ##################
