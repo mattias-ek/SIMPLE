@@ -3,11 +3,11 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["simple*"]
+include = ["simple", "simple.*"]
 
 [project]
 name = "SIMPLE"
-version = "0.2"
+version = "0.2.1"
 
 # Developed using this. Not tested with lower versions.
 #requires-python = ">= 3.9"
