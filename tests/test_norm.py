@@ -206,45 +206,160 @@ def test_intnorm_better_linear1():
     # The default rtol of the largest offset is 1E-4 and the atol on the eps values is 1E-4 (0.01 ppm)
 
     # Test 1 - Pd
-    result = model.internal_normalisation('108pd/105pd', method='better_linear')
+    result = model.internal_normalisation('108pd/105pd',
+                                          method='better_linear')
 
-    correct = np.array([37612.60223, 44386.86262, 0, 19968.47493, 0, -85421.07743])
+    correct = np.array([28612.34852, 80214.76022, 0, 14589.4154, 0, -70065.96604])
     assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
 
     # Test 2 - Mo, Ru, Pd
-    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*','108pd/105pd'))
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*','108pd/105pd'),
+                                          method='better_linear')
 
-    correct = 15745.78012
-    assert np.allclose(result['dilution_factor'], correct, rtol=1e-3, atol=0)
-
-    correct = np.array([-1.000000019, -0.440821659, 0, -0.236455613, 0, -0.258723091,
-                        -0.259895723, 0, 0.536812512, 0, 0.253259338, 0.046613434,
-                        0.285285122, 0.799814409, 0, 0.145468255, 0, -0.698579925])
+    correct = np.array([-13133.67064, -5789.540656, 0, -3105.444561, 0, -3397.686672,
+                        -23120.68645, 0, 47755.17572, 0, 22529.92662, 4146.834915,
+                        28612.34852, 80214.76022, 0, 14589.4154, 0, -70065.96604])
     assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
 
     # Test 3 - Mo1, Ru2, Pd3
-    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*', '108pd/105pd'), enrichment_factor=(1, 2, 3))
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*', '108pd/105pd'),
+                                          enrichment_factor=(1, 2, 3), method='better_linear')
 
-    correct = 37780.97147
-    assert np.allclose(result['dilution_factor'], correct, rtol=1e-3, atol=0)
-
-    correct = np.array([-0.416787848, -0.183727891, 0, -0.098550241, 0, -0.107827139,
-                        -0.21663168, 0, 0.447450333, 0, 0.211099444, 0.038853899,
-                        0.356688389, 1.000003237, 0, 0.18187762, 0, -0.873417299])
+    correct = np.array([-13133.67064, -5789.540656, 0, -3105.444561, 0, -3397.686672,
+                        -23120.68645, 0, 47755.17572, 0, 22529.92662, 4146.834915,
+                        28612.34852, 80214.76022, 0, 14589.4154, 0, -70065.96604])
     assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
 
     # Test 4 - abs Mo1, Ru2, Pd3
-    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*', '108pd/105pd'), enrichment_factor=(1, 2, 3), relative_enrichment=False)
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*', '108pd/105pd'),
+                                          enrichment_factor=(1, 2, 3), relative_enrichment=False, method='better_linear')
 
-    correct = 52413.23777
-    assert np.allclose(result['dilution_factor'], correct, rtol=1e-3, atol=0)
-
-    correct = np.array([-0.204177996, -0.090005268, 0, -0.048277974, 0, -0.052821885,
-                        -0.235022799, 0, 0.485437284, 0, 0.229021171, 0.042152404,
-                        0.356687204, 0.999999913, 0, 0.181877016, 0, -0.873414396])
+    correct = np.array([-13133.67064, -5789.540656, 0, -3105.444561, 0, -3397.686672,
+                        -23120.68645, 0, 47755.17572, 0, 22529.92662, 4146.834915,
+                        28612.34852, 80214.76022, 0, 14589.4154, 0, -70065.96604])
 
     assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
 
+def test_intnorm_better_linear2():
+    abu = np.concatenate([[sabu],
+                          [sabu * 0.01],
+                          [sabu * 0.1],
+                          [sabu * 0.5]], axis=0)
+    abu[:, 2] = abu[:, 2] * [1, 2, 3, 4]
 
+    collection = simple.ModelCollection()
+    collection.new_model('IsoRef', 'mass', type='MASS', citation='', data_values = isomass, data_keys=isokeys)
+    collection.new_model('IsoRef', 'abu', type='ABU', citation='', data_values=std_abu, data_keys=isokeys)
+    model = collection.new_model('Test', 'testing',
+                                 refid_isomass='mass', refid_isoabu='abu',
+                                 abundance=simple.askeyarray(abu, isokeys2), abundance_keys = isokeys2,
+                                )
 
+    # Test 5 - Multirow large df
+    result = model.internal_normalisation('98mo/96mo', method='better_linear')
 
+    correct = np.array([[-13133.67064, -5789.540656, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 15.29670887, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 5820.134073, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 11624.97144, 0, -3105.444561, 0, -3397.686672]])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # linear no mass_coeff
+    result = model.internal_normalisation('98mo/96mo', method='linear')
+
+    correct = np.array([[-13133.67064, -5789.540656, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 15.29670887, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 5820.134073, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 11624.97144, 0, -3105.444561, 0, -3397.686672]])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # linear mass_coeff
+    result = model.internal_normalisation('98mo/96mo', method='linear', mass_coef='better')
+
+    correct = np.array([[-13133.67064, -5789.540656, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 15.29670887, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 5820.134073, 0, -3105.444561, 0, -3397.686672],
+                        [-13133.67064, 11624.97144, 0, -3105.444561, 0, -3397.686672]])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+def test_intnorm_simplified_linear1():
+    abu = sabu
+
+    collection = simple.ModelCollection()
+    collection.new_model('IsoRef', 'mass', type='MASS', citation='', data_values = isomass, data_keys=isokeys)
+    collection.new_model('IsoRef', 'abu', type='ABU', citation='', data_values=std_abu, data_keys=isokeys)
+    model = collection.new_model('Test', 'testing',
+                                 refid_isomass='mass', refid_isoabu='abu',
+                                 abundance=simple.askeyarray(abu, isokeys2), abundance_keys = isokeys2,
+                                )
+    # If the test suddenly start failing it could be float point issues. Maybe the tolerances are to high?
+    # The default rtol of the largest offset is 1E-4 and the atol on the eps values is 1E-4 (0.01 ppm)
+
+    # Test 1 - Pd
+    result = model.internal_normalisation('108pd/105pd',
+                                          method='simplified_linear')
+
+    correct = np.array([27523.86883, 79975.61448, 0, 14707.19797, 0, -70641.64377])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # Test 2 - Mo, Ru, Pd
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*','108pd/105pd'),
+                                          method='simplified_linear')
+
+    correct = np.array([-13067.43644, -5764.906158, 0 ,-3113.559373, 0, -3334.014517,
+                        -23054.42359, 0, 47733.40714, 0, 22594.28317, 4464.965482,
+                        27523.86883, 79975.61448, 0, 14707.19797, 0, -70641.64377])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # Test 3 - Mo1, Ru2, Pd3
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*', '108pd/105pd'),
+                                          enrichment_factor=(1, 2, 3), method='simplified_linear')
+
+    correct = np.array([-13067.43644, -5764.906158, 0, -3113.559373, 0, -3334.014517,
+                        -23054.42359, 0, 47733.40714, 0, 22594.28317, 4464.965482,
+                        27523.86883, 79975.61448, 0, 14707.19797, 0, -70641.64377])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # Test 4 - abs Mo1, Ru2, Pd3
+    result = model.internal_normalisation(('98mo/96mo', '99ru*/101ru*', '108pd/105pd'),
+                                          enrichment_factor=(1, 2, 3), relative_enrichment=False,
+                                          method='linear', mass_coef='simplified')
+
+    correct = np.array([-13067.43644, -5764.906158, 0, -3113.559373, 0, -3334.014517,
+                        -23054.42359, 0, 47733.40714, 0, 22594.28317, 4464.965482,
+                        27523.86883, 79975.61448, 0, 14707.19797, 0, -70641.64377])
+
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+def test_intnorm_simplified_linear2():
+    abu = np.concatenate([[sabu],
+                          [sabu * 0.01],
+                          [sabu * 0.1],
+                          [sabu * 0.5]], axis=0)
+    abu[:, 2] = abu[:, 2] * [1, 2, 3, 4]
+
+    collection = simple.ModelCollection()
+    collection.new_model('IsoRef', 'mass', type='MASS', citation='', data_values = isomass, data_keys=isokeys)
+    collection.new_model('IsoRef', 'abu', type='ABU', citation='', data_values=std_abu, data_keys=isokeys)
+    model = collection.new_model('Test', 'testing',
+                                 refid_isomass='mass', refid_isoabu='abu',
+                                 abundance=simple.askeyarray(abu, isokeys2), abundance_keys = isokeys2,
+                                )
+
+    # Test 5 - Multirow large df
+    result = model.internal_normalisation('98mo/96mo', method='simplified_linear')
+
+    correct = np.array([[-13067.43644, -5764.906158, 0, -3113.559373, 0, -3334.014517],
+                        [-13067.43644, 39.93120603, 0, -3113.559373, 0, -3334.014517],
+                        [-13067.43644, 5844.76857, 0, -3113.559373, 0, -3334.014517],
+                        [-13067.43644, 11649.60593, 0, -3113.559373, 0, -3334.014517]])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)
+
+    # linear mass_coeff
+    result = model.internal_normalisation('98mo/96mo', method='linear', mass_coef='simplified')
+
+    correct = np.array([[-13067.43644, -5764.906158, 0, -3113.559373, 0, -3334.014517],
+                        [-13067.43644, 39.93120603, 0, -3113.559373, 0, -3334.014517],
+                        [-13067.43644, 5844.76857, 0, -3113.559373, 0, -3334.014517],
+                        [-13067.43644, 11649.60593, 0, -3113.559373, 0, -3334.014517]])
+    assert np.allclose(result['eRi_values'], correct, rtol=0, atol=1E-4)

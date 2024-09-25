@@ -15,7 +15,6 @@ def intnorm_linear(abu_i, abu_j, abu_k,
     """
     Normalise the data using the linearised internal normalisation procedure.
 
-
     The internal normalisation procedure uses Equation 7 from
     [Lugaro et al. 2023](https://doi.org/10.1140/epja/s10050-023-00968-y),
 
