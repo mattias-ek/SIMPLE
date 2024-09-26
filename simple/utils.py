@@ -100,7 +100,7 @@ def asarray(data, dtype=None, saving=False):
     return data
 
 
-def select_isolist(isolist, data, keys= None, *, without_suffix=False):
+def select_isolist(isolist, data, keys= None, *, without_suffix=False, massunit = False):
     isolist = asisolist(isolist, without_suffix=without_suffix)
     data = np.asarray(data)
     if keys is not None:
@@ -112,20 +112,24 @@ def select_isolist(isolist, data, keys= None, *, without_suffix=False):
     if data.dtype.names is None:
         if keys is None:
             raise ValueError('No keys given for the data')
-        if data.ndim < 2:
-            data = data.reshape((-1, data.size))
-        elif data.ndim > 2:
-            raise ValueError('data must be 2D')
+        data = np.atleast_1d(data)
 
         for mainiso, inciso in isolist.items():
             value = np.zeros(data.shape[0])
             for iso in inciso:
                 if iso in keys:
                     index = keys.index(iso)
-                    value = value + data[:,index]
+                    if massunit:
+                        value += (data[:,index] / float(iso.mass))
+                    else:
+                        value += data[:, index]
                 else:
                     missing_isotopes.append(iso)
-            new_data.append(value)
+
+            if massunit:
+                new_data.append(value * float(mainiso.mass))
+            else:
+                new_data.append(value)
 
         result = np.transpose(new_data), tuple(isolist.keys())
     else:
@@ -134,10 +138,17 @@ def select_isolist(isolist, data, keys= None, *, without_suffix=False):
 
             for iso in inciso:
                 if iso in data.dtype.names:
-                    value += data[iso]
+                    if massunit:
+                        value += (data[iso] / float(iso.mass))
+                    else:
+                        value += data[iso]
                 else:
                     missing_isotopes.append(iso)
-            new_data.append(value)
+
+            if massunit:
+                new_data.append(value * float(mainiso.mass))
+            else:
+                new_data.append(value)
 
         result = askeyarray(np.array(new_data).transpose(), isolist.keys())
 

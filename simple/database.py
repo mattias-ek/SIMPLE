@@ -425,9 +425,9 @@ class Test(Model):
 
 class IsoRef(Model):
     ISREF = True
-    def __init__(self, collection, name, *, type, citation, data_values, data_keys, **attrs):
+    def __init__(self, collection, name, *, type, citation, data_values, data_keys, data_unit, **attrs):
         super().__init__(collection, name, type=type, citation=citation,
-                         data_values=data_values, data_keys=data_keys, **attrs)
+                         data_values=data_values, data_keys=data_keys, data_unit=data_unit, **attrs)
         self.add_attr('data_keys', utils.asisotopes(self.data_keys, allow_invalid=True), save=True,
                       overwrite=True)
         self.add_attr('data', utils.askeyarray(self.data_values, self.data_keys), save=False)
@@ -447,12 +447,12 @@ class IsoRef(Model):
 class CCSNe(Model):
     def __init__(self, collection, name, *,
                  type, dataset, citation,
-                 mass, masscoord, abundance_values, abundance_keys,
+                 mass, masscoord, abundance_values, abundance_keys, abundance_unit,
                  refid_isoabu, refid_isomass,
                  **attrs):
         super().__init__(collection, name, type=type, dataset=dataset, citation=citation,
                         mass=mass, masscoord=masscoord, abundance_values=abundance_values, abundance_keys=abundance_keys,
-                         refid_isoabu=refid_isoabu, refid_isomass=refid_isomass,
+                        abundance_unit=abundance_unit, refid_isoabu=refid_isoabu, refid_isomass=refid_isomass,
                          **attrs)
         self.add_attr('abundance_keys', utils.asisotopes(self.abundance_keys, allow_invalid=True), save=True,
                       overwrite=True)
@@ -472,7 +472,8 @@ class CCSNe(Model):
 **Attributes**: {", ".join(sorted(attrs))}
         """.strip()
     def select_isolist(self, isolist):
-        abu, keys = utils.select_isolist(isolist, self.abundance_values, self.abundance_keys)
+        abu, keys = utils.select_isolist(isolist, self.abundance_values, self.abundance_keys,
+                                         massunit=True if self.abundance_unit == 'mass' else False)
 
         self.add_attr('abundance_values', abu, save=True, overwrite=True)
         self.add_attr('abundance_keys', keys, save=True, overwrite=True)
@@ -516,9 +517,14 @@ class CCSNe(Model):
             numerators.append(isotopes)
 
         stdabu = self.get_ref(self.refid_isoabu, 'data')
+        stdabu_massunit = True if self.get_ref(self.refid_isoabu, 'data_unit') == "mass" else False
 
-        result = norm.simple_normalisation(self.abundance, numerators, normiso, stdabu,
-                                           enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment)
+        abu = self.abundance
+        abu_massunit = True if self.abundance_unit == 'mass' else False
+
+        result = norm.simple_normalisation(abu, numerators, normiso, stdabu,
+                                           enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
+                                           abu_massunit=abu_massunit, stdabu_massunit=stdabu_massunit)
 
         for k, v in result.items():
             if isinstance(v, np.ndarray) and v.ndim == 2 and v.shape[1] == 1:

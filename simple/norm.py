@@ -211,6 +211,7 @@ def intnorm_precision(abu_up, abu_down, abu_norm,
 
 
 def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment_factor=1, relative_enrichment=True,
+                           abu_massunit=False, stdabu_massunit=False,
                            method='largest_offset', **method_kwargs):
     """
 
@@ -322,6 +323,8 @@ def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment
             abu_up = abu_up / abu_up.sum(axis=0)
 
         abu_up = abu_up * abu_factor
+        if abu_massunit:
+            abu_up = abu_up / [[float(numerator.mass)] for numerator in isotopes]
 
         all_abu_up.append(abu_up)
 
@@ -336,6 +339,8 @@ def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment
         all_mass_norm.append(np.ones(mass_up.shape) * mass_up[numeri])
 
         solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in isotopes])
+        if stdabu_massunit:
+            solar_up = solar_up / [[float(numerator.mass)] for numerator in isotopes]
         all_solar_up.append(solar_up)
         all_solar_down.append(np.ones(solar_up.shape) * solar_up[denomi])
         all_solar_norm.append(np.ones(solar_up.shape) * solar_up[numeri])
@@ -377,7 +382,7 @@ def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment
 
     return result
 
-def simple_normalisation(abu, numerators, normiso, stdabu, enrichment_factor=1, relative_enrichment=True):
+def simple_normalisation(abu, numerators, normiso, stdabu, enrichment_factor=1, relative_enrichment=True, abu_massunit=False):
     if abu.dtype.names is None:
         raise ValueError('``abu`` must be a keyarray')
     if stdabu.dtype.names is None:
@@ -406,32 +411,34 @@ def simple_normalisation(abu, numerators, normiso, stdabu, enrichment_factor=1, 
     all_solar_down = []
     all_iso_up = ()
     all_iso_down = ()
-    for numerators_, normiso_, abu_factor_ in zip(numerators, normiso, enrichment_factor):
-        numerators_ = utils.asisotopes(numerators_)
-        normiso_ = utils.asisotope(normiso_)
+    for isotopes, denominator, abu_factor in zip(numerators, normiso, enrichment_factor):
+        isotopes = utils.asisotopes(isotopes)
+        denominator = utils.asisotope(denominator)
 
-        if normiso_ not in numerators_:
-            numerators_ += (normiso_,)
+        if denominator not in isotopes:
+            isotopes += (denominator,)
 
-        denomi = numerators_.index(normiso_)
+        denomi = isotopes.index(denominator)
 
-        all_iso_up += numerators_
-        all_iso_down += tuple(normiso_ for n in numerators_)
+        all_iso_up += isotopes
+        all_iso_down += tuple(denominator for n in isotopes)
 
-        abu_up = np.array([abu[numerator] for numerator in numerators_])
+        abu_up = np.array([abu[numerator] for numerator in isotopes])
         if relative_enrichment is False:
             # Renormalise so that the sum of all numerators = 1
             # This works for both ndim = 1 & 2 as long as it is done before transpose
             abu_up = abu_up / abu_up.sum(axis=0)
 
-        abu_up = abu_up * abu_factor_
+        abu_up = abu_up * abu_factor
+        if abu_massunit:
+            abu_up = abu_up / [[float(numerator.mass)] for numerator in isotopes]
 
         all_abu_up.append(abu_up)
 
         # Same isotope for all numerators
         all_abu_down.append(np.ones(abu_up.shape) * abu_up[denomi])
 
-        solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in numerators_])
+        solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in isotopes])
         all_solar_up.append(solar_up)
         all_solar_down.append(np.ones(solar_up.shape) * solar_up[denomi])
 

@@ -55,7 +55,7 @@ def Ri18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
                                               for iso in keys])
             unit = 'mol'
         else:
-            unit = 'wt'
+            unit = 'mass'
 
         models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                    refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
@@ -102,7 +102,7 @@ def Pi16(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
                                               for iso in keys])
             unit = 'mol'
         else:
-            unit = 'wt'
+            unit = 'mass'
 
         models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                    refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
@@ -174,7 +174,7 @@ def La22(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
                                               for iso in keys])
             unit = 'mol'
         else:
-            unit = 'wt'
+            unit = 'mass'
 
         models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                    refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
@@ -217,7 +217,7 @@ def Si18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True, decayed=Fa
                                               for iso in keys])
             unit = 'mol'
         else:
-            unit = 'wt'
+            unit = 'mass'
 
         models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                    refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
@@ -260,7 +260,7 @@ def Ra02(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
                                                   for iso in keys])
                 unit = 'mol'
             else:
-                unit = 'wt'
+                unit = 'mass'
 
             masscoord = np.array([float(ii.split()[1]) / 1.989e+33 for ii in data])
 
@@ -316,7 +316,7 @@ def LC18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
                                                   for iso in keys])
                 unit = 'mol'
             else:
-                unit = 'wt'
+                unit = 'mass'
 
             models[f"{dataset}_m{emass}"] = dict(type='CCSNe', dataset=dataset, citation=citation,
                                                        refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
