@@ -13,14 +13,29 @@ logger = logging.getLogger('SIMPLE.CCSNe.plotting')
 class EndlessList:
     # Index will never go out of bounds. It will just start from the beginning if larger than the initial list.
     def __init__(self, items):
-        self.list = list(items)
+        if type(items) is list:
+            self.items = items
+        elif type(items) is self.__class__:
+            self.items = items.items
+        else:
+            self.items = [items]
 
     def __getitem__(self, index):
-        return self.list[index % len(self.list)]
+        return self.items[index % len(self.items)]
 
-colours=EndlessList(["red", "blue", "green", "orange", "black", "blueviolet", "darkgoldenrod", "mediumvioletred"])
-linestyles = EndlessList(['-', '--', ':', '-.'])
-markers = EndlessList(["o", "s", "^", "D", "P"])
+    def __len__(self):
+        return len(self.items)
+
+
+
+# colours appropriate for colour blindness
+# Taken from https://davidmathlogic.com/colorblind/#%23000000-%23E69F00-%2356B4E9-%23009E73-%23F0E442-%230072B2-%23D55E00-%23CC79A7
+all_colors=EndlessList(["#D55E00", "#56B4E9", "#009E73", "#E69F00", "#CC79A7", "#0072B2", "#F0E442"])
+all_linestyles = EndlessList(['-', (0, (4, 4)), (0, (2,1)),
+                          (0, (4,2,1,2)), (0, (4,2,1,1,1,2)), (0, (4,2,1,1,1,1,2)),
+                          (0, (2,1,2,2,1,2)), (0, (2,1,2,2,1,1,1,2)), (0, (2,1,2,2,1,1,1,1,1,2)),
+                          (0, (2,1,2,1,2,2,1,2)), (0, (2,1,2,1,2,2,1,1,1,2)), (0, (2,1,2,1,2,2,1,1,1,1,1,2))])
+all_markers = EndlessList(["o", "s", "^", "D", "P","X", "v", "<", ">",  "*", "p", "d", "H"])
 
 def get_onion_structure(model):
     """
@@ -127,7 +142,7 @@ def plot_onion_structure(model):
 # TODO change this so that the first item is axes where to plot the data
 # if its plt then use gca() on it. But then all the method calls need to be the axes
 # ones and not the plt ones. But this way it will work if you have subplots etc.
-def plot_slopes(models, ratio, axes = None, where=None, where_kwargs={}):
+def plot_slopes(models, ratio, linestyle=True, color=True, marker=False, axes = None, where=None, where_kwargs={}):
     """
     Plots the slope of two internally normalised eRi compositions.
 
@@ -138,15 +153,17 @@ def plot_slopes(models, ratio, axes = None, where=None, where_kwargs={}):
         where_kwargs ():
 
     """
+    # Work on the axes object. That way it will work for subplots to
     if axes is None:
         axes = plt.gca()
     elif isinstance(axes, Axes):
         pass
     elif hasattr(axes, 'gca'):
-        axes = axes.gca()
+        axes = axes.gca() # if axes = plt
     else:
         raise ValueError('axes must be an Axes, Axes instance or have a gca() method that return an Axes')
 
+    # select models
     if where is not None:
         models = models.where(where, **where_kwargs)
 
@@ -156,29 +173,75 @@ def plot_slopes(models, ratio, axes = None, where=None, where_kwargs={}):
 
     ratios = simple.asratios(ratio)
 
-    if len(ratios) == 1:
-        n = models[0].intnorm.label_latex[ratios[0].numer]
-        d = models[0].intnorm.label_latex[ratios[0].denom]
-        ylabel = f'Slope of {n}/{d}'
-        simple_legend = True
+    # Figure out ylabel and what should go in the legend label.
+    n = {r.numer for r in ratios}
+    d = {r.denom for r in ratios}
+    if len(n) == 1:
+        ylabel = f"Slope of {models[0].intnorm.label_latex[ratios[0].numer]}"
+        nlegend = False
     else:
-        ylabel = f'Slope of A/B'
-        simple_legend = False
+        ylabel = 'Slope of A'
+        nlegend = True
+
+    if len(d) == 1:
+        ylabel = f"{ylabel} / {models[0].intnorm.label_latex[ratios[0].denom]}"
+        dlegend = False
+    else:
+        ylabel = f'{ylabel} / B'
+        dlegend = True
+
+    if len(models) == 1:
+        mlegend = False
+        title = models[0].name
+    else:
+        mlegend = True
+        title = None
+
+    # Sorts our the linestyle, color and marker for each plot
+    if color is False:
+        colors = EndlessList("#000000")
+    elif color is True:
+        colors = all_colors
+    else:
+        colors = EndlessList(color)
+
+    if linestyle is False:
+        linestyles = EndlessList("")
+    elif linestyle is True:
+        linestyles = all_linestyles
+    else:
+        linestyles = EndlessList(linestyle)
+
+    if marker is False:
+        markers = EndlessList("")
+    elif marker is True:
+        markers = all_markers
+    else:
+        markers = EndlessList(marker)
+
+    if (len(models) == 1 or len(ratios) == 1):
+        lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(ratios)*len(models))]
+    else:
+        lscm = [(linestyles[i%len(models)], colors[i%len(ratios)], markers[i%len(ratios)])
+                for i in range(len(ratios) * len(models))]
 
     masscut = []
     for rat in ratios:
         for i, model in enumerate(models):
-            if simple_legend:
-                legend = model.name
-            else:
-                n = models[0].intnorm.label_latex[rat.numer]
-                d = models[0].intnorm.label_latex[rat.denom]
-                legend = f'{n}/{d} {model.name}'
+            legend = ""
+            if nlegend and dlegend: legend += f'{model.intnorm.label_latex[rat.numer]}/{model.intnorm.label_latex[rat.denom]}'
+            elif nlegend: legend += f"{model.intnorm.label_latex[rat.numer]}"
+            elif dlegend: legend += f" {model.intnorm.label_latex[rat.denom]}"
+            if mlegend: legend += f' {model.name}'
 
+            ls, c, m = lscm.pop(0)
             axes.plot(model.masscoord, model.intnorm.eRi[rat.numer] / model.intnorm.eRi[rat.denom],
-                     color=colours[i], markersize=4, ls='-', label=legend)  # label=label_for_legend+ ' '+label_models[i]
+                     color=c, markersize=4, ls=ls, marker = m, markerfacecolor = c, label=legend.strip())
             masscut.append(np.min(model.masscoord))
 
+    # If there is only one model it is set as the title to make the legend shorter
+    if title is not None:
+        axes.set_title(title)
     axes.set_ylabel(ylabel, fontsize=15)
     axes.set_xlabel('Mass coordinate M$_{\odot}$', fontsize=15)
 
