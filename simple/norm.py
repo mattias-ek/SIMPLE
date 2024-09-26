@@ -211,7 +211,7 @@ def intnorm_precision(abu_up, abu_down, abu_norm,
 
 
 def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment_factor=1, relative_enrichment=True,
-                           abu_massunit=False, stdabu_massunit=False,
+                           abu_massunit=False, stdabu_massunit=False, convert_massunit=True,
                            method='largest_offset', **method_kwargs):
     """
 
@@ -323,7 +323,7 @@ def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment
             abu_up = abu_up / abu_up.sum(axis=0)
 
         abu_up = abu_up * abu_factor
-        if abu_massunit:
+        if abu_massunit and convert_massunit:
             abu_up = abu_up / [[float(numerator.mass)] for numerator in isotopes]
 
         all_abu_up.append(abu_up)
@@ -339,7 +339,7 @@ def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment
         all_mass_norm.append(np.ones(mass_up.shape) * mass_up[numeri])
 
         solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in isotopes])
-        if stdabu_massunit:
+        if stdabu_massunit and convert_massunit:
             solar_up = solar_up / [[float(numerator.mass)] for numerator in isotopes]
         all_solar_up.append(solar_up)
         all_solar_down.append(np.ones(solar_up.shape) * solar_up[denomi])
@@ -382,7 +382,8 @@ def internal_normalisation(abu, numerators, normrat, stdmass, stdabu, enrichment
 
     return result
 
-def simple_normalisation(abu, numerators, normiso, stdabu, enrichment_factor=1, relative_enrichment=True, abu_massunit=False):
+def simple_normalisation(abu, numerators, normiso, stdabu, enrichment_factor=1, relative_enrichment=True,
+                         abu_massunit=False, stdabu_massunit=False, convert_massunit=True):
     if abu.dtype.names is None:
         raise ValueError('``abu`` must be a keyarray')
     if stdabu.dtype.names is None:
@@ -430,7 +431,7 @@ def simple_normalisation(abu, numerators, normiso, stdabu, enrichment_factor=1, 
             abu_up = abu_up / abu_up.sum(axis=0)
 
         abu_up = abu_up * abu_factor
-        if abu_massunit:
+        if abu_massunit and convert_massunit:
             abu_up = abu_up / [[float(numerator.mass)] for numerator in isotopes]
 
         all_abu_up.append(abu_up)
@@ -439,6 +440,8 @@ def simple_normalisation(abu, numerators, normiso, stdabu, enrichment_factor=1, 
         all_abu_down.append(np.ones(abu_up.shape) * abu_up[denomi])
 
         solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in isotopes])
+        if stdabu_massunit and convert_massunit:
+            solar_up = solar_up / [[float(numerator.mass)] for numerator in isotopes]
         all_solar_up.append(solar_up)
         all_solar_down.append(np.ones(solar_up.shape) * solar_up[denomi])
 

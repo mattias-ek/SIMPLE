@@ -36,7 +36,7 @@ class ArrayAttrs(Attrs):
         value = utils.asarray(value)
         super().__setitem__(name, value)
 
-def load_models(filename, dbfilename, default_isolist=None, where=None, overwrite=False, **where_kwargs):
+def load_models(filename, dbfilename, default_isolist=None, where=None, overwrite=False, convert_massunit=True, **where_kwargs):
     """
     Loads a selection of models from a file.
 
@@ -59,7 +59,7 @@ def load_models(filename, dbfilename, default_isolist=None, where=None, overwrit
     elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5') and not overwrite:
         mc.load_file(f'{filename}.hdf5', where=where, **where_kwargs)
     elif os.path.exists(dbfilename):
-        mc.load_file(dbfilename, isolist=default_isolist, where=where, **where_kwargs)
+        mc.load_file(dbfilename, isolist=default_isolist, convert_massunit=True, where=where, **where_kwargs)
         mc.save(filename)
     else:
         raise ValueError(f'Neither "{filename}" or "{dbfilename}" exist')
@@ -149,7 +149,7 @@ References in collection:
                 # columns in CCSNe data
                 group.create_dataset(name, data = v, compression = 'gzip', compression_opts = 9)
 
-    def load_file(self, filename, isolist=None, where=None, **where_kwargs):
+    def load_file(self, filename, isolist=None, convert_massunit=True, where=None, **where_kwargs):
         """
         Add models from file to the current collection.
 
@@ -168,13 +168,13 @@ References in collection:
         t0 = datetime.datetime.now()
         with h5py.File(filename, 'r') as efile:
             for name, group in efile['models'].items():
-                model = self._load_model(efile, group, name, isolist, where, where_kwargs)
+                model = self._load_model(efile, group, name, isolist, convert_massunit, where, where_kwargs)
                 #self.models[name] = model
 
         t = datetime.datetime.now() - t0
         logger.info(f'Time to load file: {t}')
 
-    def _load_model(self, file, group, model_name, isolist, where, where_kwargs):
+    def _load_model(self, file, group, model_name, isolist, convert_massunit, where, where_kwargs):
         attrs = {}
         if where is not None:
             eval = utils.model_eval.parse_where(where)
@@ -194,7 +194,7 @@ References in collection:
 
             model = Model(self, model_name, **attrs)
             if isolist is not None:
-                model.select_isolist(isolist)
+                model.select_isolist(isolist, convert_massunit=convert_massunit)
 
             for attr in attrs:
                 if attr[:6] == 'refid_':
@@ -214,7 +214,7 @@ References in collection:
         except KeyError:
             raise ValueError(f"Reference '{refname}' does not exist")
         else:
-            self.refs[refname] = self._load_model(file, group, refname, None, None, None)
+            self.refs[refname] = self._load_model(file, group, refname, None, True, None, None)
 
 
     ##############
@@ -480,7 +480,7 @@ class CCSNe(Model):
         self.add_attr('abundance', utils.askeyarray(abu, keys), save=False, overwrite=True)
 
     def internal_normalisation(self, normrat, enrichment_factor=1, relative_enrichment=True,
-                               attrname='intnorm',
+                               attrname='intnorm', convert_massunit=True,
                                method='largest_offset', **method_kwargs):
         normrat = utils.asratios(normrat)
 
@@ -495,11 +495,17 @@ class CCSNe(Model):
             isotopes = utils.get_isotopes_of_element(self.abundance_keys, nr.denom.element, nr.denom.suffix)
             numerators.append(isotopes)
 
+        abu = self.abundance
+        abu_massunit = True if self.abundance_unit == 'mass' else False
+
         stdmass = self.get_ref(self.refid_isomass, 'data')
         stdabu = self.get_ref(self.refid_isoabu, 'data')
+        stdabu_massunit = True if self.get_ref(self.refid_isoabu, 'data_unit') == "mass" else False
 
-        result = norm.internal_normalisation(self.abundance, numerators, normrat, stdmass, stdabu,
+        result = norm.internal_normalisation(abu, numerators, normrat, stdmass, stdabu,
                                              enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
+                                             abu_massunit=abu_massunit, stdabu_massunit=stdabu_massunit,
+                                             convert_massunit=convert_massunit,
                                              method=method, **method_kwargs)
 
         for k, v in result.items():
@@ -508,7 +514,8 @@ class CCSNe(Model):
         self.add_attr(attrname, Attrs(result), save=False, overwrite=True)
         return result
 
-    def simple_normalisation(self, normiso, enrichment_factor = 1, relative_enrichment=True, attrname='simplenorm',):
+    def simple_normalisation(self, normiso, enrichment_factor = 1, relative_enrichment=True,
+                             attrname='simplenorm',convert_massunit=True, ):
         normiso = utils.asisotopes(normiso)
 
         numerators = []
@@ -516,15 +523,16 @@ class CCSNe(Model):
             isotopes = utils.get_isotopes_of_element(self.abundance_keys, denom.element, denom.suffix)
             numerators.append(isotopes)
 
-        stdabu = self.get_ref(self.refid_isoabu, 'data')
-        stdabu_massunit = True if self.get_ref(self.refid_isoabu, 'data_unit') == "mass" else False
-
         abu = self.abundance
         abu_massunit = True if self.abundance_unit == 'mass' else False
 
+        stdabu = self.get_ref(self.refid_isoabu, 'data')
+        stdabu_massunit = True if self.get_ref(self.refid_isoabu, 'data_unit') == "mass" else False
+
         result = norm.simple_normalisation(abu, numerators, normiso, stdabu,
                                            enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
-                                           abu_massunit=abu_massunit, stdabu_massunit=stdabu_massunit)
+                                           abu_massunit=abu_massunit, stdabu_massunit=stdabu_massunit,
+                                           convert_massunit=convert_massunit)
 
         for k, v in result.items():
             if isinstance(v, np.ndarray) and v.ndim == 2 and v.shape[1] == 1:

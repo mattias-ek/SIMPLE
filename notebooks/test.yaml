@@ -3,7 +3,7 @@ load_models:
     filename: test.hdf5
 
     # The name of the raw file
-    dbfilename: ../data/SIMPLE_CCSNeV1.hdf5
+    dbfilename: ../data/SIMPLE_CCSNeV1_mass.hdf5
 
     default_isolist:
         # The name of the isotope followed by a list of the isotopes to be summed up to give its value.

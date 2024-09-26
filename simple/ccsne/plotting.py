@@ -220,9 +220,11 @@ def plot_slopes(models, ratio, linestyle=True, color=True, marker=False, axes = 
         markers = EndlessList(marker)
 
     if (len(models) == 1 or len(ratios) == 1):
+        #Everything get a different colour and linestyle
         lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(ratios)*len(models))]
     else:
-        lscm = [(linestyles[i%len(models)], colors[i%len(ratios)], markers[i%len(ratios)])
+        # Each model has the same linesyle and each ratio a different color
+        lscm = [(linestyles[i//len(models)], colors[i%len(ratios)], markers[i%len(ratios)])
                 for i in range(len(ratios) * len(models))]
 
     masscut = []
