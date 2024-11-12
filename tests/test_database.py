@@ -2,21 +2,31 @@ import pytest
 import os
 import numpy as np
 from numpy.testing import assert_equal
-from simple import database, utils
+from simple import models, utils
+
+@pytest.fixture
+def collection():
+    return models.ModelCollection()
+
+@pytest.fixture
+def test_model_cls():
+    class TestModel(models.ModelTemplate):
+        pass
+
+    return TestModel
 
 class TestModel:
-    def test_attrs(self):
-        models = database.ModelCollection()
-
-        model = models.new_model('Test', 'Model')
-        assert model.name == 'Model'
-        assert type(model) is database.Test
+    def test_attrs(self, collection, test_model_cls):
+        print(models.AllModelClasses)
+        model = collection.new_model('TestModel', 'test')
+        assert model.name == 'test'
+        assert type(model) is test_model_cls
 
         with pytest.raises(AttributeError):
             model.mass = 1
 
-        model.add_attr('mass', 1, save=True)
-        assert 'mass' in model.saved_attrs
+        model.setattr('mass', 1, hdf5_compatible=True)
+        assert 'mass' in model.hdf5_attrs
         assert isinstance(model.mass, np.ndarray)
         assert model.mass.shape == ()
         assert model.mass.dtype == np.int64
@@ -27,9 +37,9 @@ class TestModel:
             model.mass = 1
 
         with pytest.raises(AttributeError):
-            model.add_attr('mass', 1.5, save=True)
+            model.setattr('mass', 1.5, hdf5_compatible=True)
 
-        model.add_attr('mass', 1.5, save=True, overwrite=True)
+        model.setattr('mass', 1.5, hdf5_compatible=True, overwrite=True)
         assert isinstance(model.mass, np.ndarray)
         assert model.mass.shape == ()
         assert model.mass.dtype == np.float64
@@ -37,28 +47,28 @@ class TestModel:
         assert model['mass'] is model.mass
 
         with pytest.raises(AttributeError):
-            model.add_attr('mass', 2)
+            model.setattr('mass', 2)
 
         with pytest.raises(AttributeError):
             model.mass = 2
 
-        model.add_attr('mass', 2, overwrite=True)
+        model.setattr('mass', 2, overwrite=True)
         assert type(model.mass) is int
         assert model.mass == 2
         assert model['mass'] is model.mass
 
         with pytest.raises(AttributeError):
-            model.add_attr('mass', 2.5)
+            model.setattr('mass', 2.5)
 
-        model.add_attr('mass', 2.5, overwrite=True)
+        model.setattr('mass', 2.5, overwrite=True)
         assert type(model.mass) is float
         assert model.mass == 2.5
         assert model['mass'] is model.mass
 
         with pytest.raises(AttributeError):
-            model.add_attr('mass', 3, save=True)
+            model.setattr('mass', 3, hdf5_compatible=True)
 
-        model.add_attr('mass', 3, save=True, overwrite=True)
+        model.setattr('mass', 3, hdf5_compatible=True, overwrite=True)
         assert isinstance(model.mass, np.ndarray)
         assert model.mass.shape == ()
         assert model.mass.dtype == np.int64
@@ -68,12 +78,12 @@ class TestModel:
         ###########
         # Strings #
         ###########
-        model.add_attr('citation', 'Me')
+        model.setattr('citation', 'Me')
         assert isinstance(model.citation, str)
         assert model.citation == 'Me'
         assert model['citation'] is model.citation
 
-        model.add_attr('citation', 'Irene', save=True, overwrite=True)
+        model.setattr('citation', 'Irene', hdf5_compatible=True, overwrite=True)
         assert isinstance(model.citation, str)
         assert model.citation == 'Irene'
         assert model['citation'] is model.citation
@@ -87,39 +97,37 @@ class TestModel:
                            [23, 43, 53],
                            [24, 44, 54]])
         a = utils.askeyarray(values, keys)
-        model.add_attr('data', a, save=True)
+        model.setattr('data', a, hdf5_compatible=True)
         assert model.data is a
         assert model['data'] is model.data
         assert isinstance(model.data, np.ndarray)
         assert model.data.dtype.names == keys
         assert_equal(model.data, a)
 
-    def test_names(self):
-        models = database.ModelCollection()
-
-        model = models.new_model('Test', 'Model')
-        assert model.name == 'Model'
-        assert type(model) is database.Test
+    def test_names(self, collection, test_model_cls):
+        model = collection.new_model('TestModel', 'ModelTemplate')
+        assert model.name == 'ModelTemplate'
+        assert type(model) is test_model_cls
 
         with pytest.raises(AttributeError):
-            model.name = 'Another Model'
+            model.name = 'Another ModelTemplate'
 
-        model.change_name('Yet Another Model')
-        assert model.name == 'Yet Another Model'
+        model.change_name('Yet Another ModelTemplate')
+        assert model.name == 'Yet Another ModelTemplate'
 
     def test_copy(self):
         pass
 
-    def test_save_load1(self):
+    def test_save_load1(self, test_model_cls):
         filename = 'tests/savetest.hdf5'
         if os.path.exists(filename):
             os.remove(filename)
 
-        saving = database.ModelCollection()
+        saving = models.ModelCollection()
 
-        saved_model = saving.new_model('Test', 'Model')
-        assert saved_model.name == 'Model'
-        assert type(saved_model) is database.Test
+        saved_model = saving.new_model('TestModel', 'ModelTemplate')
+        assert saved_model.name == 'ModelTemplate'
+        assert type(saved_model) is test_model_cls
 
         mass = 1
         citation = 'Me'
@@ -133,18 +141,18 @@ class TestModel:
                            [24, 44, 54]])
         data = utils.askeyarray(values, keys)
 
-        saved_model.add_attr('mass', mass, save=True)
-        saved_model.add_attr('citation', citation, save=True)
-        saved_model.add_attr('abc', abc, save=True)
-        saved_model.add_attr('note', note, save=False)
-        saved_model.add_attr('data', data, save=True)
+        saved_model.setattr('mass', mass, hdf5_compatible=True)
+        saved_model.setattr('citation', citation, hdf5_compatible=True)
+        saved_model.setattr('abc', abc, hdf5_compatible=True)
+        saved_model.setattr('note', note, hdf5_compatible=False)
+        saved_model.setattr('data', data, hdf5_compatible=True)
 
         saving.save(filename)
 
-        loaded = database.ModelCollection()
+        loaded = models.ModelCollection()
         loaded.load_file(filename=filename)
 
-        loaded_model = loaded['Model']
+        loaded_model = loaded['ModelTemplate']
 
         assert loaded_model.mass == mass
         assert isinstance(loaded_model.mass, np.ndarray)
@@ -165,13 +173,14 @@ class TestModel:
         assert_equal(loaded_model.data, data)
 
 
-    def test_ref(self):
+    def test_ref(self, collection, test_model_cls):
         keys = utils.asisotopes('101Ru,102Ru,104Ru,103Rh,102Pd,104Pd,105Pd,106Pd,108Pd,110Pd,107Ag,109Ag')
         stdabu = np.array([0.304, 0.562, 0.332, 0.37, 0.0139, 0.1513, 0.3032, 0.371, 0.359, 0.159, 0.254, 0.236])
 
-        collection = database.ModelCollection()
-        ref_abu = collection.new_model('IsoRef', 'abu', type='ABU', citation='', data_values=stdabu, data_keys=keys)
-        model = collection.new_model('Test', 'testing',
+        ref_abu = collection.new_model('IsoRef', 'abu',
+                                       type='ABU', citation='',
+                                       data_values=stdabu, data_keys=keys, data_unit='mass')
+        model = collection.new_model('TestModel', 'testing',
                                      refid_isoabu='abu',
                                      )
         assert 'abu' in collection.refs

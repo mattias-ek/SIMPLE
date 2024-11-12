@@ -8,7 +8,12 @@ plugins:
         python:
           options:
             show_source: true
-            show_root_heading: false
+            show_root_heading: true
+            merge_init_into_class: true
+            show_symbol_type_toc: true
+            show_symbol_type_heading: true
+            #separate_signature: true
+            members_order: source
 
 theme:
   name: material
@@ -19,10 +24,14 @@ nav:
     - Examples:
         - Create CCSNe database: examples/create_simple_db.ipynb
         - CCSNE Exmple: examples/simple_mattias_version.ipynb
+        - Rose Diagrams: example/rose_diagram.ipynb
     - API:
       - simple: api/simple.md
-      - simple.ccsne: api/ccsne.md
+      - simple.plot: api/plot.md
       - simple.norm: api/norm.md
+      - simple.models: api/models.md
+      - simple.utils: api/utils.md
+      - simple.ccsne: api/ccsne.md
     - About:
           - License: license.md
 

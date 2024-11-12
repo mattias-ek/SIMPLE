@@ -1,5 +1,15 @@
-# Normalising data
+# simple.norm
 
-This module contains functions to normalise data in different ways.
+The ``simple.norm`` module contains functions to normalise data in different ways.
 
-::: simple.norm
+## Internal normalisation
+
+::: simple.norm.internal_normalisation
+
+::: simple.norm.intnorm_largest_offset
+
+::: simple.norm.intnorm_linear
+
+## Simple normalisation
+
+::: simple.norm.simple_normalisation

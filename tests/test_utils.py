@@ -173,15 +173,8 @@ def test_asratio():
         utils.asratio('invalid/Pd-105*')
 
     rat = utils.asratio('invalid/Pd-105*', allow_invalid=True)
-    assert type(rat) is utils.Ratio
-    assert isinstance(rat, str)
+    assert type(rat) is str
     assert rat == 'invalid/Pd-105*'
-
-    assert type(rat.numer) is str
-    assert rat.numer == 'invalid'
-
-    assert type(rat.denom) is utils.Isotope
-    assert rat.denom == 'Pd-105*'
 
     ##########
     # Errors #
@@ -200,12 +193,6 @@ def test_asratio():
 
     rat = utils.asratio('108pd**/105pd*')
     assert rat.latex(dollar=False) == fr'{rat.numer.latex(dollar=False)}/{rat.denom.latex(dollar=False)}'
-
-    rat = utils.asratio('invalid/105pd*', allow_invalid=True)
-    assert rat.latex() == fr'invalid/{rat.denom.latex()}'
-
-    rat = utils.asratio('invalid/thistoo', allow_invalid=True)
-    assert rat.latex() == fr'invalid/thistoo'
 
 def test_asisolist():
     string = '102pd*'
@@ -370,6 +357,49 @@ def test_asisolist():
         assert type(isolist[key]) is tuple
         assert len(isolist[key]) == len(keys)
         assert isolist[key] == tuple(keys)
+
+def test_select_isolist():
+    keys = utils.asisotopes('invalid, ar40, fe56*, zn70, pd105*, pt196', allow_invalid=True)
+    values = np.array([[-100, 40, 56, 70, 105, 196],
+                       [-100 * 2, 40 * 2, 56 * 2, 70 * 2, 105 * 2, 196 * 2]])
+    array = utils.askeyarray(values, keys)
+
+    isolist = {'ar40': 'ar40, zn70, ar40',
+               'fe56*': 'fe56, zn70, pt196',
+               'pd105': 'fe56*, pd105*, pt196*'}
+
+    # array
+    if True:
+        correct_keys = utils.asisotopes(['ar40', 'fe56*', 'pd105'])
+        correct_values = np.array([[150, 266, 161], [150 * 2, 266 * 2, 161 * 2]])
+        correct_array = utils.askeyarray(correct_values, correct_keys)
+
+        result = utils.select_isolist(isolist, array)
+        assert isinstance(result, np.ndarray)
+        assert result.dtype.names == correct_keys
+        np.testing.assert_array_equal(result, correct_array)
+
+    # array - massunit = True
+    if True:
+        correct_keys = utils.asisotopes(['ar40', 'fe56*', 'pd105'])
+        correct_values = np.array([[3 * 40, 2 * 56, 2 * 105], [3 * 40 * 2, 2 * 56 * 2, 2 * 105 * 2]])
+        correct_array = utils.askeyarray(correct_values, correct_keys)
+
+        result = utils.select_isolist(isolist, array, massunit=True)
+        assert isinstance(result, np.ndarray)
+        assert result.dtype.names == correct_keys
+        np.testing.assert_array_equal(result, correct_array)
+
+    # array - without_suffix=True
+    if True:
+        correct_keys = utils.asisotopes(['ar40', 'fe56', 'pd105'])
+        correct_values = np.array([[150, 266, 196], [150 * 2, 266 * 2, 196 * 2]])
+        correct_array = utils.askeyarray(correct_values, correct_keys)
+
+        result = utils.select_isolist(isolist, array, without_suffix=True)
+        assert isinstance(result, np.ndarray)
+        assert result.dtype.names == correct_keys
+        np.testing.assert_array_equal(result, correct_array)
 
 def test_askeyarray():
     keys = utils.asisotopes('Pd-102, Pd-104, Pd-105*')
@@ -604,49 +634,6 @@ def test_model_eval():
     for attrs in [oattrs, dattrs]:
         with pytest.raises(ValueError):
             eval.eval_where(attrs, '.a = A')
-
-def test_select_isolist():
-    keys = utils.asisotopes('Pd-102, Pd-104, Pd-105*')
-    values = [[21, 41, 51],
-              [22, 42, 52],
-              [23, 43, 53],
-              [24, 44, 54]]
-    a = utils.askeyarray(values, keys)
-
-    isolist = ('Pd-104', 'Pd-105', 'Pd-102')
-    b = utils.select_isolist('104pd, 105pd, 102pd', a)
-    assert isinstance(b, np.ndarray)
-    assert b.dtype.names == isolist
-    assert b.shape == (4,)
-    assert_equal(b['Pd-104'], a['Pd-104'])
-    assert_equal(b['Pd-105'], np.zeros(4))
-    assert_equal(b['Pd-102'], a['Pd-102'])
-
-    b = utils.select_isolist(isolist, a)
-    assert isinstance(b, np.ndarray)
-    assert b.dtype.names == isolist
-    assert b.shape == (4,)
-    assert_equal(b['Pd-104'], a['Pd-104'])
-    assert_equal(b['Pd-105'], np.zeros(4))
-    assert_equal(b['Pd-102'], a['Pd-102'])
-
-    isolist = {'Pd-104': '104pd',
-               'Pd-105': ['105pd*', 'pd105'],
-               'Pd-102': '102pd, 104pd',
-               'Pd-106*': [],
-               'Pd-108': '',
-               'Pd-110*': '102pd, 104pd, 105pd, 105pd*, 106pd',}
-    b = utils.select_isolist(isolist, a)
-    assert isinstance(b, np.ndarray)
-    assert b.dtype.names == tuple(isolist.keys())
-    assert b.shape == (4,)
-    assert_equal(b['Pd-104'], a['Pd-104'])
-    assert_equal(b['Pd-105'], a['Pd-105*'])
-    assert_equal(b['Pd-102'], a['Pd-102']+a['Pd-104'])
-    assert_equal(b['Pd-106*'], np.zeros(4))
-    assert_equal(b['Pd-108'], np.zeros(4))
-    assert_equal(b['Pd-110*'], a['Pd-102'] + a['Pd-104']+ a['Pd-105*'])
-
 
 
 

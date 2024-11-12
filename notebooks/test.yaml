@@ -59,7 +59,7 @@ load_models:
         Zn-70*: Zn-70,Ga-70,Ge-70,As-70,Se-70,Br-70,Cu-70,Ni-70,Co-70,Fe-70,Mn-70,Cr-70
 
     # Use python style evaluators and & to chain multiple statements together
-    # To check an model attribute prefix it with a "."
+    # To check an model1 attribute prefix it with a "."
     #where: .mass == 25
 
 
@@ -83,7 +83,7 @@ simple_normalisation:
     relative_enrichment: true
 
 plot_slopes_example:
-    ratio: 'Ni-58*/Ni-62*, Ni-60*/Ni-62*, Ni-61*/Ni-62*, Ni-62*/Ni-62*, Ni-64*/Ni-62*'
+    isotopes_or_ratios: 'Ni-58*/Ni-62*, Ni-60*/Ni-62*, Ni-61*/Ni-62*, Ni-62*/Ni-62*, Ni-64*/Ni-62*'
     where: '.mass==25 & .dataset == Ri18'
 
 old_norm:
