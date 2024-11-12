@@ -32,8 +32,8 @@ nav:
       - simple.models: api/models.md
       - simple.utils: api/utils.md
       - simple.ccsne: api/ccsne.md
-    - About:
-          - License: license.md
+    - About: about.md
+    - License: license.md
 
 markdown_extensions:
   - pymdownx.arithmatex:
