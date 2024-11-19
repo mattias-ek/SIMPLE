@@ -7,6 +7,8 @@ import logging
 
 logger = logging.getLogger('SIMPLE.CCSNe.models')
 
+__all__ = ['CCSNe',
+           'load_LC18', 'load_Ra02', 'load_La22', 'load_Pi16', 'load_Ri18', 'load_Si18']
 ###################
 ### Load models ###
 ###################
@@ -34,7 +36,7 @@ class CCSNe(models.ModelTemplate):
     REQUIRED_ATTRS = ['type', 'dataset', 'citation', 'mass', 'masscoord',
                       'abundance_values', 'abundance_keys', 'abundance_unit',
                       'refid_isoabu', 'refid_isomass']
-    REPR_ATTRS = ['name', 'type', 'dataset', 'mass']
+    REPR_ATTRS = ['prefixes', 'type', 'dataset', 'mass']
     NORM_ABU_KEYARRAY = 'abundance'
 
 z_names = ['Neut', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al',
@@ -279,12 +281,12 @@ def load_Ra02(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
         with open(filename, 'r') as f:
             head = f.readline();
             isos_dum = head.split()[5:]  # getting isotopes, not first header names
-            dum_a = [re.findall('\d+', ik)[0] for ik in isos_dum]  # getting the A from isotope name
-            dum_el = [re.sub(r'[0-9]+', '', ik) for ik in isos_dum]  # getting the element name from the isotope name
+            dum_a = [re.findall('\d+', ik)[0] for ik in isos_dum]  # getting the A from isotope prefixes
+            dum_el = [re.sub(r'[0-9]+', '', ik) for ik in isos_dum]  # getting the element prefixes from the isotope prefixes
             dum_new_iso = [dum_el[ik].capitalize() + '-' + dum_a[ik] for ik in range(len(isos_dum))]
 
 
-            # isotope name that we can use around, just neutron name is different, but not care
+            # isotope prefixes that we can use around, just neutron prefixes is different, but not care
             keys = utils.asisotopes(dum_new_iso, allow_invalid=True)
 
             data = f.readlines()[:-2]  # getting the all item, excepting the last two lines
@@ -332,15 +334,15 @@ def load_LC18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
             isos_dum[0] = isos_dum[0] + '1';
             isos_dum[1] = isos_dum[1] + '1';
             isos_dum[6] = isos_dum[6] + '1'
-            dum_a = [re.findall('\d+', ik)[0] for ik in isos_dum]  # getting the A from isotope name
-            dum_el = [re.sub(r'[0-9]+', '', ik) for ik in isos_dum]  # getting the element name from the isotope name
+            dum_a = [re.findall('\d+', ik)[0] for ik in isos_dum]  # getting the A from isotope prefixes
+            dum_el = [re.sub(r'[0-9]+', '', ik) for ik in isos_dum]  # getting the element prefixes from the isotope prefixes
             dum_new_iso = [dum_el[ik].capitalize() + '-' + dum_a[ik] for ik in range(len(isos_dum))]
 
             data = f.readlines()[:-1]  # getting the all item, excepting the last fake line (bounch of zeros)
 
             masscoord = np.array([float(ii.split()[0]) for ii in data])
 
-            # isotope name that we can use around, just neutron name is different, but not care
+            # isotope prefixes that we can use around, just neutron prefixes is different, but not care
             keys = utils.asisotopes(dum_new_iso, allow_invalid=True)
 
             # done reading, just closing the file now

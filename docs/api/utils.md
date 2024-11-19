@@ -2,6 +2,10 @@
 
 Additional functions and classes available in the ``simpe.utils`` module.
 
+::: simple.utils.UNITS
+
+:::simple.utils.EndlessList
+
 ::: simple.utils.Isotope
 
 ::: simple.utils.Ratio
@@ -9,10 +13,6 @@ Additional functions and classes available in the ``simpe.utils`` module.
 ::: simple.utils.select_isolist
 
 ::: simple.utils.get_isotopes_of_element
-
-::: simple.utils.MASS_UNITS
-
-::: simple.utils.MOLE_UNITS
 
 ::: simple.utils.NamedDict
 

@@ -205,7 +205,7 @@ def intnorm_precision(abu_up, abu_down, abu_norm,
 
 
 def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_factor=1, relative_enrichment=True,
-                           abu_massunit=False, stdabu_massunit=False, convert_unit=True,
+                           abu_unit=None, stdabu_unit=None, convert_unit=True,
                            method='largest_offset', **method_kwargs):
     """
     Normalise the abundances of ``abu`` relative to the isotopes_or_ratios ``normrat`` using the internal normalisation procedure
@@ -226,10 +226,10 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         relative_enrichment (): If ''True'' the abundances of all ``isotopes`` are simply multiplied by
             ``enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1
             before **then** multiplied by ``enrichment_factor``.
-        abu_massunit (bool): If ``True`` all abundances will be divided by the isotopes mass number if ``convert_unit``
-            is ``True``.
-        stdabu_massunit: If ``True`` all reference abundances will be divided by the isotopes mass number if ``convert_unit``
-            is ``True``.
+        abu_unit (str): The unit of ``abu````. If these are not in moles and ``convert_unit`` is ``True``, they will
+            be converted to moles. An exception is raised if the values cannot be converted.
+        stdabu_unit (str): The unit of ``stdabu````. If these are not in moles and ``convert_unit`` is ``True``, they will
+            be converted to moles. An exception is raised if the values cannot be converted.
         convert_unit (bool): Whether to convert abundances from mass fractions to molar fractions.
         method (string): The method used. See options in section below.
         **method_kwargs (): Additional arguments for the chosen ``method``.
@@ -272,6 +272,13 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         raise ValueError('``stdmass`` must be a keyarray')
     if stdabu.dtype.names is None:
         raise ValueError('``stdabu`` must be a keyarray')
+
+    if abu_unit is None:
+        logger.warning('No unit given for abu abundances. Assuming they are in moles')
+        abu_unit = 'mol'
+    if stdabu_unit is None:
+        logger.warning('No unit given for stdabu abundances. Assuming they are in moles')
+        stdabu_unit = 'mol'
 
     if method.lower() == 'largest_offset':
         methodfunc = intnorm_largest_offset
@@ -337,8 +344,12 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         all_iso_norm += tuple(rat.numer for n in numerators)
 
         abu_up = np.array([abu[numerator] for numerator in numerators])
-        if abu_massunit and convert_unit:
-            abu_up = abu_up / [[float(numerator.mass)] for numerator in numerators]
+        if convert_unit and abu_unit.lower() not in utils.UNITS['mole']:
+            if abu_unit.lower() in utils.UNITS['mass']:
+                logger.info('Converting model abundances from mass to moles by dividing by the mass number.')
+                abu_up = abu_up / [[float(numerator.mass)] for numerator in numerators]
+            else:
+                raise ValueError(f'Unable to convert abundances from {abu_unit} to moles.')
 
         if relative_enrichment is False:
             # Renormalise so that the sum of all isotopes = 1
@@ -359,8 +370,13 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         all_mass_norm.append(np.ones(mass_up.shape) * mass_up[numeri])
 
         solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in numerators])
-        if stdabu_massunit and convert_unit:
-            solar_up = solar_up / [[float(numerator.mass)] for numerator in numerators]
+        if convert_unit and stdabu_unit.lower() not in utils.UNITS['mole']:
+            if stdabu_unit.lower() in utils.UNITS['mass']:
+                logger.info('Converting standard abundances from mass to moles by dividing by the mass number.')
+                solar_up = solar_up / [[float(numerator.mass)] for numerator in numerators]
+            else:
+                raise ValueError(f'Unable to convert abundances from {stdabu_unit} to moles.')
+
         all_solar_up.append(solar_up)
         all_solar_down.append(np.ones(solar_up.shape) * solar_up[denomi])
         all_solar_norm.append(np.ones(solar_up.shape) * solar_up[numeri])
@@ -404,7 +420,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
     return utils.NamedDict(result)
 
 def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, relative_enrichment=True,
-                         abu_massunit=False, stdabu_massunit=False, convert_unit=True):
+                         abu_unit=False, stdabu_unit=False, convert_unit=True):
     """
     Normalise the abundances of ``abu`` relative to a specified isotope ``normiso`` as commonly done for
     stardust data.
@@ -430,10 +446,10 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
         relative_enrichment (): If ''True'' the abundances of all ``isotopes`` are simply multiplied by
             ``enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1
             before **then** multiplied by ``enrichment_factor``.
-        abu_massunit (bool): If ``True`` all abundances will be divided by the isotopes mass number if ``convert_unit``
-            is ``True``.
-        stdabu_massunit: If ``True`` all reference abundances will be divided by the isotopes mass number if
-        ``convert_unit`` is ``True``.
+        abu_unit (str): The unit of ``abu````. If these are not in moles and ``convert_unit`` is ``True``, they will
+            be converted to moles. An exception is raised if the values cannot be converted.
+        stdabu_unit (str): The unit of ``stdabu````. If these are not in moles and ``convert_unit`` is ``True``, they will
+            be converted to moles. An exception is raised if the values cannot be converted.
         convert_unit (bool): Whether to convert abundances from mass fractions to molar fractions.
 
 
@@ -460,6 +476,13 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
         raise ValueError('``abu`` must be a keyarray')
     if stdabu.dtype.names is None:
         raise ValueError('``stdabu`` must be a keyarray')
+
+    if abu_unit is None:
+        logger.warning('No unit given for abu abundances. Assuming they are in moles')
+        abu_unit = 'mole'
+    if stdabu_unit is None:
+        logger.warning('No unit given for stdabu abundances. Assuming they are in moles')
+        stdabu_unit = 'mole'
 
     if isinstance(normiso, (list, tuple)):
         if isotopes is None:
@@ -498,8 +521,12 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
         all_iso_down += tuple(denominator for n in numerators)
 
         abu_up = np.array([abu[numerator] for numerator in numerators])
-        if abu_massunit and convert_unit:
-            abu_up = abu_up / [[float(numerator.mass)] for numerator in numerators]
+        if convert_unit and abu_unit.lower() not in utils.UNITS['mole']:
+            if abu_unit.lower() in utils.UNITS['mass']:
+                logger.info('Converting model abundances from mass to moles by dividing by the mass number.')
+                abu_up = abu_up / [[float(numerator.mass)] for numerator in numerators]
+            else:
+                raise ValueError(f'Unable to convert abundances from {abu_unit} to moles.')
 
         if relative_enrichment is False:
             # Renormalise so that the sum of all isotopes = 1
@@ -514,8 +541,12 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
         all_abu_down.append(np.ones(abu_up.shape) * abu_up[denomi])
 
         solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in numerators])
-        if stdabu_massunit and convert_unit:
-            solar_up = solar_up / [[float(numerator.mass)] for numerator in numerators]
+        if convert_unit and stdabu_unit.lower() not in utils.UNITS['mole']:
+            if stdabu_unit.lower() in utils.UNITS['mass']:
+                logger.info('Converting standard abundances from mass to moles by dividing by the mass number.')
+                solar_up = solar_up / [[float(numerator.mass)] for numerator in numerators]
+            else:
+                raise ValueError(f'Unable to convert abundances from {stdabu_unit} to moles.')
         all_solar_up.append(solar_up)
         all_solar_down.append(np.ones(solar_up.shape) * solar_up[denomi])
 

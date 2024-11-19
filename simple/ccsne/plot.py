@@ -1,27 +1,58 @@
-import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.ticker import AutoMinorLocator
 import numpy as np
 import logging
 
-import simple
-from simple import models
-from simple.plot import get_axes, get_models, get_lscm
+import simple.plot
+from simple import models, utils, plot
 import simple.ccsne.utils as ccsneutils
-
 
 logger = logging.getLogger('SIMPLE.CCSNe.plotting')
 
-def plot_onion_structure(model, *, axes=None, text_ypos = 1.01):
+__all__ = ['plot_abundance', 'plot_intnorm', 'plot_simplenorm', 'mhist_intnorm']
+
+# Stores default kwargs for plots. Should be mapped to the prefixes of the function.
+default_kwargs = dict()
+
+
+# For line, text and fill there is additional keyword - show - which determines if the thing is drawn
+# For text there is also an additional keyword - y - which is the y position in xy
+default_kwargs['plot_onion_structure'] = dict(
+    default = dict(line=dict(color='black', linestyle='--', lw=2, alpha=0.75),
+                   text=dict(fontsize=10., color='black',
+                             horizontalalignment='center',
+                             xycoords=('data', 'axes fraction'), y = 1.01),
+                   fill=dict(color='lightblue', alpha=0.25)),
+
+                    # For the rest we only need to give the values that differ from the default
+                   remnant = dict(line=dict(linestyle=':'),
+                                  fill=dict(color='gray', alpha=0.5)),
+                   HeN = dict(fill=dict(show=False)),
+                   OC = dict(fill=dict(show=False)),
+                   OSi = dict(fill=dict(show=False)),
+                   Ni = dict(fill=dict(show=False)))
+
+@utils.set_default_kwargs(default_kwargs,
+    # Default settings for line, text and fill
+    default_line_color='black', default_line_linestyle='--', default_line_lw=2, default_line_alpha=0.75,
+    default_text_fontsize=10., default_text_color='black',
+    default_text_horizontalalignment='center', default_text_xycoords=('data', 'axes fraction'), default_text_y = 1.01,
+    default_fill_color='lightblue', default_fill_alpha=0.25,
+
+    # For the rest we only need to give the values that differ from the default
+   remnant_line_linestyle=':', remnant_fill_color='gray', remnant_fill_alpha=0.5,
+   HeN_fill_show=False,
+   OC_fill_show=False,
+   OSi_fill_show=False,
+   Ni_fill_show=False)
+
+def plot_onion_structure(model, *, xlim = None, ylim=None, ax=None, **kwargs):
     if not isinstance(model, models.ModelTemplate):
         raise ValueError(f'model must be an Model object not {type(model)}')
 
-    axes = get_axes(axes)
+    ax = plot.get_axes(ax)
 
     lower_bounds = getattr(model, 'onion_lower_bounds', None)
     if lower_bounds is None:
         lower_bounds = ccsneutils.get_onion_structure(model)
-
 
     lbound_H = lower_bounds['H'][0]
     lbound_HeN = lower_bounds['He/N'][0]
@@ -32,266 +63,241 @@ def plot_onion_structure(model, *, axes=None, text_ypos = 1.01):
     lbound_Si = lower_bounds['Si'][0]
     lbound_Ni = lower_bounds['Ni'][0]
 
-    mass = model.masscoord
-    masscut = mass[0]
-    massmax = mass[-1]
+    default_line = utils.extract_kwargs(kwargs, prefix='default_line')
+    default_text = utils.extract_kwargs(kwargs, prefix='default_text')
+    default_fill = utils.extract_kwargs(kwargs, prefix='default_fill')
 
-    # plot limits
-    xl1 = masscut - 0.25
-    xl2 = np.round(massmax, 1)
-    xln = np.round(massmax, 1)
+    def add_line(name, x):
+        line_kwargs = utils.extract_kwargs(kwargs, prefix='{name}_line', **default_line)
+        if line_kwargs.pop('show', True):
+            ax.axvline(x, **line_kwargs)
 
-    # Using annotate instead of text as we can then sp
+    def add_text(name, text, x):
+        text_kwargs = utils.extract_kwargs(kwargs, prefix=f'{name}_text', **default_text)
+        if text_kwargs.pop('show', True):
+            # Using annotate instead of text as we can then specify x in absolute, and y coordinates relative, in space.
+            ax.annotate(text_kwargs.pop('xytext', text), (x, text_kwargs.pop('y', 1.01)),
+                        **text_kwargs)
 
-    # remnant
-    axes.axvline(x=masscut, color='black', linestyle=':', lw=2, alpha=0.75)
-    axes.annotate(r'M$_{\rm rem}$', (((xl1 + masscut) / 2), text_ypos), fontsize=10., color='black',
-                   horizontalalignment='center', xycoords=('data', 'axes fraction'))
-    axes.fill_between([xl1, masscut], [-1.e10, -1.e10], [1.e10, 1.e10], color='gray', alpha=0.5)
+    def add_fill(name, x):
+        fill_kwargs = utils.extract_kwargs(kwargs, prefix=f'{name}_fill', **default_fill)
+        if fill_kwargs.pop('show', True):
+            ax.fill_between(x, fill_kwargs.pop('y1', [ylim[0], ylim[0]]),
+                             fill_kwargs.pop('y2', [ylim[1], ylim[1]]),
+                            **fill_kwargs)
 
-    # Convective envelope
-    if (lbound_H + 1) < massmax:
-        xl2 = np.round(lbound_H + 0.5, 1)
-        axes.axvline(x=lbound_H, color='black', linestyle='--', lw=2, alpha=0.75)
-        axes.fill_between([lbound_H, xl2], [-1.e10, -1.e10], [1.e10, 1.e10], color='lightblue', alpha=0.25)
-        if np.round(lbound_H, 2) != np.round(massmax, 2):
-            axes.annotate('H', (((lbound_H + xl2) / 2), text_ypos), fontsize=10., color='black',
-                           horizontalalignment='center', xycoords=('data', 'axes fraction'))
+    def add(name, text, lbound):
+        if kwargs.get(f'{name}_show', True) is False:
+            return
 
-    # He/N layer
-    if (lbound_HeC + 0.05) < massmax:
-        axes.axvline(x=lbound_HeC, color='black', linestyle='--', lw=2, alpha=0.75)
-        if lbound_H == massmax:
-            xl2 = np.round(lbound_HeN + 0.3, 1)
-            axes.annotate('He/N', (((xl2 + lbound_HeN) / 2), text_ypos), fontsize=10., color='black',
-                           horizontalalignment='center', xycoords=('data', 'axes fraction'))
+        if np.isnan(lbound) or not (ubound > xlim[0]) or not (lbound < ubound): return ubound
+
+        if not lbound > xlim[0]:
+            lbound = xlim[0]
         else:
-            axes.annotate('He/N', (((lbound_H + lbound_HeN) / 2), text_ypos), fontsize=10., color='black',
-                           horizontalalignment='center', xycoords=('data', 'axes fraction'))
+            add_line(name, lbound)
 
-    # He/C layer
-    if (lbound_HeN + 0.04) < massmax:
-        axes.axvline(x=lbound_HeN, color='black', linestyle='--', lw=2, alpha=0.75)
-        axes.annotate('He/C', (((lbound_HeC + lbound_HeN) / 2), text_ypos), fontsize=10., color='black',
-                       horizontalalignment='center', xycoords=('data', 'axes fraction'))
+        add_text(name, text, (lbound + ubound)/2)
+        add_fill(name, [lbound, ubound])
+        return lbound
 
-        if (lbound_H + 0.05) > massmax and lbound_HeC + 0.05 < massmax:
-            if (lbound_HeC - lbound_OC) < 0.2:
-                xl2 = np.round(lbound_HeN + 0.5, 1)
-                axes.annotate('He/C', (((int(xl2) + lbound_OC) / 2), text_ypos), fontsize=10., color='black',
-                               horizontalalignment='center', xycoords=('data', 'axes fraction'))
+    if ylim is None:
+        ylim = ax.get_ylim()
+    if xlim is None:
+        xlim = ax.get_xlim()
 
-    axes.axvline(x=lbound_OC, color='black', linestyle='--', lw=2, alpha=0.75)
+    # Outside-in since the last lower limit is the upper limit of the next one
 
-    # merger
-    # max_value = max([mass[ic2], masscut, mass[ine]])
-    if np.abs(lbound_OC - lbound_ONe) > 0.05:
-        axes.axvline(x=lbound_ONe, color='black', linestyle='--', lw=2, alpha=0.75)
-        axes.annotate('O/Ne', (((lbound_OC + max(lbound_ONe, masscut)) / 2), text_ypos),  fontsize=10., color='black',
-                       horizontalalignment='center', xycoords=('data', 'axes fraction'))
-        axes.fill_between([max(lbound_ONe, masscut), lbound_OC], [-1.e10, -1.e10], [1.e10, 1.e10],
-                               color='lightblue', alpha=0.25)
+    # @ Gabor - I dont understand all the additional limits you imposed here?
+    # Were they just cosmetic or were they part of the limit determinations.
+    # If its the latter it should go in the function that determines the onion structure.
+    ubound = np.min([model.masscoord[-1], xlim[1]])
 
-    axes.axvline(x=lbound_OSi, color='black', linestyle='--', lw=2, alpha=0.75)
-    axes.axvline(x=lbound_Si, color='black', linestyle='--', lw=2, alpha=0.75)
+    # H - Envelope
+    ubound = add('H', 'H', lbound_H)
 
-    axes.fill_between([lbound_HeC, lbound_HeN], [-1.e10, -1.e10], [1.e10, 1.e10], color='lightblue', alpha=0.25)
+    # He/N
+    ubound = add('HeN', 'He/N', lbound_HeN)
 
-    axes.annotate('O/C', (((max(lbound_OC, masscut) + lbound_HeC) / 2), text_ypos),  fontsize=10., color='black',
-                   horizontalalignment='center', xycoords=('data', 'axes fraction'))
+    # He/C
+    ubound = add('HeC', 'He/C', lbound_HeC)
 
-    if (lbound_OSi > masscut and (lbound_OSi - masscut) > 0.05):
-        axes.annotate('O/Si', (((lbound_ONe + lbound_OSi) / 2), text_ypos),  fontsize=10., color='black',
-                       horizontalalignment='center', xycoords=('data', 'axes fraction'))
-    elif (lbound_ONe - masscut) > 0.05:
-        axes.annotate('O/Si', (((lbound_ONe + masscut) / 2), text_ypos), fontsize=10., color='black',
-                       horizontalalignment='center', xycoords=('data', 'axes fraction'))
+    # O/C
+    ubound = add('OC', 'O/C',lbound_OC)
 
-    # Si layer
-    if lbound_OSi > masscut:
-        if not np.isnan(lbound_Si):
-            axes.annotate('Si', (((lbound_OSi + lbound_Si) / 2), text_ypos), fontsize=10., color='black',
-                           horizontalalignment='center', xycoords=('data', 'axes fraction'))
-            axes.fill_between([lbound_Si, lbound_OSi], [-1.e10, -1.e10], [1.e10, 1.e10], color='lightblue',
-                                   alpha=0.25)  # silicon
-        elif (lbound_OSi - masscut) > 0.05:
-            axes.annotate('Si', (((lbound_OSi + masscut) / 2), text_ypos),  fontsize=10., color='black',
-                           horizontalalignment='center', xycoords=('data', 'axes fraction'))
-            axes.fill_between([lbound_OSi, masscut], [-1.e10, -1.e10], [1.e10, 1.e10], color='lightblue',
-                                   alpha=0.25)  # silicon
+    # O/Ne
+    ubound = add('ONe', 'O/Ne',lbound_ONe)
 
-    # Ni layer
-    if not np.all(np.isnan(lbound_Si)):
-        axes.annotate('Ni', (((lbound_Ni + lbound_Si) / 2), text_ypos), fontsize=10., color='black',
-                       horizontalalignment='center', xycoords=('data', 'axes fraction'))
+    # O/Si
+    ubound = add('OSi', 'O/Si', lbound_OSi)
 
-    if (xl2 - xln) > 0.3:
-        xl2 = np.round(massmax, 1) + 0.1
+    # Si
+    ubound = add('Si', 'Si', lbound_Si)
 
-    return (xl1, xl2)
+    # Ni
+    ubound = add('Ni', 'Ni', lbound_Ni)
 
+    # Remnant
+    masscut = model.masscoord[0]
+    if xlim[0] < masscut:
+        lbound_rem = np.max([0,xlim[0]])
+        add_text('remnant', r'M$_{\rm rem}$', ((lbound_rem + masscut) / 2))
+        add_fill('remnant', [lbound_rem, masscut])
 
-def plot_intnorm(models, isotopes_or_ratios, *, attrname = 'intnorm', onion=False,
-                 axes = None, where = None, where_kwargs={}, **kwargs):
-    """
-    Plots the slope of two internally normalised eRi compositions against the mass coordinates.
+class AbuGetter:
+    def __init__(self, attrname, unit, isotope = None):
+        self.attrname = attrname
+        self.isotope = isotope
 
-    Args:
-        models (): The collection of models to be plotted.
-        isotopes_or_ratios (): Can either be a single isotopes_or_ratios or multiple ratios.
-        where (): Can be used to select only a subset of the models to plot.
-        where_kwargs ():
-
-    """
-    if where is not None:
-        models = models.where(where, **where_kwargs)
-
-    axes = get_axes(axes)
-
-    plot_norm(models, attrname, 'eRi', isotopes_or_ratios, **kwargs)
-
-    if onion:
-        axes.set_title(None)
-        if len(models) > 1:
-            raise ValueError(f"Can only plot onion structure for a single model")
+        for k, v in utils.UNITS.items():
+            if unit in v:
+                self.unit = k
+                break
         else:
-            plot_onion_structure(models[0], axes=axes)
-
-def plot_simplenorm(models, isotopes_or_ratios, *, attrname = 'simplenorm', onion=False,
-                 axes = None, where = None, where_kwargs={}, **kwargs):
-    """
-    Plots the slope of two internally normalised eRi compositions against the mass coordinates.
-
-    Args:
-        models (): The collection of models to be plotted.
-        isotopes_or_ratios (): Can either be a single isotopes_or_ratios or multiple ratios.
-        where (): Can be used to select only a subset of the models to plot.
-        where_kwargs ():
-
-    """
-    if where is not None:
-        models = models.where(where, **where_kwargs)
-
-    axes = get_axes(axes)
-
-    plot_norm(models, attrname, 'Ri', isotopes_or_ratios, **kwargs)
-
-    if onion:
-        axes.set_title(None)
-        if len(models) > 1:
-            raise ValueError(f"Can only plot onion structure for a single model")
-        else:
-            plot_onion_structure(models[0], axes=axes)
+            raise ValueError(f'Unit not recognised')
 
 
-def plot_norm(models, normname, Rvalname, isotopes_or_ratios, *,
-              linestyle=True, color=True, marker=False,
-              axes = None, use_title = True,
-              where=None, where_kwargs={},
-              **kwargs):
-    """
-    Plots the slope of two internally normalised eRi compositions against the mass coordinates.
+    def get_data(self, model, isotope=None):
+        if isotope is None: isotope = self.isotope
+        data = getattr(model, self.attrname)[isotope]
+        data_unit = getattr(model, f"{self.attrname}_unit", None)
 
-    Args:
-        models (): The collection of models to be plotted.
-        isotopes_or_ratios (): Can either be a single isotopes_or_ratios or multiple ratios.
-        where (): Can be used to select only a subset of the models to plot.
-        where_kwargs ():
+        if data_unit is None:
+            logger.warning('Data does not have a specified unit. Assuming it has the requested unit')
+            data_unit = self.unit
 
-    """
-    # Work on the axes object. That way it will work for subplots to
-
-    axes = get_axes(axes)
-    models = get_models(models, where=where, where_kwargs=where_kwargs)
-    linestyles, colors, markers = get_lscm(linestyle, color, marker)
-
-    try:
-        isotopes_or_ratios = simple.asratios(isotopes_or_ratios)
-    except ValueError:
-        try:
-          isotopes_or_ratios = simple.asisotopes(isotopes_or_ratios)
-        except ValueError:
-            raise ValueError(f'Unable to convert {isotopes_or_ratios} into isotope or isotopes_or_ratios strings')
-        else:
-            plot_ratio=False
-    else:
-        plot_ratio = True
-
-    if plot_ratio:
-        # Figure out ylabel and what should go in the legend label.
-        n = {r.numer for r in isotopes_or_ratios}
-        d = {r.denom for r in isotopes_or_ratios}
-        if len(n) == 1:
-            ylabel = f"Slope of {getattr(models[0], normname).label_latex[isotopes_or_ratios[0].numer]}"
-            nlegend = False
-        else:
-            ylabel = 'Slope of A'
-            nlegend = True
-
-        if len(d) == 1:
-            ylabel = f"{ylabel} / {getattr(models[0], normname).label_latex[isotopes_or_ratios[0].denom]}"
-            dlegend = False
-        else:
-            ylabel = f'{ylabel} / B'
-            dlegend = True
-    else:
-        if len(isotopes_or_ratios) == 1:
-            ylabel = f"{getattr(models[0], normname).label_latex[isotopes_or_ratios[0]]}"
-            ilegend = False
-        else:
-            ylabel = r'${\mathrm{R}}_{\mathrm{i}}}$'
-            ilegend = True
-
-    axes.set_ylabel(ylabel, fontsize=15)
-    axes.set_xlabel('Mass coordinate M$_{\odot}$', fontsize=15)
-
-    # If there is only one model1 it is set as the title to make the legend shorter
-    if len(models) == 1 and use_title:
-        mlegend = False
-        axes.set_title(models[0].name)
-    else:
-        mlegend = True
-
-    if (len(models) == 1 or len(isotopes_or_ratios) == 1):
-        #Everything get a different colour and linestyle
-        lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(isotopes_or_ratios)*len(models))]
-    else:
-        # Each model1 has the same linesyle and each isotopes_or_ratios a different color
-        lscm = [(linestyles[i//len(models)], colors[i%len(isotopes_or_ratios)], markers[i%len(isotopes_or_ratios)])
-                for i in range(len(isotopes_or_ratios) * len(models))]
-
-    min_masscut, max_masscut = [], []
-    label = kwargs.pop('label', '')
-    mfc = kwargs.pop('markerfacecolor', None)
-    for iso_or_rat in isotopes_or_ratios:
-        for i, model in enumerate(models):
-            norm = getattr(model, normname)
-            Rval = getattr(model, Rvalname)
-            ls, c, m = lscm.pop(0)
-
-            legend = label
-            if plot_ratio:
-                if nlegend and dlegend: legend += f'{norm.label_latex[iso_or_rat.numer]}/{norm.label_latex[iso_or_rat.denom]}'
-                elif nlegend: legend += f"{norm.label_latex[iso_or_rat.numer]}"
-                elif dlegend: legend += f" {norm.label_latex[iso_or_rat.denom]}"
-                yval = Rval[iso_or_rat.numer] / Rval[iso_or_rat.denom]
+        if data_unit not in utils.UNITS[self.unit]:
+            if self.unit == 'mass' and data_unit in utils.UNITS['mole']:
+                logger.info(f'Multiplying data by the isotope mass number to convert from mass to moles')
+                data = data * float(isotope.mass)
+            elif self.unit == 'mole' and data_unit in utils.UNITS['mass']:
+                logger.info(f'Dividing data by the isotope mass number to convert from moles to mass')
+                data = data / float(isotope.mass)
             else:
-                if ilegend: legend += f'{norm.label_latex[iso_or_rat]}'
-                yval = Rval[iso_or_rat]
+                raise ValueError(f'Unable to convert data from {data_unit} to {self.unit})')
 
-            if mlegend: legend += f' {model.name}'
-            axes.plot(model.masscoord, yval,
-                      color=c, markersize=4, ls=ls, marker=m,
-                      markerfacecolor=mfc or c,
-                      label=legend.strip() or None, **kwargs)
-            min_masscut.append(np.min(model.masscoord))
-            max_masscut.append(np.max(model.masscoord))
+        return data
 
-    axes.legend(loc='upper right')
-    axes.set_xlim(np.min(min_masscut), np.max(max_masscut))
-    axes.tick_params(left=True, right=True, top=True, labelleft=True, which='both')  # ,labelright=True)
+    def get_label(self, model, isotope=None):
+        if isotope is None: isotope = self.isotope
+        return rf'${{}}^{{{isotope.mass}}}\mathrm{{{isotope.element}}}$'
 
-    axes.xaxis.set_minor_locator(AutoMinorLocator())
-    axes.yaxis.set_minor_locator(AutoMinorLocator())
+class NormGetter:
+    def __init__(self, attrname, Rvalname, isotope=None):
+        self.attrname = attrname
+        self.Rvalname = Rvalname
+        self.isotope = isotope
 
-    return axes
+    def get_data(self, model, isotope=None):
+        if isotope is None: isotope = self.isotope
+        norm = getattr(model, self.attrname)
+        Rval = getattr(norm, self.Rvalname)
+        return Rval[isotope]
+
+    def get_label(self, model, isotope=None):
+        if isotope is None: isotope = self.isotope
+        return getattr(model, self.attrname).label_latex[isotope]
+
+class MasscoordGetter:
+    def get_data(self, model, isotope=None):
+        return model.masscoord
+
+    def get_label(self, model=None, isotope=None):
+        return 'Mass coordinate M$_{\odot}$',
+
+@utils.set_default_kwargs(default_kwargs,)
+def plot_abundance(models, isotopes_or_ratios, *,
+                   onion=None, semilog = False, unit='mass',
+                   ax = None, where=None, where_kwargs={},
+                   **kwargs):
+
+    if semilog: kwargs['yscale'] = 'log'
+    xgetter = MasscoordGetter()
+    ygetter = AbuGetter('abundance', unit)
+    ax, model = helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, onion=onion,
+                                          ax=ax, where=where, where_kwargs=where_kwargs,
+                                          **kwargs)
+    return ax
+
+@utils.set_default_kwargs(default_kwargs,)
+def plot_intnorm(models, isotopes_or_ratios, *,
+                 attrname = 'intnorm', onion=None,
+                 ax = None, where=None, where_kwargs={},
+                 **kwargs):
+    """
+    Plots the slope of two internally normalised eRi compositions against the mass coordinates.
+
+    Args:
+        models (): The collection of models to be plotted.
+        isotopes_or_ratios (): Can either be a single isotopes_or_ratios or multiple ratios.
+        where (): Can be used to select only a subset of the models to plot.
+        where_kwargs ():
+
+    """
+    xgetter = MasscoordGetter()
+    ygetter = NormGetter(attrname, 'eRi')
+    ax, model = helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, onion=onion,
+                                          ax=ax, where=where, where_kwargs=where_kwargs,
+                                          **kwargs)
+    return ax
+
+@utils.set_default_kwargs(default_kwargs,)
+def plot_simplenorm(models, isotopes_or_ratios, *,
+                    attrname = 'simplenorm', onion=None,
+                    ax = None, where=None, where_kwargs={}, **kwargs):
+    """
+    Plots the slope of two simply normalised Ri compositions against the mass coordinates.
+
+    Args:
+        models (): The collection of models to be plotted.
+        isotopes_or_ratios (): Can either be a single isotopes_or_ratios or multiple ratios.
+
+    """
+    xgetter = MasscoordGetter()
+    ygetter = NormGetter(attrname, 'Ri')
+    ax, model = helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, onion=onion,
+                                          ax=ax, where=where, where_kwargs=where_kwargs,
+                                          **kwargs)
+    return ax
+
+@utils.set_default_kwargs(default_kwargs,)
+def mhist_intnorm(models, xisotope, yisotope, *,
+                 attrname='intnorm',
+                 ax = None, where=None, where_kwargs={},
+                 **kwargs):
+
+    xygetter = NormGetter(attrname, 'eRi')
+    ax, model = simple.plot.helper_mhist_singlex_singley(models, xygetter, xygetter,
+                                                         xisotope, yisotope,
+                                                         ax=ax, where=where, where_kwargs=where_kwargs,
+                                                         **kwargs)
+    return ax
+
+@utils.set_default_kwargs(default_kwargs,)
+def mhist_abundance(models, xisotope, yisotope, *,
+                    unit = 'mass',
+                    ax = None, where=None, where_kwargs={},
+                    **kwargs):
+
+    xygetter = AbuGetter('abundance', unit)
+    ax, model = simple.plot.helper_mhist_singlex_singley(models, xygetter, xygetter,
+                                                         xisotope, yisotope,
+                                                         ax=ax, where=where, where_kwargs=where_kwargs,
+                                                         **kwargs)
+    return ax
+
+
+def helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, onion=False, **kwargs):
+    # Wrapper that adds the option to plot the onion structure of CCSNe models
+    onion_kwargs = utils.extract_kwargs(kwargs, prefix='onion')
+
+    ax, models = plot.helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, **kwargs)
+
+    if onion or (onion is None and len(models) == 1):
+        ax.set_title(None)
+        if len(models) > 1:
+            raise ValueError(f"Can only plot onion structure for a single model")
+        else:
+            plot_onion_structure(models[0], ax=ax, **onion_kwargs)
+
+    return ax, models

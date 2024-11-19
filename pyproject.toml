@@ -7,7 +7,7 @@ include = ["simple", "simple.*"]
 
 [project]
 name = "SIMPLE"
-version = "0.2.1"
+version = "0.2.2"
 
 # Developed using this. Not tested with lower versions.
 #requires-python = ">= 3.9"

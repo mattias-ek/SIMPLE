@@ -2,6 +2,7 @@ import re, operator
 import numpy as np
 import logging
 import yaml
+import functools
 import collections
 
 logger = logging.getLogger('SIMPLE.utils')
@@ -10,15 +11,106 @@ __all__ = ['load_defaults',
            'asarray', 'askeyarray',
            'asisotope', 'asisotopes', 'asratio', 'asratios']
 
-MASS_UNITS = ['mass', 'massfrac', 'wt', 'wt%']
+UNITS = dict(mass = ['mass', 'massfrac', 'wt', 'wt%'],
+             mole = ['mol', 'molfrac'])
 """
-A list of units that represent data being stored in a mass unit or as mass fractions.
-"""
+A dictionary containing the names associated with different unit types
 
-MOLE_UNITS = ['mol', 'molfrac']
+Current unit types are:
+- ``mass`` that represents data being stored in a mass unit or as mass fractions.
+-  ``mole`` that represents data being stored in moles or as mole fractions.
 """
-A list of units representing data being stored in moles or as mole fractions.
-"""
+class EndlessList(list):
+    """
+    A subclass of ``list`` that where the index will never go out of bounds. If a requested
+    index is out of bounds, it will cycle around to the start of the list.
+
+    Examples:
+        >>> ls = simple.plot.Endlesslist(["a", "b", "c"])
+        >>> ls[3]
+        "a"
+    """
+    # Index will never go out of bounds. It will just start from the beginning if larger than the initial list.
+    def __getitem__(self, index):
+        value = super().__getitem__(index % len(self))
+        if type(index) == slice:
+            return EndlessList(value)
+        else:
+            return value
+
+
+def extract_kwargs(kwargs, *keys, prefix=None, pop=True, **initial_kwargs):
+    """
+    Extracts the given keyword arguments from ``kwargs``.
+
+    Args:
+        kwargs (): The dictionary from which the keyword arguments will be extracted.
+        *keys (): Keyword arguments to be extracted
+        prefix (): Any keyword with this prefix will be extracted. The prefix will not be included in the keyword of
+            the returned dictionary. A ``"_"`` will be added to the end of the prefix if not already present.
+        pop (): Whether to remove the extracted keyword arguments from ``kwargs``.
+        **initial_kwargs (): Any additional keyword arguments. Note that these will be overwritten if the same
+        keyword is extracted from ``kwargs``.
+
+    Returns:
+        dict: A dictionary containing the extracted keyword arguments.
+    """
+    extracted = initial_kwargs
+
+    for k in keys:
+        if k in kwargs:
+            if pop:
+                extracted[k] = kwargs.pop(k)
+            else:
+                extracted[k] = kwargs.get(k)
+
+    if type(prefix) is str:
+        if prefix[-1] != '_': prefix += '_'
+
+        for k in list(kwargs.keys()):
+            if k[:len(prefix)] == prefix:
+                name = k[len(prefix):]
+                if pop:
+                    extracted[name] = kwargs.pop(k)
+                else:
+                    extracted[name] = kwargs.get(k)
+
+    return extracted
+
+
+def set_default_kwargs(default_kwargs_dict, **default_kwargs):
+    """
+    Decorator sets the default arguments for the function. It wraps the function so that the
+    default kwargs are always passed to the function.
+
+    It also adds a ``update_kwargs(**new_kwargs)`` function to the wrapper that can be used to
+    update the default kwargs.
+
+    Args:
+        default_kwargs_dict (): The local dictionary where the default kwargs are stored
+        **kwargs ():
+
+    Returns:
+
+    """
+    def decorator(func):
+        funcname = func.__name__
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            new_kwargs = default_kwargs_dict.get(funcname, dict()).copy()
+            new_kwargs.update(kwargs)
+            return func(*args, **new_kwargs)
+
+        def update_kwargs(**new_kwargs):
+            d = default_kwargs_dict.setdefault(funcname, dict())
+            for k,v in new_kwargs.items():
+                d[k] = v
+
+        update_kwargs(**default_kwargs)
+        wrapper.update_kwargs = update_kwargs
+        return wrapper
+    return decorator
 
 def load_defaults(filename: str):
     """
@@ -29,7 +121,7 @@ def load_defaults(filename: str):
     You can still arguments and keyword arguments as normal as long as they are not included in the default dictionary.
 
     Returns:
-        A named dictionary containing mapping the name given in the yaml file to another dictionary mapping the arguments
+        A named dictionary containing mapping the prefixes given in the yaml file to another dictionary mapping the arguments
         to the specified values.
 
     Examples:
@@ -216,6 +308,8 @@ class Isotope(str):
         else:
             raise ValueError(f"String '{string}' is not a valid isotope")
 
+        if '/' in suffix:
+            raise ValueError(f'Invalid character "/" encountered in suffix "{suffix}"')
         return cls._new_(mass, element, '' if without_suffix else suffix)
 
     def __init__(self, string, without_suffix=False):
@@ -331,7 +425,10 @@ def asisotope(string, without_suffix=False, allow_invalid=False):
 
     """
     if type(string) is Isotope:
-        return string
+        if without_suffix:
+            return string.without_suffix()
+        else:
+            return string
     elif isinstance(string, str):
         string = string.strip()
     else:

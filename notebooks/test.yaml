@@ -1,12 +1,12 @@
 load_models:
-    # The name of the smaller file
+    # The prefixes of the smaller file
     filename: test.hdf5
 
-    # The name of the raw file
+    # The prefixes of the raw file
     dbfilename: ../data/SIMPLE_CCSNeV1_mass.hdf5
 
     default_isolist:
-        # The name of the isotope followed by a list of the isotopes to be summed up to give its value.
+        # The prefixes of the isotope followed by a list of the isotopes to be summed up to give its value.
         H-1: H-1
         He-4: He-4
         C-12: C-12

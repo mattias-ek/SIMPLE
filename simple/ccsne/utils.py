@@ -4,10 +4,13 @@ import logging
 
 logger = logging.getLogger('SIMPLE.CCSNe.utils')
 
+__all__ = []
+
 def get_onion_structure(model):
     """
     Return a key array with the lower boundaries of the H, He/N, He/C, O/C, O/Ne, O/Si, Si and Ni shells/layers.
     """
+
     logging.info(f'Calculating the onion structure for: {model.name}')
     mass = model.masscoord
     he4 = model.abundance['He-4']
@@ -24,6 +27,8 @@ def get_onion_structure(model):
 
     shells = 'H He/N He/C O/C O/Ne O/Si Si Ni'.split()
     boundaries = []
+
+    # TODO warning if a lower limit is above a layer above.
 
     # definition of borders
     ih = np.where((he4 > 0.5))[0][-1]
@@ -62,7 +67,7 @@ def get_onion_structure(model):
         boundaries.append(mass[isi])
 
     try:
-        ini = np.where((ni56 > si28) & (mass > masscut))[0][0]
+        ini = np.where((ni56 > si28))[0][0]
     except IndexError:
         logging.info("No lower boundary of Ni layer")
         boundaries.append(np.nan)

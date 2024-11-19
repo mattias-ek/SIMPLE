@@ -13,7 +13,7 @@ logger = logging.getLogger('SIMPLE.models')
 ##############
 ### Models ###
 ##############
-def load_collection(filename, dbfilename, *, default_isolist=None, convert_unit=True, overwrite=False,
+def load_collection(filename, dbfilename=None, *, default_isolist=None, convert_unit=True, overwrite=False,
                     where=None, **where_kwargs):
     """
     Loads a selection of models from a file.
@@ -48,6 +48,8 @@ def load_collection(filename, dbfilename, *, default_isolist=None, convert_unit=
         mc.load_file(filename, where=where, **where_kwargs)
     elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5') and not overwrite:
         mc.load_file(f'{filename}.hdf5', where=where, **where_kwargs)
+    elif dbfilename is None:
+        raise ValueError(f'File {filename} does not exist')
     elif os.path.exists(dbfilename):
         mc.load_file(dbfilename, isolist=default_isolist, convert_unit=convert_unit, where=where, **where_kwargs)
         mc.save(filename)
@@ -424,7 +426,7 @@ class ModelTemplate:
             self.setattr(k, v, hdf5_compatible=True)
 
         # This is how we know which class to create. Need to be set after attrs incase you remapp the
-        # the class name
+        # class name
         self.setattr('clsname', self.__class__.__name__, hdf5_compatible=True, overwrite=True)
 
         # Automatically creates <name> key array if <name>_values and <name>_keys exists
@@ -558,7 +560,7 @@ class ModelTemplate:
 
         abu = self[self.NORM_ABU_KEYARRAY]
         abu_unit = getattr(self, f"{self.NORM_ABU_KEYARRAY}_unit", "mol")
-        abu_massunit = True if abu_unit in utils.MASS_UNITS else False
+        abu_massunit = True if abu_unit in utils.UNITS['mass'] else False
 
         abu = utils.select_isolist(isolist, abu, massunit=True if abu_massunit == 'mass' else False, convert_unit=convert_unit)
 
@@ -595,7 +597,6 @@ class ModelTemplate:
         # The abundances to be normalised
         abu = self[self.NORM_ABU_KEYARRAY]
         abu_unit = getattr(self, f"{self.NORM_ABU_KEYARRAY}_unit", "mol")
-        abu_massunit = True if abu_unit in utils.MASS_UNITS else False
 
         # Isotope masses
         stdmass = self.get_ref(self.refid_isomass, 'data')
@@ -603,11 +604,10 @@ class ModelTemplate:
         # The reference abundances. Typically, the initial values of the model
         stdabu = self.get_ref(self.refid_isoabu, 'data')
         stdabu_unit = self.get_ref(self.refid_isoabu, 'data_unit')
-        stdabu_massunit = True if stdabu_unit in utils.MASS_UNITS else False
 
         result = norm.internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
                                              enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
-                                             abu_massunit=abu_massunit, stdabu_massunit=stdabu_massunit,
+                                             abu_unit=abu_unit, stdabu_unit=stdabu_unit,
                                              convert_unit=convert_unit,
                                              method=method, **method_kwargs)
 
@@ -631,15 +631,13 @@ class ModelTemplate:
 
         abu = self[self.NORM_ABU_KEYARRAY]
         abu_unit = getattr(self, f"{self.NORM_ABU_KEYARRAY}_unit", "mol")
-        abu_massunit = True if abu_unit == 'mass' else False
 
         stdabu = self.get_ref(self.refid_isoabu, 'data')
         stdabu_unit = self.get_ref(self.refid_isoabu, 'data_unit')
-        stdabu_massunit = True if stdabu_unit in utils.MASS_UNITS else False
 
         result = norm.simple_normalisation(abu, isotopes, normiso, stdabu,
                                            enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
-                                           abu_massunit=abu_massunit, stdabu_massunit=stdabu_massunit,
+                                           abu_unit=abu_unit, stdabu_unit=stdabu_unit,
                                            convert_unit=convert_unit)
 
         self.setattr(attrname, result, hdf5_compatible=False, overwrite=True)

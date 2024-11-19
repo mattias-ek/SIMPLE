@@ -2,8 +2,6 @@
 
 Things only available through the ``simple.plot`` namespace.
 
-:::simple.plot.EndlessList
-
 :::simple.plot.get_axes
 
 :::simple.plot.get_lscm

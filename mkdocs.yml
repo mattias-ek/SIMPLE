@@ -21,6 +21,8 @@ theme:
 nav:
     - Home: index.md
     - User Guide: user-guide.md
+    - Tutorials:
+        - Part 2 - Normalising and plotting data: examples/ccsne_tutorial2.ipynb
     - Examples:
         - Create CCSNe database: examples/create_simple_db.ipynb
         - CCSNE Exmple: examples/simple_mattias_version.ipynb

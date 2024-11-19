@@ -11,9 +11,15 @@ avaliable through through ``simple.ccsne``
 
 ## Plotting
 
-Function specifically for plotting CCSNe data
+Function specifically for plotting CCSNe data.
+
+:::simple.ccsne.plot_abundance
 
 :::simple.ccsne.plot_intnorm
+
+:::simple.ccsne.plot_simplenorm
+
+:::simple.ccsne.mhist_intnorm
 
 ## Import model data
 

@@ -1,46 +1,29 @@
-import functools
-from idlelib.multicall import r
-
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.axes import Axes
+from matplotlib.ticker import AutoMinorLocator
+
 import numpy as np
 import warnings
 
-import simple.utils, simple.models
+import simple.models
+from simple import utils
 
 import logging
 logger = logging.getLogger('SIMPLE.plot')
 
 __all__ = ['create_rose_plot']
 
-class EndlessList(list):
-    """
-    A subclass of ``list`` that where the index will never go out of bounds. If a requested
-    index is out of bounds, it will cycle around to the start of the list.
-
-    Examples:
-        >>> ls = simple.plot.Endlesslist(["a", "b", "c"])
-        >>> ls[3]
-        "a"
-    """
-    # Index will never go out of bounds. It will just start from the beginning if larger than the initial list.
-    def __getitem__(self, index):
-        value = super().__getitem__(index % len(self))
-        if type(index) == slice:
-            return EndlessList(value)
-        else:
-            return value
-
+default_kwargs = dict()
 
 # colours appropriate for colour blindness
 # Taken from https://davidmathlogic.com/colorblind/#%23000000-%23E69F00-%2356B4E9-%23009E73-%23F0E442-%230072B2-%23D55E00-%23CC79A7
-all_colors=EndlessList(["#D55E00", "#56B4E9", "#009E73", "#E69F00", "#CC79A7", "#0072B2", "#F0E442"])
+all_colors=utils.EndlessList(["#D55E00", "#56B4E9", "#009E73", "#E69F00", "#CC79A7", "#0072B2", "#F0E442"])
 """
 [``Endlesslist``][simple.plot.EndlessList] containing the default colors used by simple plotting functions.
 """
 
-all_linestyles = EndlessList(['-', (0, (4, 4)), (0, (2,1)),
+all_linestyles = utils.EndlessList(['-', (0, (4, 4)), (0, (2,1)),
                               (0, (4,2,1,2)), (0, (4,2,1,1,1,2)), (0, (4,2,1,1,1,1,1,2)),
                               (0, (2,1,2,2,1,2)), (0, (2,1,2,2,1,1,1,2)), (0, (2,1,2,2,1,1,1,1,1,2)),
                               (0, (2,1,2,1,2,2,1,2)), (0, (2,1,2,1,2,2,1,1,1,2)), (0, (2,1,2,1,2,2,1,1,1,1,1,2))])
@@ -48,31 +31,31 @@ all_linestyles = EndlessList(['-', (0, (4, 4)), (0, (2,1)),
 [``Endlesslist``][simple.plot.EndlessList] default line styles used by simple plotting functions.
 """
 
-all_markers = EndlessList(["o", "s", "^", "D", "P","X", "v", "<", ">",  "*", "p", "d", "H"])
+all_markers = utils.EndlessList(["o", "s", "^", "D", "P","X", "v", "<", ">",  "*", "p", "d", "H"])
 """
 [``Endlesslist``][simple.plot.EndlessList] default marker styles used by simple plotting functions.
 """
 
 def get_axes(axes, projection=None):
     """
-    Return the axes that should be used for plotting.
+    Return the ax that should be used for plotting.
 
     Args:
-        axes (): Must either be ``None``, in which case ``plt.gca()`` will be returned, a matplotlib axes instance, or
+        axes (): Must either be ``None``, in which case ``plt.gca()`` will be returned, a matplotlib ax instance, or
             any object that has a ``.gca()`` method.
-        projection (): If given, an exception is raised if ``axes`` does not have this projection.
+        projection (): If given, an exception is raised if ``ax`` does not have this projection.
     """
     if axes is None:
         axes = plt.gca()
     elif isinstance(axes, Axes):
         pass
     elif hasattr(axes, 'gca'):
-        axes = axes.gca() # if axes = plt
+        axes = axes.gca() # if ax = plt
     else:
-        raise ValueError('axes must be an Axes, Axes instance or have a gca() method that return an Axes')
+        raise ValueError('ax must be an Axes, Axes instance or have a gca() method that return an Axes')
 
     if projection is not None and axes.name != projection:
-        raise TypeError(f'The selected axes has the wrong projection. Expected {projection} got {axes.name}.')
+        raise TypeError(f'The selected ax has the wrong projection. Expected {projection} got {axes.name}.')
         
     return axes
 
@@ -96,25 +79,25 @@ def get_lscm(linestyle = False, color = False, marker=False):
         (EndlessList, EndlessList, EndlessList): linestyles, colors, markers
     """
     if color is False or color is None:
-        colors = EndlessList(["#000000"])
+        colors = utils.EndlessList(["#000000"])
     elif color is True:
         colors = all_colors
     else:
-        colors = EndlessList(color)
+        colors = utils.EndlessList(color)
 
     if linestyle is False or linestyle is None:
-        linestyles = EndlessList([""])
+        linestyles = utils.EndlessList([""])
     elif linestyle is True:
         linestyles = all_linestyles
     else:
-        linestyles = EndlessList(linestyle)
+        linestyles = utils.EndlessList(linestyle)
 
     if marker is False or marker is None:
-        markers = EndlessList([""])
+        markers = utils.EndlessList([""])
     elif marker is True:
         markers = all_markers
     else:
-        markers = EndlessList(marker)
+        markers = utils.EndlessList(marker)
 
     return linestyles, colors, markers
 
@@ -225,21 +208,21 @@ def create_rose_plot(ax=None, *, vmin= None, vmax=None, log = False, cmap='turbo
     """
     Create a plot with a [rose projection](simple.plot.RoseAxes).
 
-    The rose axes is a subclass of matplotlibs
-    [polar axes](https://matplotlib.org/stable/api/projections/polar.html#matplotlib.projections.polar.PolarAxes).
+    The rose ax is a subclass of matplotlibs
+    [polar ax](https://matplotlib.org/stable/api/projections/polar.html#matplotlib.projections.polar.PolarAxes).
 
     Args:
-        ax (): If no preexisting axes is given then a new figure with a single rose axes is created. If an existing
-        axes is passed this axes will be deleted and replaced with a [RoseAxes][#RoseAxes].
+        ax (): If no preexisting ax is given then a new figure with a single rose ax is created. If an existing
+        ax is passed this ax will be deleted and replaced with a [RoseAxes][#RoseAxes].
         vmin (float): The lower limit of the colour map. If no value is given the minimum value is ``0`` (or ``1E-10`` if
         ``log=True``)
         vmax (float): The upper limit of the colour map. If no value is given then ``vmax`` is set to ``1`` and all bin
             weights are divided by the heaviest bin weight in each histogram.
         log (bool): Whether the color map scale is logarithmic or not.
-        cmap (): The name of the colormap to use. See,
+        cmap (): The prefixes of the colormap to use. See,
                 [matplotlib documentation][https://matplotlib.org/stable/users/explain/colors/colormaps.html]
                  for a list of available colormaps.
-        colorbar_show (): Whether to add a colorbar to the right of the axes.
+        colorbar_show (): Whether to add a colorbar to the right of the ax.
         colorbar_label (): The label given to the colorbar.
         colorbar_fontsize (): The fontsize of the colorbar label.
         xscale (): The scale of the x axis.
@@ -252,7 +235,7 @@ def create_rose_plot(ax=None, *, vmin= None, vmax=None, log = False, cmap='turbo
             is not given.
 
     Returns:
-        RoseAxes : The new rose axes.
+        RoseAxes : The new rose ax.
     """
     if ax is None:
         figure_kwargs = {'layout': 'constrained'}
@@ -304,6 +287,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         self._norm = mpl.colors.Normalize(vmin=self._vmin, vmax=self._vmax)
         self._cmap = get_cmap('turbo')
         self._colorrbar = None
+        self._last_hist_r = 0
 
         super().__init__(*args,
                          theta_offset=np.pi * 0.5, theta_direction=-1,
@@ -311,11 +295,12 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
 
     def clear(self):
         """
-        Clear the axes.
+        Clear the ax.
         """
         super().clear()
         self.set_xysegment(self._xysegment)
         self.axes.set_yticklabels([])
+        self._last_hist_r = 0
 
     def set_colorbar(self, vmin=None, vmax=None, log=False, cmap='turbo',
                      label=None, fontsize=None, show=True, clear=True):
@@ -332,13 +317,13 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             vmax (float): The upper limit of the colour map. If no value is given then ``vmax`` is set to ``1`` and all bin
                 weights are divided by the heaviest bin weight in each histogram.
             log (bool): Whether the color map scale is logarithmic or not.
-            cmap (): The name of the colormap to use. See,
+            cmap (): The prefixes of the colormap to use. See,
                 [matplotlib documentation][https://matplotlib.org/stable/users/explain/colors/colormaps.html]
                 for a list of available colormaps.
             label (): The label given to the colorbar.
             fontsize (): The fontsize of the colorbar label.
-            show (): Whether to add a colorbar to the right of the axes.
-            clear (): If ``True`` the axes will be cleared.
+            show (): Whether to add a colorbar to the right of the ax.
+            clear (): If ``True`` the ax will be cleared.
         """
         self._vrel = True if vmax is None else False
         if log:
@@ -585,6 +570,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
 
         if antipodal:
             kwargs.pop('label', None)
+            kwargs.pop('label', None)
             kwargs['color'] = line.get_color()
             self._mline(m=(x * -1, y * -1), r=(rmin, rmax), merr=merr,
                         ecolor=ecolor, elinestyle=elinestyle, elinewidth=elinewidth,
@@ -679,7 +665,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
     ####################
     ### Hist Methods ###
     ####################
-    def mhist(self, m, r=1, weights=1, rwidth=0.9, rscale=True, rescale=True, antipodal=None,
+    def mhist(self, m, r=None, weights=1, rwidth=0.9, rscale=True, rescale=True, antipodal=None,
               bins=72, label=None, label_pos=0, label_roffset=None, label_kwargs={}):
         """
         Create a histogram of the given slopes.
@@ -687,7 +673,8 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         Args:
             m (float, (float, float)): Either a single array of floats representing a slope or a tuple of *x* and *y*
                 coordinates from which a slope will be calculated.
-            r (): The radius at which the histogram will be drawn.
+            r (): The radius at which the histogram will be drawn. If 'None' it will be plotted ``1`` above the
+                previous histogram, or at 1 if no histogram have been drawn.
             weights (): The weight assigned to each slope.
             rwidth (): The width of the histogram.
             rscale (): If ``True`` width of the individual bins will be scaled to their weight. Otherwise all bins
@@ -713,6 +700,10 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             if antipodal is None:
                 antipodal = True
 
+        if r is None:
+            r = self._last_hist_r + 1
+        self._last_hist_r = r
+
         x, y, weights = as1darray(x, y, weights)
         theta = self._xy2rad(x, y)
         if antipodal:
@@ -720,8 +711,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             weights = np.append(weights, weights)
 
         bin_weights, bin_edges = np.histogram(theta, bins=bins, range=(0, np.pi * 2), weights=weights, density=False)
-
-        bin_weights = bin_weights / (np.max(bin_weights) if self._vrel else self._vmax)
+        if self._vrel: bin_weights = bin_weights / np.max(bin_weights)
         bin_colors = np.array([self._cmap(self._norm(bw)) for bw in bin_weights])
 
         if rscale:
@@ -752,4 +742,258 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
 
 
 mpl.projections.register_projection(RoseAxes)
+
+#################################
+### helper plotting functions ###
+#################################
+
+@utils.set_default_kwargs(default_kwargs,
+    linestyle=True, color=True, marker=False,
+    xlabel_fontsize = 15,
+    ylabel_fontsize=15,
+    markersize=4,
+    title=True,
+    legend=True, legend_loc='upper right', y_in_legend=None, model_in_legend=None)
+def helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, *,
+                              ax = None, where=None, where_kwargs={},
+                              **kwargs):
+    """
+    Helper function that plots multiple isotope or ratio values from each model against a fixed x value.
+    For example plotting CCSNe model yields against the mass-coordinate.
+
+    Args:
+        models (): The models to be plotted
+        xgetter (): Getter object for data on the x-axis
+        ygetter (): Getter object for data on the y-axis
+        isotopes_or_ratios (): A list of isotopes or a list of ratios that will be plotted on the y-axis.
+        ax (): The axes for the plotting.
+        where (): A string to select which models to plot. See
+            [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
+        where_kwargs (): Arguments used to evaluate ``where``.
+        **kwargs ():
+
+    Keyword Arguments:
+        **plot**
+            - ``linestyle`` Can be a list of linestyles that will be iterated through for each item plotted. If ``True``
+            the default list of linestyles is used.
+            - ``color`` Can be a list of colors that will be iterated through for each item plotted. If ``True``
+            the default list of colors is used.
+            - ``marker`` Can be a list of markers that will be iterated through for each item plotted. If ``True``
+            the default list of markers is used.
+            - Any keyword argument accepted by matplotlibs
+            [``plot``](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html) method.
+
+        **title**
+        - ``title`` The title of the figure. If ``True` and ``len(models)==1`` the title will be the name if
+        the model. Additional keyword arguments can be passed to the ``set_title`` method by prefixing them with
+        ``title_<kwarg>``.
+
+        **ylabel**
+        - ``ylabel`` The label for the y-axis. If omitted a suitable label is automatically generated based on
+        what is plotten on the y-axis.
+
+        **xlabel**
+        - ``xlabel`` The label for the x-axis.
+
+        **yscale**
+        - ``yscale`` The scale used for the y-axis. Additional keyword arguments can be passed to
+        the ``set_yscale`` method by prefixing them with ``yscale_<kwarg>``.
+
+        **xlim**
+        - ``xlim`` A tuple containing minimum and maximum values of the x-axis. Additional keyword arguments can
+        be passed to the ``set_xlim`` method by prefixing them with ``xlim_<kwarg>``.
+
+        **ylim**
+        - ``ylim`` A tuple containing minimum and maximum values of the x-axis. Additional keyword arguments can
+        be passed to the ``set_ylim`` method by prefixing them with ``ylim_<kwarg>``.
+
+        **legend**
+        - ``legend`` Whether the legend will be drawn on the y-axis. Additional keyword arguments can be
+        passed to the ``legend`` method by prefixing them with ``legend_<kwarg>``.
+        - ``y_in_legend`` Whether to add the y-axis data label to the legend label. If ``None`` only the
+        unique part of the y-axis data label is included and common-to-all parts of the y-axis data labels is
+        included in the default to the y-axis label.
+        - ``model_in_legend`` Whether to add the model name to the legend label. If ``None`` the model name is
+        only added if more than one model is being plotted.
+
+    Returns:
+
+    """
+
+
+    # Work on the ax object. That way it will work for subplots to
+
+    # Get the different kwargs
+    where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
+
+    xlabel_kwargs = utils.extract_kwargs(kwargs, 'xlabel', prefix='xlabel', xlabel = 'Mass coordinate M$_{\odot}$')
+    ylabel_kwargs = utils.extract_kwargs(kwargs,'ylabel', prefix='ylabel')
+    yscale_kwargs = utils.extract_kwargs(kwargs, 'yscale', prefix='yscale')
+    xlim_kwargs = utils.extract_kwargs(kwargs, 'xlim', prefix='xlim')
+    ylim_kwargs = utils.extract_kwargs(kwargs, 'ylim', prefix='ylim')
+    title_kwargs = utils.extract_kwargs(kwargs, 'title', prefix='title', title=True)
+    figure_kwargs = utils.extract_kwargs(kwargs, 'figsize', prefix='figure')
+
+    lscm_kwargs = utils.extract_kwargs(kwargs, 'linestyle', 'color', 'marker',
+                                 linestyle=True, color=True, marker=False)
+    legend_kwargs = utils.extract_kwargs(kwargs, 'legend', prefix='legend')
+    y_in_legend = kwargs.pop('y_in_legend', None)
+    model_in_legend = kwargs.pop('model_in_legend', None)
+
+    ax = get_axes(ax)
+    models = get_models(models, where=where, where_kwargs=where_kwargs)
+    linestyles, colors, markers = get_lscm(**lscm_kwargs)
+
+    figure = ax.get_figure()
+    if figure_kwargs.get('figsize', None):
+        figure.set_size_inches(*figure_kwargs['figsize'])
+
+    try:
+        isotopes_or_ratios = simple.asratios(isotopes_or_ratios)
+    except ValueError:
+        try:
+          isotopes_or_ratios = simple.asisotopes(isotopes_or_ratios)
+        except ValueError:
+            raise ValueError(f'Unable to convert {isotopes_or_ratios} into isotope or isotopes_or_ratios strings')
+        else:
+            plot_ratio=False
+    else:
+        plot_ratio = True
+
+    if yscale_kwargs.get('yscale', False):
+        ax.set_yscale(yscale_kwargs.pop('yscale'), **yscale_kwargs)
+
+    if xlim_kwargs.get('xlim', False):
+        ax.set_xlim(*xlim_kwargs.pop('xlim'), **xlim_kwargs)
+
+    if ylim_kwargs.get('ylim', False):
+        ax.set_ylim(*ylim_kwargs.pop('ylim'), **ylim_kwargs)
+
+    if plot_ratio:
+        # Figure out ylabel and what should go in the legend label.
+        n = {r.numer for r in isotopes_or_ratios}
+        d = {r.denom for r in isotopes_or_ratios}
+        numer_in_legend = y_in_legend
+        denom_in_legend = y_in_legend
+        if len(n) == 1:
+            ylabel = f"Slope of {ygetter.get_label(models[0], isotopes_or_ratios[0].numer)}"
+            if numer_in_legend is None: numer_in_legend = False
+        else:
+            ylabel = 'Slope of A'
+            if numer_in_legend is None:numer_in_legend = True
+
+        if len(d) == 1:
+            ylabel = f"{ylabel} / {ygetter.get_label(models[0], isotopes_or_ratios[0].denom)}"
+            if denom_in_legend is None: denom_in_legend = False
+        else:
+            ylabel = f'{ylabel} / B'
+            if denom_in_legend is None: denom_in_legend = True
+    else:
+        iso_in_legend = y_in_legend
+        if len(isotopes_or_ratios) == 1:
+            ylabel = f"{ygetter.get_label(models[0], isotopes_or_ratios[0])}"
+            if iso_in_legend is None: iso_in_legend = False
+        else:
+            ylabel = r'${\mathrm{R}}_{\mathrm{i}}$'
+            if iso_in_legend is None: iso_in_legend = True
+    ylabel_kwargs.setdefault('ylabel', ylabel)
+    xlabel_kwargs.setdefault('xlabel', xgetter.get_label())
+
+    ax.set_ylabel(**ylabel_kwargs)
+    ax.set_xlabel(**xlabel_kwargs)
+
+    # If there is only one model1 it is set as the title to make the legend shorter
+    if len(models) == 1 and title_kwargs['title'] is True:
+        if model_in_legend is None: model_in_legend = False
+        title_kwargs['title'] = models[0].name
+    else:
+        if model_in_legend is None: model_in_legend = True
+
+    if type(title_kwargs['title']) is str:
+        ax.set_title(title_kwargs.pop('title'), **title_kwargs)
+
+    # Get the linestyle, color and marker for each thing to be plotted.
+    if (len(models) == 1 or len(isotopes_or_ratios) == 1):
+        #Everything get a different colour and linestyle
+        lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(isotopes_or_ratios)*len(models))]
+    else:
+        # Each model has the same linestyle and each isotopes_or_ratios a different color
+        lscm = [(linestyles[i//len(models)], colors[i%len(isotopes_or_ratios)], markers[i%len(isotopes_or_ratios)])
+                for i in range(len(isotopes_or_ratios) * len(models))]
+
+    label = kwargs.pop('label', '')
+    mfc = kwargs.pop('markerfacecolor', None)
+    for iso_or_rat in isotopes_or_ratios:
+        for i, model in enumerate(models):
+            ls, c, m = lscm.pop(0)
+
+            legend = label
+            if plot_ratio:
+                if numer_in_legend and denom_in_legend:
+                    legend += f'{ygetter.get_label(model, iso_or_rat.numer)}/{ygetter.get_label(model, iso_or_rat.denom)}'
+                elif numer_in_legend: legend += f"{ygetter.get_label(model, iso_or_rat.numer)}"
+                elif denom_in_legend: legend += f" {ygetter.get_label(model, iso_or_rat.denom)}"
+                yval = ygetter.get_data(model, iso_or_rat.numer) / ygetter.get_data(model, iso_or_rat.denom)
+            else:
+                if iso_in_legend: legend += f'{ygetter.get_label(iso_or_rat)}'
+                yval = ygetter.get_data(model, iso_or_rat)
+
+            if model_in_legend: legend += f' {model.name}'
+            ax.plot(xgetter.get_data(model), yval,
+                    color=c, ls=ls, marker=m,
+                    markerfacecolor=mfc or c,
+                    label=legend.strip() or None, **kwargs)
+
+    if legend_kwargs.pop('legend', False):
+        ax.legend(**legend_kwargs)
+    ax.tick_params(left=True, right=True, top=True, labelleft=True, which='both')  # ,labelright=True)
+
+    #ax.xaxis.set_minor_locator(AutoMinorLocator())
+    #ax.yaxis.set_minor_locator(AutoMinorLocator())
+
+    return ax, models
+
+
+@utils.set_default_kwargs(default_kwargs,
+                        ylabel_labelpad=20,
+                         )
+def helper_mhist_singlex_singley(models, xgetter, ygetter, xisotope, yisotope,
+                                 ax = None, where=None, where_kwargs={},
+                                 **kwargs):
+    where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
+    xlabel_kwargs = utils.extract_kwargs(kwargs, 'xlabel', prefix='xlabel')
+    ylabel_kwargs = utils.extract_kwargs(kwargs, 'ylabel', prefix='ylabel')
+    rose_kwargs = utils.extract_kwargs(kwargs, prefix='rose')
+
+    try:
+        xisotope = simple.asisotope(xisotope)
+    except ValueError as e:
+        raise ValueError(f'Unable to convert {xisotope} into isotope string') from e
+    try:
+        yisotope = simple.asisotope(yisotope)
+    except ValueError as e:
+        raise ValueError(f'Unable to convert {yisotope} into isotope string') from e
+
+    ax = get_axes(ax)
+    models = get_models(models, where=where, where_kwargs=where_kwargs)
+
+    if ax.name != 'rose':
+        ax = create_rose_plot(ax, **rose_kwargs)
+
+    for model in models:
+        xy = (xgetter.get_data(model, xisotope), ygetter.get_data(model, yisotope))
+        ax.mhist(xy, **kwargs)
+
+    xlabel_kwargs.setdefault('xlabel', xgetter.get_label(models[0], xisotope))
+    ylabel_kwargs.setdefault('ylabel', ygetter.get_label(models[0], yisotope))
+    if xlabel_kwargs.get('xlabel', None) is not None:
+        ax.set_xlabel(**xlabel_kwargs)
+    if ylabel_kwargs.get('ylabel', None) is not None:
+        ax.set_ylabel(**ylabel_kwargs)
+
+    return ax, models
+
+
+
+
 
