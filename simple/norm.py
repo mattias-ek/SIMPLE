@@ -171,8 +171,8 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
             ignore = offset < largest_offset
             include = np.invert(ignore)
             if ignore.any():
-                logger.warning(f'{np.count_nonzero(ignore)} rows have largest offsets smaller than'
-                            f' {largest_offset} at the minimun dilution factor of {min_dilution_factor}. '
+                logger.warning(f'{np.count_nonzero(ignore)} rows out of {ignore.size} have largest offsets smaller than'
+                            f' {largest_offset} at the minimum dilution factor of {min_dilution_factor}. '
                             f'These rows are set to nan.')
             first_time = False
 
@@ -199,7 +199,7 @@ def intnorm_precision(abu_up, abu_down, abu_norm,
                       solar_up, solar_down, solar_norm,
                       dilution_step = 0.1, precision = 0.01):
     # Im not sure I understand this well enough to implement so I'll leave ir for now
-    # The way the method works means it needs to calculate a isotopes_or_ratios between two slopes to work
+    # The way the method works means it needs to calculate a ykeys between two slopes to work
     # Also the give_ratio_gm method is very inefficent...
     pass
 
@@ -208,7 +208,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
                            abu_unit=None, stdabu_unit=None, convert_unit=True,
                            method='largest_offset', **method_kwargs):
     """
-    Normalise the abundances of ``abu`` relative to the isotopes_or_ratios ``normrat`` using the internal normalisation procedure
+    Normalise the abundances of ``abu`` relative to the ykeys ``normrat`` using the internal normalisation procedure
     commonly used for data measured by mass spectrometers.
 
     Multiple normalisations can be done at once by supplying a list of normalising ratios. If doing multiple elements
@@ -219,7 +219,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         abu (): A [keyarray][simple.askeyarray] containing the abundances to be normalised.
         isotopes (): The numerator isotopes (i) in the calculation. If ``None`` all the isotopes in ``abu`` with the
             same element symbol and suffix as ``normrat`` will be selected.
-        normrat (): The isotopes_or_ratios (kj) used for internal normalisation.
+        normrat (): The ykeys (kj) used for internal normalisation.
         stdmass (): A [keyarray][simple.askeyarray] containing the isotope masses.
         stdabu (): A [keyarray][simple.askeyarray] containing the reference abundances.
         enrichment_factor (): Enrichment factor applied to ``abu``. Useful when doing multiple elements at once.
@@ -258,11 +258,11 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
 
             - ``eRi``: A key array containing the eRi values for each column in ``eRi_keys``.
             - ``eRi_keys``: The numerator isotopes for each column in ``eRi_values``.
-            - ``ij_key``, ``kj_key``: Dictionaries mapping ``eRi_keys`` to the numerator-denominator isotopes_or_ratios (ij) and the
-                normalising isotopes_or_ratios (kj) for each column in ``eRi``.
+            - ``ij_key``, ``kj_key``: Dictionaries mapping ``eRi_keys`` to the numerator-denominator ykeys (ij) and the
+                normalising ykeys (kj) for each column in ``eRi``.
             - ``label``, ``label_latex``: Dictionaries mapping ``eRi_keys`` to plain text and latex labels suitable
                 for plotting. Contains the ε symbol followed by the numerator isotope and the last digit of each mass in
-                the normalising isotopes_or_ratios, in brackets. E.g. ε104Pd(85) and $\\epsilon{}^{105}\\mathrm{Pd}_{(85)}$,
+                the normalising ykeys, in brackets. E.g. ε104Pd(85) and $\\epsilon{}^{105}\\mathrm{Pd}_{(85)}$,
                 where i=Pd-104, k=Pd-108 and j=Pd-105.
             - Additional attrs might be supplied by the different methods.
     """
@@ -319,7 +319,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
     for numerators, rat, abu_factor in zip(isotopes, normrat, enrichment_factor):
         rat = utils.asratio(rat)
 
-        if rat.numer.element != rat.denom.element:
+        if rat.numer.symbol != rat.denom.symbol:
             raise ValueError('The ``normrat`` numerator and normiso isotopes must be of the same element')
 
         if numerators is None:
@@ -327,7 +327,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
                 raise ValueError('The ``normrat`` numerator and normiso isotopes must have the same suffix '
                                  'for auto discovery of numerator isotopes')
 
-            numerators = utils.get_isotopes_of_element(abu.dtype.names, rat.denom.element, rat.denom.suffix)
+            numerators = utils.get_isotopes_of_element(abu.dtype.names, rat.denom.element)
         else:
             numerators = utils.asisotopes(numerators)
 
@@ -335,6 +335,9 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
             numerators += (rat.numer,)
         if rat.denom not in numerators:
             numerators += (rat.denom, )
+
+        logger.info(
+            f'Internally normalising {numerators} to {normrat} with an enrichment factor of {enrichment_factor}')
 
         numeri = numerators.index(rat.numer)
         denomi = numerators.index(rat.denom)
@@ -466,10 +469,10 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
 
             - ``Ri``: A key array containing the eRi values for each column in ``Ri_keys``.
             - ``Ri_keys``: The numerator isotopes for each column in ``Ri_values``.
-            - ``ij_key``: Dictionaries mapping ``Ri_keys`` to the numerator-denominator isotopes_or_ratios (ij) for each column
+            - ``ij_key``: Dictionaries mapping ``Ri_keys`` to the numerator-denominator ykeys (ij) for each column
                 in ``Ri``.
             - ``label``, ``label_latex``: Dictionaries mapping ``Ri_keys`` to plain text and latex labels suitable
-                for plotting. Consists of the ij mass isotopes_or_ratios followed by the element symbol of the numerator.
+                for plotting. Consists of the ij mass ykeys followed by the element symbol of the numerator.
                 E.g. 104/105Pd and ${}^{104/105}\\mathrm{Pd}$, where i=Pd-104 and j=Pd-105.
     """
     if abu.dtype.names is None:
@@ -508,12 +511,14 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
         denominator = utils.asisotope(denominator)
 
         if numerators is None:
-            numerators = utils.get_isotopes_of_element(abu.dtype.names, denominator.element, denominator.suffix)
+            numerators = utils.get_isotopes_of_element(abu.dtype.names, denominator.element)
         else:
             numerators = utils.asisotopes(numerators)
 
         if denominator not in numerators:
             numerators += (denominator,)
+
+        logger.info(f'Normalising {numerators} to {denominator} with an enrichment factor of {abu_factor}')
 
         denomi = numerators.index(denominator)
 
@@ -564,9 +569,9 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
     result['ij_key'] = dict(zip(all_iso_up, utils.asratios([f'{n}/{d}' for n, d in zip(all_iso_up, all_iso_down)])))
 
     # The labels assume that both the numerator and denominator is the same element.
-    result['label'] = dict(zip(all_iso_up, [f'{ij.numer.mass}/{ij.denom.mass}{ij.numer.element}{ij.numer.suffix}' for ij in result['ij_key'].values()]))
+    result['label'] = dict(zip(all_iso_up, [f'{ij.numer.mass}/{ij.denom.mass}{ij.numer.element}' for ij in result['ij_key'].values()]))
     result['label_latex'] = dict(
-        zip(all_iso_up, [fr'${{}}^{{{ij.numer.mass}/{ij.denom.mass}}}\mathrm{{{ij.numer.element}{ij.numer.suffix}}}$'
+        zip(all_iso_up, [fr'${{}}^{{{ij.numer.mass}/{ij.denom.mass}}}\mathrm{{{ij.numer.element}}}$'
                          for ij in result['ij_key'].values()]))
 
     for k, v in result.items():

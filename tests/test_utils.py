@@ -10,8 +10,10 @@ def test_asisotope():
         assert isinstance(iso, str)
         assert iso == 'Pd-102'
         assert iso.mass == '102'
-        assert iso.element == 'Pd'
+        assert iso.symbol == 'Pd'
         assert iso.suffix == ''
+        assert type(iso.element) is utils.Element
+        assert iso.element == 'Pd'
 
     ###############
     # Test suffix #
@@ -22,49 +24,60 @@ def test_asisotope():
         assert isinstance(iso, str)
         assert iso != 'Pd-102'
         assert iso.mass == '102'
-        assert iso.element == 'Pd'
+        assert iso.symbol == 'Pd'
         assert iso.suffix != ''
+        assert type(iso.element) is utils.Element
+        assert iso.element != 'Pd'
 
     iso = utils.asisotope('102Pd*')
     assert iso == 'Pd-102*'
     assert iso.suffix == '*'
+    assert iso.element == 'Pd*'
 
     iso = utils.asisotope('102Pd*', without_suffix=True)
     assert iso == 'Pd-102'
     assert iso.suffix == ''
+    assert iso.element == 'Pd'
 
     iso = utils.asisotope('102pd** ', without_suffix=False)
     assert iso == 'Pd-102**'
     assert iso.suffix == '**'
+    assert iso.element == 'Pd**'
 
     iso = utils.asisotope('102pd** ', without_suffix=True)
     assert iso == 'Pd-102'
     assert iso.suffix == ''
+    assert iso.element == 'Pd'
 
     iso = utils.asisotope(' Pd102 suffix ', without_suffix=False)
     assert iso == 'Pd-102 suffix'
     assert iso.suffix == ' suffix'
+    assert iso.element == 'Pd suffix'
 
     iso = utils.asisotope(' Pd102 suffix ', without_suffix=True)
     assert iso == 'Pd-102'
     assert iso.suffix == ''
+    assert iso.element == 'Pd'
 
     iso = utils.asisotope('102Pd*').without_suffix()
     assert iso == 'Pd-102'
     assert iso.suffix == ''
+    assert iso.element == 'Pd'
 
     iso = utils.asisotope('102Pd').without_suffix()
     assert iso == 'Pd-102'
     assert iso.suffix == ''
+    assert iso.element == 'Pd'
 
     iso = utils.asisotope('102Pd*', without_suffix=True).without_suffix()
     assert iso == 'Pd-102'
     assert iso.suffix == ''
+    assert iso.element == 'Pd'
 
     ################
     # Test invalid #
     ################
-    for string in 'invalid, mattias , Pd-1022, 1022pd, Pd102A, 102-Pdd, 102pd1, *102pd'.split(','):
+    for string in 'invalid, mattias , Pd-1022, 1022pd, Pd102A, 102-Pdd, 102pd1, *102pd, 102pda, 102pd-, 102pd/'.split(','):
         with pytest.raises(ValueError):
             utils.asisotope(string)
 
@@ -379,13 +392,13 @@ def test_select_isolist():
         assert result.dtype.names == correct_keys
         np.testing.assert_array_equal(result, correct_array)
 
-    # array - massunit = True
+    # array - unit = 'mass'
     if True:
         correct_keys = utils.asisotopes(['ar40', 'fe56*', 'pd105'])
         correct_values = np.array([[3 * 40, 2 * 56, 2 * 105], [3 * 40 * 2, 2 * 56 * 2, 2 * 105 * 2]])
         correct_array = utils.askeyarray(correct_values, correct_keys)
 
-        result = utils.select_isolist(isolist, array, massunit=True)
+        result = utils.select_isolist(isolist, array, unit='mass')
         assert isinstance(result, np.ndarray)
         assert result.dtype.names == correct_keys
         np.testing.assert_array_equal(result, correct_array)
@@ -552,80 +565,80 @@ def test_model_eval():
         a = 'A'
         b = 3.6
 
-    eval = utils.model_eval
+    eval = utils.simple_eval
     dattrs = {"a": 'A', 'b': 3.6}
     oattrs = Item()
 
     # == and !=
     for attrs in [oattrs, dattrs]:
-        result = eval.eval_where(attrs, 'a == A')
+        result = eval.eval(attrs, 'a == A')
         assert result is False
 
-        result = eval.eval_where(attrs, 'a != A')
+        result = eval.eval(attrs, 'a != A')
         assert result is True
 
-        result = eval.eval_where(attrs, '.a == A')
+        result = eval.eval(attrs, '.a == A')
         assert result is True
 
-        result = eval.eval_where(attrs, '.a != A')
+        result = eval.eval(attrs, '.a != A')
         assert result is False
 
-        result = eval.eval_where(attrs, '.a == {A}', A='x')
+        result = eval.eval(attrs, '.a == {A}', A='x')
         assert result is False
 
-        result = eval.eval_where(attrs, '.a != {A}', A='x')
+        result = eval.eval(attrs, '.a != {A}', A='x')
         assert result is True
 
-        result = eval.eval_where(attrs, '.a == {A}', A='A')
+        result = eval.eval(attrs, '.a == {A}', A='A')
         assert result is True
 
-        result = eval.eval_where(attrs, '.a != {A}', A='A')
+        result = eval.eval(attrs, '.a != {A}', A='A')
         assert result is False
 
-        result = eval.eval_where(attrs, '.b == 3.6')
+        result = eval.eval(attrs, '.b == 3.6')
         assert result is True
 
-        result = eval.eval_where(attrs, '.b != 3.6')
+        result = eval.eval(attrs, '.b != 3.6')
         assert result is False
 
-        result = eval.eval_where(attrs, '.c != c')
+        result = eval.eval(attrs, '.c != c')
         assert result is False
 
-        result = eval.eval_where(attrs, '{c} != c')
+        result = eval.eval(attrs, '{c} != c')
         assert result is False
 
     # <, >, <=, >=
     for attrs in [oattrs, dattrs]:
-        result = eval.eval_where(attrs, '.b > 3')
+        result = eval.eval(attrs, '.b > 3')
         assert result is True
 
-        result = eval.eval_where(attrs, '.b > 3.6')
+        result = eval.eval(attrs, '.b > 3.6')
         assert result is False
 
-        result = eval.eval_where(attrs, '.b >= 3.6')
+        result = eval.eval(attrs, '.b >= 3.6')
         assert result is True
 
-        result = eval.eval_where(attrs, '3 < .b')
+        result = eval.eval(attrs, '3 < .b')
         assert result is True
 
-        result = eval.eval_where(attrs, '3.6 < .b')
+        result = eval.eval(attrs, '3.6 < .b')
         assert result is False
 
-        result = eval.eval_where(attrs, '3.6 <= .b')
+        result = eval.eval(attrs, '3.6 <= .b')
         assert result is True
 
     # IN and NOT IN
     for attrs in [oattrs, dattrs]:
-        result = eval.eval_where(attrs, '.a == A & .b > 3 & x IN {arg}', arg=['x', 'y', 'z'])
+        result = eval.eval(attrs, '.a == A & .b > 3 & x IN {arg}', arg=['x', 'y', 'z'])
         assert result is True
 
-        result = eval.eval_where(attrs, '.a != A & .b > 3 & x IN {arg}', arg=['x', 'y', 'z'])
+        result = eval.eval(attrs, '.a != A & .b > 3 & x IN {arg}', arg=['x', 'y', 'z'])
         assert result is False
 
-        result = eval.eval_where(attrs, '.a == A & .b < 3 & x IN {arg}', arg=['x', 'y', 'z'])
+        result = eval.eval(attrs, '.a == A & .b < 3 & x IN {arg}', arg=['x', 'y', 'z'])
         assert result is False
 
-        result = eval.eval_where(attrs, '.a == A & .b > 3 & x NOT IN {arg}', arg=['x', 'y', 'z'])
+        result = eval.eval(attrs, '.a == A & .b > 3 & x NOT IN {arg}', arg=['x', 'y', 'z'])
         assert result is False
 
     ##########
@@ -633,7 +646,7 @@ def test_model_eval():
     ##########
     for attrs in [oattrs, dattrs]:
         with pytest.raises(ValueError):
-            eval.eval_where(attrs, '.a = A')
+            eval.eval(attrs, '.a = A')
 
 
 

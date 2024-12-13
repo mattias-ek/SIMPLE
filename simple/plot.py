@@ -12,9 +12,10 @@ from simple import utils
 import logging
 logger = logging.getLogger('SIMPLE.plot')
 
-__all__ = ['create_rose_plot']
+__all__ = ['create_rose_plot',
+           'mhist_abundance', 'mhist_intnorm', 'mhist_simplenorm',
+           'plot_intnorm', 'plot_simplenorm', 'plot_abundance']
 
-default_kwargs = dict()
 
 # colours appropriate for colour blindness
 # Taken from https://davidmathlogic.com/colorblind/#%23000000-%23E69F00-%2356B4E9-%23009E73-%23F0E442-%230072B2-%23D55E00-%23CC79A7
@@ -199,6 +200,74 @@ def get_cmap(name):
     except:
         return mpl.cm.get_cmap(name)
 
+def update_axes(ax, kwargs, *delay, delay_all=False):
+    """
+    Updates the axes and figure objects.
+
+    Keywords beginning with ``ax_<name>`` and ``fig_<name>`` will be stripped from kwargs. These will then be used
+    to call the ``set_<name>`` or ``<name>`` method of the axes or figure object.
+
+    If the value mapped to ``ax_<name>`` or ``fig_<name>`` is:
+    - A boolean it is used to determine whether to call the method. The boolean itself will not be passed to
+        the method. To pass a boolean to a method place it in a tuple, e.g. ``(True, )``.
+    - A tuple then the contents of the tuple is unpacked as arguments for the method call.
+    - A dictionary then the contents of the dictionary is unpacked as keyword arguments for the method call.
+    - Any other value will be passed as the first argument to the method call.
+
+    Additional keyword arguments can be passed to methods by mapping ``ax_kw_<name>_<keyword>`` or
+    ``fig_kw_<name>_<keyword>`` kwargs to the value. These additional keyword arguments are only used if the
+    ``ax_<name>`` or ``fig_<name>`` kwargs exist. Note however that they are always stripped from ``kwargs``.
+
+    It is possible to delay calling certain method adding ``ax_<name>`` or ``fig_<name>`` to ``*delay``. Keywords
+    associated with these method will then be included in the returned dictionary. This dictionary can be passed back
+    to the function at a later time. To delay all calls, i.e. just strip out all the relevant kwargs use
+    ``delay_all=True``.
+
+    Returns
+        dict: A dictionary containing the delayed method calls.
+    """
+    axes_meth = utils.extract_kwargs(kwargs, prefix='ax')
+    axes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
+
+    figure_meth = utils.extract_kwargs(kwargs, prefix='fig')
+    figure_kw = utils.extract_kwargs(figure_meth, prefix='kw')
+
+    # Special cases
+    if 'size' in figure_meth: figure_meth.setdefault('size_inches', figure_meth.pop('size'))
+
+    delayed_kwargs = {}
+
+    def update(obj, name, meth_kwargs, kw_kwargs):
+        for var, arg in meth_kwargs.items():
+            var_kwargs = utils.extract_kwargs(kw_kwargs, prefix=var)
+            try:
+                method = getattr(obj, f'set_{var}')
+            except:
+                try:
+                    method = getattr(obj, var)
+                except:
+                    raise AttributeError(f'The {name} object has no method called ``set_{var}`` or ``{var}``')
+
+            if f'{name}_{var}' in delay or delay_all:
+                delayed_kwargs[f'{name}_{var}'] = arg
+                delayed_kwargs.update({f'{name}_kw_{var}_{k}': v for k,v in var_kwargs.items()})
+                continue
+
+            elif arg is False:
+                continue
+            elif arg is True:
+                arg = ()
+            elif type(arg) is dict:
+                var_kwargs.update(arg)
+                arg = ()
+
+            method(*(arg if type(arg) is tuple else (arg,)), **var_kwargs)
+
+    update(ax, 'ax', axes_meth, axes_kw)
+    update(ax.get_figure(), 'fig', figure_meth, figure_kw)
+
+    return delayed_kwargs
+
 
 def create_rose_plot(ax=None, *, vmin= None, vmax=None, log = False, cmap='turbo',
                      colorbar_show=True, colorbar_label=None, colorbar_fontsize=None,
@@ -217,7 +286,7 @@ def create_rose_plot(ax=None, *, vmin= None, vmax=None, log = False, cmap='turbo
         vmin (float): The lower limit of the colour map. If no value is given the minimum value is ``0`` (or ``1E-10`` if
         ``log=True``)
         vmax (float): The upper limit of the colour map. If no value is given then ``vmax`` is set to ``1`` and all bin
-            weights are divided by the heaviest bin weight in each histogram.
+            default_weight are divided by the heaviest bin weight in each histogram.
         log (bool): Whether the color map scale is logarithmic or not.
         cmap (): The prefixes of the colormap to use. See,
                 [matplotlib documentation][https://matplotlib.org/stable/users/explain/colors/colormaps.html]
@@ -315,7 +384,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             vmin (float): The lower limit of the colour map. If no value is given the minimum value is ``0`` (or ``1E-10`` if
                 ``log=True``)
             vmax (float): The upper limit of the colour map. If no value is given then ``vmax`` is set to ``1`` and all bin
-                weights are divided by the heaviest bin weight in each histogram.
+                default_weight are divided by the heaviest bin weight in each histogram.
             log (bool): Whether the color map scale is logarithmic or not.
             cmap (): The prefixes of the colormap to use. See,
                 [matplotlib documentation][https://matplotlib.org/stable/users/explain/colors/colormaps.html]
@@ -746,223 +815,607 @@ mpl.projections.register_projection(RoseAxes)
 #################################
 ### helper plotting functions ###
 #################################
-
-@utils.set_default_kwargs(default_kwargs,
-    linestyle=True, color=True, marker=False,
-    xlabel_fontsize = 15,
-    ylabel_fontsize=15,
-    markersize=4,
-    title=True,
-    legend=True, legend_loc='upper right', y_in_legend=None, model_in_legend=None)
-def helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, *,
-                              ax = None, where=None, where_kwargs={},
-                              **kwargs):
+class GetterTemplate:
     """
-    Helper function that plots multiple isotope or ratio values from each model against a fixed x value.
-    For example plotting CCSNe model yields against the mass-coordinate.
+    Helper object for extracting data from models. To be used together with the helper plotting functions.
+    """
+    def get_data(self, model, key=None):
+        """
+        Extract the data from model.
+
+        Args:
+            model (): Model from which to extract the desired data
+            key (): The data column ``key`` to be extracted from the predefined attribute. If ``None`` the predefined
+                attribute is used.
+        """
+        raise NotImplementedError()
+
+    def get_label(self, model, key=None):
+        raise NotImplementedError()
+
+    def get_weights(self, model, weights=None, desired_unit=None):
+        raise NotImplementedError()
+
+class DataGetter(GetterTemplate):
+    def __init__(self, attrname, key = None, desired_unit=None, default_weight=1):
+        self.attrname = attrname
+        self.key = key
+        self.desired_unit = desired_unit
+        self.default_weight = default_weight
+
+
+    def get_data(self, model, key=None, desired_unit=None):
+        data = getattr(model, self.attrname)
+        data_unit = getattr(model, f"{self.attrname}_unit", None)
+
+        return self._get_data_(data, data_unit, key, desired_unit)
+
+    def _get_data_(self, data, data_unit, key, desired_unit):
+        if key is None: key = self.key
+        if desired_unit is None: desired_unit = self.desired_unit
+
+        try:
+            key = utils.asisotope(key)
+        except ValueError:
+            pass
+        else:
+            return self._get_value_(data, data_unit, key, desired_unit)
+
+        try:
+            key = utils.asratio(key)
+        except ValueError:
+            raise ValueError(f'Unable to parse {key} into an isotope or ratio string')
+        else:
+            return (self._get_value_(data, data_unit, key.numer, desired_unit) /
+                    self._get_value_(data, data_unit, key.denom, desired_unit))
+
+    def _get_value_(self, data, data_unit, isotope, desired_unit):
+        value = data[isotope]
+
+        if desired_unit is None:
+            pass
+        elif data_unit is None:
+            logger.warning('Data does not have a specified unit. Assuming it has the requested unit')
+        elif desired_unit in utils.UNITS['mass'] and data_unit in utils.UNITS['mass']:
+            pass
+        elif desired_unit in utils.UNITS['mole'] and data_unit in utils.UNITS['mole']:
+            pass
+        elif desired_unit in utils.UNITS['mass'] and data_unit in utils.UNITS['mole']:
+            logger.info(f'Multiplying data by the isotope mass number to convert from mole to mass')
+            value = value * float(isotope.mass)
+        elif desired_unit in utils.UNITS['mole'] and data_unit in utils.UNITS['mass']:
+            logger.info(f'Dividing data by the isotope mass number to convert from mass to mole')
+            value = value / float(isotope.mass)
+        else:
+            raise ValueError(f'Unable to convert data from {data_unit} to {desired_unit})')
+
+        return value
+
+    def get_label(self, model, key=None, prefix = '',
+                  key_in_label= True, numer_in_label=True, denom_in_label=True,
+                  model_in_label=False):
+        if key is None: key = self.key
+
+        label = prefix
+        if key_in_label:
+            try:
+                key = utils.asisotope(key)
+            except ValueError:
+                try:
+                    key = utils.asratio(key)
+                except ValueError:
+                    raise ValueError(f'Unable to parse {key} into an isotope or ratio string')
+                else:
+                    if numer_in_label and denom_in_label:
+                        label += f'{self._get_label_(model, key.numer)}/{self._get_label_(model, key.denom)} '
+                    elif numer_in_label:
+                        label += self._get_label_(model, key.numer) + ' '
+                    elif denom_in_label:
+                        label += self._get_label_(model, key.denom) + ' '
+            else:
+                label += self._get_label_(model, key) + ' '
+
+        if model_in_label:
+            return (label + model.name).strip()
+        else:
+            return label.strip()
+
+    def _get_label_(self, model, isotope):
+        return rf'${{}}^{{{isotope.mass}}}\mathrm{{{isotope.element}}}$'
+
+    def get_weights(self, model, weights=None, desired_unit=None):
+        data = getattr(model, self.attrname)
+        data_unit = getattr(model, f"{self.attrname}_unit", None)
+
+        return self._get_weight_(data, data_unit, weights, desired_unit)
+
+    def _get_weight_(self, data, data_unit, weights, desired_unit):
+        if weights is None: weights = self.default_weight
+        if desired_unit is None: desired_unit = self.desired_unit
+
+        if type(weights) == str:
+            try:
+                isotopes = utils.asisotopes(weights)
+            except ValueError:
+                try:
+                    element = utils.aselement(weights)
+                except ValueError:
+                    raise ValueError(f'Unable to parse "{weights}" into a list of isotope string or an element string')
+                else:
+                    isotopes = utils.get_isotopes_of_element(data.dtype.names, element)
+
+            weights = 0
+            for iso in isotopes:
+                if iso in data.dtype.names:
+                    weights += self._get_data_(data, data_unit, iso, desired_unit)
+
+        return weights
+
+class NormGetter(DataGetter):
+    def __init__(self, attrname, Rvalname, key=None,
+                 default_weight=1, weights_attrname=None, weights_desired_unit=None):
+        super().__init__(attrname, key, default_weight=default_weight)
+        self.Rvalname = Rvalname
+        self.weights_attrname = weights_attrname
+        self.weights_desired_unit = weights_desired_unit
+
+    def get_data(self, model, key=None):
+        norm = getattr(model, self.attrname)
+        data = getattr(norm, self.Rvalname)
+        return self._get_data_(data, None, key, None)
+
+    def _get_label_(self, model, isotope=None):
+        return getattr(model, self.attrname).label_latex[isotope]
+
+    def get_weights(self, model, weights=None, desired_unit=None):
+        if desired_unit is None: desired_unit = self.weights_desired_unit
+
+        if self.weights_attrname is None:
+            norm = getattr(model, self.attrname)
+            data = getattr(norm, self.Rvalname)
+            data_unit = None
+        else:
+            data = getattr(model, self.weights_attrname)
+            data_unit = getattr(model, f"{self.weights_attrname}_unit", None)
+
+        return self._get_weight_(data, data_unit, weights, desired_unit)
+
+
+################
+### xy plots ###
+################
+@utils.set_default_kwargs()
+def plot_abundance(models, xkey, ykey, *,
+                 attrname = 'abundance', unit=None,
+                 ax = None, where=None, where_kwargs={},
+                 **kwargs):
+    """
+    Plots *xkey* against *ykey* from a data array.
+
+    Args:
+        models (): The collection of models to be plotted.
+        xkey (): Can either an isotope or a ratio of two isotopes.
+        ykey (): Can either an isotope or a ratio of two isotopes.
+        attrname (): The name of the attribute storing the data array.
+        unit (str): The unit the data should be plotted in. If the data is stored in a different unit an attempt
+            to convert the data to *unit* is made before plotting.
+        ax (Axes): Axes on which to plot the data.
+        where (): A string to select which models to plot. See
+            [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
+        where_kwargs (): Keyword arguments to go with *where*.
+        kwargs: See section below for a description of acceptable keywords.
+
+    Keyword Arguments:
+        - ``model_in_legend`` Whether to add the model name to the legend label. If ``None`` the model name is
+        only added if more than one model is being plotted.
+
+        - ``linestyle`` Can be a list of linestyles that will be iterated through for each item plotted. If ``True``
+        the default list of linestyles is used.
+        - ``color`` Can be a list of colors that will be iterated through for each item plotted. If ``True``
+        the default list of colors is used.
+        - ``marker`` Can be a list of markers that will be iterated through for each item plotted. If ``True``
+        the default list of markers is used.
+        - Any keyword argument accepted by matplotlibs
+        [``plot``](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html) method.
+
+        - Keywords in the style of ``ax_<name>`` and ``fig_<name>`` can be used to update the axes and figure object.
+        Additional keyword arguments for these method calls can be set using ``ax_kw_<name>_<keyword>`` and
+        ``fig_kw_<name>_<keyword>``. See [here](simple.plot.update_axes) for more details.
+
+    """
+    xygetter = DataGetter(attrname, desired_unit=unit)
+    ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
+                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                **kwargs)
+    return ax
+@utils.set_default_kwargs()
+def plot_simplenorm(models, xkey, ykey, *,
+                 attrname = 'simplenorm',
+                 ax = None, where=None, where_kwargs={},
+                 **kwargs):
+    """
+    Plots *xkey* against *ykey* from the simply normalised Ri compositions.
+
+    Args:
+        models (): The collection of models to be plotted.
+        xkey (): Can either an isotope or a ratio of two isotopes.
+        ykey (): Can either an isotope or a ratio of two isotopes.
+        attrname (): The name of the attribute storing the internally normalised data.
+        ax (Axes): Axes on which to plot the data.
+        where (): A string to select which models to plot. See
+            [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
+        where_kwargs (): Keyword arguments to go with *where*.
+        kwargs: See section below for a description of acceptable keywords.
+
+    Keyword Arguments:
+        - ``model_in_legend`` Whether to add the model name to the legend label. If ``None`` the model name is
+        only added if more than one model is being plotted.
+
+        - ``linestyle`` Can be a list of linestyles that will be iterated through for each item plotted. If ``True``
+        the default list of linestyles is used.
+        - ``color`` Can be a list of colors that will be iterated through for each item plotted. If ``True``
+        the default list of colors is used.
+        - ``marker`` Can be a list of markers that will be iterated through for each item plotted. If ``True``
+        the default list of markers is used.
+        - Any keyword argument accepted by matplotlibs
+        [``plot``](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html) method.
+
+        - Keywords in the style of ``ax_<name>`` and ``fig_<name>`` can be used to update the axes and figure object.
+        Additional keyword arguments for these method calls can be set using ``ax_kw_<name>_<keyword>`` and
+        ``fig_kw_<name>_<keyword>``. See [here](simple.plot.update_axes) for more details.
+
+    """
+    xygetter = NormGetter(attrname, 'eRi')
+    ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
+                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                **kwargs)
+    return ax
+
+@utils.set_default_kwargs()
+def plot_intnorm(models, xkey, ykey, *,
+                 attrname = 'intnorm',
+                 ax = None, where=None, where_kwargs={},
+                 **kwargs):
+    """
+    Plots *xkey* against *ykey* from the internally normalised eRi compositions.
+
+    Args:
+        models (): The collection of models to be plotted.
+        xkey (): Can either an isotope or a ratio of two isotopes.
+        ykey (): Can either an isotope or a ratio of two isotopes.
+        attrname (): The name of the attribute storing the internally normalised data.
+        ax (Axes): Axes on which to plot the data.
+        where (): Can be used to select only a subset of the models to plot.
+        where (): A string to select which models to plot. See
+            [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
+        kwargs: See section below for a description of acceptable keywords.
+
+    Keyword Arguments:
+        - ``model_in_legend`` Whether to add the model name to the legend label. If ``None`` the model name is
+        only added if more than one model is being plotted.
+
+        - ``linestyle`` Can be a list of linestyles that will be iterated through for each item plotted. If ``True``
+        the default list of linestyles is used.
+        - ``color`` Can be a list of colors that will be iterated through for each item plotted. If ``True``
+        the default list of colors is used.
+        - ``marker`` Can be a list of markers that will be iterated through for each item plotted. If ``True``
+        the default list of markers is used.
+        - Any keyword argument accepted by matplotlibs
+        [``plot``](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html) method.
+
+        - Keywords in the style of ``ax_<name>`` and ``fig_<name>`` can be used to update the axes and figure object.
+        Additional keyword arguments for these method calls can be set using ``ax_kw_<name>_<keyword>`` and
+        ``fig_kw_<name>_<keyword>``. See [here](simple.plot.update_axes) for more details.
+
+    """
+    xygetter = NormGetter(attrname, 'eRi')
+    ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
+                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                **kwargs)
+    return ax
+
+##################
+### rose plots ###
+##################
+
+@utils.set_default_kwargs()
+def mhist_intnorm(models, xisotope, yisotope, *,
+                 attrname='intnorm',
+                 weights = 1, weights_attrname='abundance', weights_desired_unit='mole',
+                 ax = None, where=None, where_kwargs={},
+                 **kwargs):
+
+    xygetter = NormGetter(attrname, 'eRi',
+                          default_weight=weights, weights_attrname=weights_attrname, weights_desired_unit=weights_desired_unit)
+
+    ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
+                                  ax=ax, where=where, where_kwargs=where_kwargs,
+                                  **kwargs)
+    return ax
+
+@utils.set_default_kwargs()
+def mhist_simplenorm(models, xisotope, yisotope, *,
+                 attrname='simplenorm',
+                 weights = 1, weights_attrname='abundance', weights_desired_unit='mole',
+                 ax = None, where=None, where_kwargs={},
+                 **kwargs):
+
+    xygetter = NormGetter(attrname, 'eRi',
+                          default_weight=weights, weights_attrname=weights_attrname, weights_desired_unit=weights_desired_unit)
+
+    ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
+                                  ax=ax, where=where, where_kwargs=where_kwargs,
+                                  **kwargs)
+    return ax
+
+@utils.set_default_kwargs()
+def mhist_abundance(models, xisotope, yisotope, *,
+                    attrname='intnorm', unit=None, default_weight=1,
+                    ax = None, where=None, where_kwargs={},
+                    **kwargs):
+
+    xygetter = DataGetter(attrname, desired_unit=unit, default_weight=default_weight)
+
+    #numerators = utils.get_isotopes_of_element(abu.dtype.names, rat.denom.element, rat.denom.suffix)
+
+
+    ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
+                                  ax=ax, where=where, where_kwargs=where_kwargs,
+                                  **kwargs)
+    return ax
+
+#############################
+### Getter plot functions ###
+#############################
+# These aid in plotting the same thing for different models.
+@utils.set_default_kwargs(
+    linestyle=True, color=True, marker=False,
+    ax_kw_xlabel_fontsize=15,
+    ax_kw_ylabel_fontsize=15,
+    markersize=4,
+    ax_legend=dict(loc='upper right'),
+    model_in_legend=None,
+    ax_tick_params=dict(axis='both', left=True, right=True, top=True)
+    )
+
+def template_plot_xy(models, xgetter, ygetter, xkey, ykey,
+                     ax = None, where=None, where_kwargs={},
+                     **kwargs):
+    """
+    Template function for a xy plot.
+
+    Args:
+        models (): The collection of models to be plotted.
+        xgetter (): Getter object for retrieving the *xkey* data from each model.
+        ygetter (): Getter object for retrieving the *ykey* data from each model.
+        xkey (): Can either an isotope or a ratio of two isotopes.
+        ykey (): Can either an isotope or a ratio of two isotopes.
+        ax (Axes): Axes on which to plot the data.
+        where (): A string to select which models to plot. See
+            [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
+        where_kwargs (): Keyword arguments to go with *where*.
+        kwargs: See section below for a description of acceptable keywords.
+
+    Keyword Arguments:
+        - ``model_in_legend`` Whether to add the model name to the legend label. If ``None`` the model name is
+        only added if more than one model is being plotted.
+
+        - ``linestyle`` Can be a list of linestyles that will be iterated through for each item plotted. If ``True``
+        the default list of linestyles is used.
+        - ``color`` Can be a list of colors that will be iterated through for each item plotted. If ``True``
+        the default list of colors is used.
+        - ``marker`` Can be a list of markers that will be iterated through for each item plotted. If ``True``
+        the default list of markers is used.
+        - Any keyword argument accepted by matplotlibs
+        [``plot``](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html) method.
+
+        - Keywords in the style of ``ax_<name>`` and ``fig_<name>`` can be used to update the axes and figure object.
+        Additional keyword arguments for these method calls can be set using ``ax_kw_<name>_<keyword>`` and
+        ``fig_kw_<name>_<keyword>``. See [here](simple.plot.update_axes) for more details.
+
+    """
+    where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
+    lscm_kwargs = utils.extract_kwargs(kwargs, 'linestyle', 'color', 'marker',
+                                       linestyle=True, color=True, marker=False)
+
+    model_in_legend = kwargs.pop('model_in_legend', None)
+
+    ax = get_axes(ax)  # We are working on the axes object proper
+    models = get_models(models, where=where, where_kwargs=where_kwargs)
+    linestyles, colors, markers = get_lscm(**lscm_kwargs)
+
+    # If there is only one model1 it is set as the title to make the legend shorter
+    if len(models) == 1:
+        if model_in_legend is None: model_in_legend = False
+        kwargs.setdefault('ax_title', models[0].name)
+    else:
+        if model_in_legend is None: model_in_legend = True
+
+    kwargs.setdefault('ax_xlabel', xgetter.get_label(models[0], xkey))
+    kwargs.setdefault('ax_ylabel', ygetter.get_label(models[0], ykey))
+
+    delayed_kwargs = update_axes(ax, kwargs, 'ax_legend')
+
+    # Get the linestyle, color and marker for each thing to be plotted.
+    lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(models))]
+
+    label = kwargs.pop('label', '')
+    mfc = kwargs.pop('markerfacecolor', None)
+    for i, model in enumerate(models):
+        ls, c, m = lscm.pop(0)
+
+        if model_in_legend:
+            legend = f'{label} {model.name}'
+        else:
+            legend = label
+
+        xval = xgetter.get_data(model, xkey)
+        yval = ygetter.get_data(model, ykey)
+
+        ax.plot(xval, yval,
+                color=c, ls=ls, marker=m,
+                markerfacecolor=mfc or c,
+                label=legend.strip() or None, **kwargs)
+
+    update_axes(ax, delayed_kwargs)
+
+    return ax, models
+
+@utils.set_default_kwargs(
+    linestyle=True, color=True, marker=False,
+    ax_kw_xlabel_fontsize=15,
+    ax_kw_ylabel_fontsize=15,
+    markersize=4,
+    ax_legend=dict(loc='upper right'),
+    y_in_legend=None, model_in_legend=None,
+    ax_tick_params=dict(axis='both', left=True, right=True, top=True)
+    )
+
+def template_plot_y(models, xgetter, ygetter, ykeys, *,
+                    ax = None, where=None, where_kwargs={},
+                    **kwargs):
+    """
+    Template function for plotting different y values against a static x value.
 
     Args:
         models (): The models to be plotted
         xgetter (): Getter object for data on the x-axis
         ygetter (): Getter object for data on the y-axis
-        isotopes_or_ratios (): A list of isotopes or a list of ratios that will be plotted on the y-axis.
+        ykeys (): A list of isotopes or ratios that will be plotted on the y-axis.
         ax (): The axes for the plotting.
         where (): A string to select which models to plot. See
             [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
         where_kwargs (): Arguments used to evaluate ``where``.
-        **kwargs ():
+        **kwargs (): See section below for a description of acceptable keywords.
 
     Keyword Arguments:
-        **plot**
-            - ``linestyle`` Can be a list of linestyles that will be iterated through for each item plotted. If ``True``
-            the default list of linestyles is used.
-            - ``color`` Can be a list of colors that will be iterated through for each item plotted. If ``True``
-            the default list of colors is used.
-            - ``marker`` Can be a list of markers that will be iterated through for each item plotted. If ``True``
-            the default list of markers is used.
-            - Any keyword argument accepted by matplotlibs
-            [``plot``](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html) method.
-
-        **title**
-        - ``title`` The title of the figure. If ``True` and ``len(models)==1`` the title will be the name if
-        the model. Additional keyword arguments can be passed to the ``set_title`` method by prefixing them with
-        ``title_<kwarg>``.
-
-        **ylabel**
-        - ``ylabel`` The label for the y-axis. If omitted a suitable label is automatically generated based on
-        what is plotten on the y-axis.
-
-        **xlabel**
-        - ``xlabel`` The label for the x-axis.
-
-        **yscale**
-        - ``yscale`` The scale used for the y-axis. Additional keyword arguments can be passed to
-        the ``set_yscale`` method by prefixing them with ``yscale_<kwarg>``.
-
-        **xlim**
-        - ``xlim`` A tuple containing minimum and maximum values of the x-axis. Additional keyword arguments can
-        be passed to the ``set_xlim`` method by prefixing them with ``xlim_<kwarg>``.
-
-        **ylim**
-        - ``ylim`` A tuple containing minimum and maximum values of the x-axis. Additional keyword arguments can
-        be passed to the ``set_ylim`` method by prefixing them with ``ylim_<kwarg>``.
-
-        **legend**
-        - ``legend`` Whether the legend will be drawn on the y-axis. Additional keyword arguments can be
-        passed to the ``legend`` method by prefixing them with ``legend_<kwarg>``.
         - ``y_in_legend`` Whether to add the y-axis data label to the legend label. If ``None`` only the
         unique part of the y-axis data label is included and common-to-all parts of the y-axis data labels is
         included in the default to the y-axis label.
         - ``model_in_legend`` Whether to add the model name to the legend label. If ``None`` the model name is
         only added if more than one model is being plotted.
 
+        - ``linestyle`` Can be a list of linestyles that will be iterated through for each item plotted. If ``True``
+        the default list of linestyles is used.
+        - ``color`` Can be a list of colors that will be iterated through for each item plotted. If ``True``
+        the default list of colors is used.
+        - ``marker`` Can be a list of markers that will be iterated through for each item plotted. If ``True``
+        the default list of markers is used.
+        - Any keyword argument accepted by matplotlibs
+        [``plot``](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html) method.
+
+        - Keywords in the style of ``ax_<name>`` and ``fig_<name>`` can be used to update the axes and figure object.
+        Additional keyword arguments for these method calls can be set using ``ax_kw_<name>_<keyword>`` and
+        ``fig_kw_<name>_<keyword>``. See [here](simple.plot.update_axes) for more details.
+
     Returns:
+        Axes, ModelCollection: The axes and the models plotted.
 
     """
-
-
-    # Work on the ax object. That way it will work for subplots to
-
-    # Get the different kwargs
     where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
-
-    xlabel_kwargs = utils.extract_kwargs(kwargs, 'xlabel', prefix='xlabel', xlabel = 'Mass coordinate M$_{\odot}$')
-    ylabel_kwargs = utils.extract_kwargs(kwargs,'ylabel', prefix='ylabel')
-    yscale_kwargs = utils.extract_kwargs(kwargs, 'yscale', prefix='yscale')
-    xlim_kwargs = utils.extract_kwargs(kwargs, 'xlim', prefix='xlim')
-    ylim_kwargs = utils.extract_kwargs(kwargs, 'ylim', prefix='ylim')
-    title_kwargs = utils.extract_kwargs(kwargs, 'title', prefix='title', title=True)
-    figure_kwargs = utils.extract_kwargs(kwargs, 'figsize', prefix='figure')
-
     lscm_kwargs = utils.extract_kwargs(kwargs, 'linestyle', 'color', 'marker',
-                                 linestyle=True, color=True, marker=False)
-    legend_kwargs = utils.extract_kwargs(kwargs, 'legend', prefix='legend')
+                                       linestyle=True, color=True, marker=False)
+
     y_in_legend = kwargs.pop('y_in_legend', None)
     model_in_legend = kwargs.pop('model_in_legend', None)
 
-    ax = get_axes(ax)
+    ax = get_axes(ax) # We are working on the axes object proper
     models = get_models(models, where=where, where_kwargs=where_kwargs)
     linestyles, colors, markers = get_lscm(**lscm_kwargs)
 
-    figure = ax.get_figure()
-    if figure_kwargs.get('figsize', None):
-        figure.set_size_inches(*figure_kwargs['figsize'])
-
     try:
-        isotopes_or_ratios = simple.asratios(isotopes_or_ratios)
+        ykeys = simple.asratios(ykeys)
     except ValueError:
         try:
-          isotopes_or_ratios = simple.asisotopes(isotopes_or_ratios)
+          ykeys = simple.asisotopes(ykeys)
         except ValueError:
-            raise ValueError(f'Unable to convert {isotopes_or_ratios} into isotope or isotopes_or_ratios strings')
+            raise ValueError(f'Unable to convert {ykeys} into isotope or ratio strings')
         else:
             plot_ratio=False
     else:
         plot_ratio = True
 
-    if yscale_kwargs.get('yscale', False):
-        ax.set_yscale(yscale_kwargs.pop('yscale'), **yscale_kwargs)
-
-    if xlim_kwargs.get('xlim', False):
-        ax.set_xlim(*xlim_kwargs.pop('xlim'), **xlim_kwargs)
-
-    if ylim_kwargs.get('ylim', False):
-        ax.set_ylim(*ylim_kwargs.pop('ylim'), **ylim_kwargs)
-
+    # Create a label for the y-axis
     if plot_ratio:
         # Figure out ylabel and what should go in the legend label.
-        n = {r.numer for r in isotopes_or_ratios}
-        d = {r.denom for r in isotopes_or_ratios}
+        n = {r.numer for r in ykeys}
+        d = {r.denom for r in ykeys}
+        key_in_legend = True
         numer_in_legend = y_in_legend
         denom_in_legend = y_in_legend
         if len(n) == 1:
-            ylabel = f"Slope of {ygetter.get_label(models[0], isotopes_or_ratios[0].numer)}"
+            ylabel = f"Slope of {ygetter.get_label(models[0], ykeys[0].numer)}"
             if numer_in_legend is None: numer_in_legend = False
         else:
             ylabel = 'Slope of A'
             if numer_in_legend is None:numer_in_legend = True
 
         if len(d) == 1:
-            ylabel = f"{ylabel} / {ygetter.get_label(models[0], isotopes_or_ratios[0].denom)}"
+            ylabel = f"{ylabel} / {ygetter.get_label(models[0], ykeys[0].denom)}"
             if denom_in_legend is None: denom_in_legend = False
         else:
             ylabel = f'{ylabel} / B'
             if denom_in_legend is None: denom_in_legend = True
     else:
-        iso_in_legend = y_in_legend
-        if len(isotopes_or_ratios) == 1:
-            ylabel = f"{ygetter.get_label(models[0], isotopes_or_ratios[0])}"
-            if iso_in_legend is None: iso_in_legend = False
+        key_in_legend = y_in_legend
+        numer_in_legend = False
+        denom_in_legend = False
+        if len(ykeys) == 1:
+            ylabel = f"{ygetter.get_label(models[0], ykeys[0])}"
+            if key_in_legend is None: key_in_legend = False
         else:
             ylabel = r'${\mathrm{R}}_{\mathrm{i}}$'
-            if iso_in_legend is None: iso_in_legend = True
-    ylabel_kwargs.setdefault('ylabel', ylabel)
-    xlabel_kwargs.setdefault('xlabel', xgetter.get_label())
-
-    ax.set_ylabel(**ylabel_kwargs)
-    ax.set_xlabel(**xlabel_kwargs)
+            if key_in_legend is None: key_in_legend = True
+    kwargs.setdefault('ax_ylabel', ylabel)
+    kwargs.setdefault('ax_xlabel', xgetter.get_label(models[0], None))
 
     # If there is only one model1 it is set as the title to make the legend shorter
-    if len(models) == 1 and title_kwargs['title'] is True:
+    if len(models) == 1:
         if model_in_legend is None: model_in_legend = False
-        title_kwargs['title'] = models[0].name
+        kwargs.setdefault('ax_title', models[0].name)
     else:
         if model_in_legend is None: model_in_legend = True
 
-    if type(title_kwargs['title']) is str:
-        ax.set_title(title_kwargs.pop('title'), **title_kwargs)
+    delayed_kwargs = update_axes(ax, kwargs, 'ax_legend')
 
     # Get the linestyle, color and marker for each thing to be plotted.
-    if (len(models) == 1 or len(isotopes_or_ratios) == 1):
+    if (len(models) == 1 or len(ykeys) == 1):
         #Everything get a different colour and linestyle
-        lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(isotopes_or_ratios)*len(models))]
+        lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(ykeys) * len(models))]
     else:
-        # Each model has the same linestyle and each isotopes_or_ratios a different color
-        lscm = [(linestyles[i//len(models)], colors[i%len(isotopes_or_ratios)], markers[i%len(isotopes_or_ratios)])
-                for i in range(len(isotopes_or_ratios) * len(models))]
+        # Each model has the same linestyle and each ykeys a different color
+        lscm = [(linestyles[i//len(models)], colors[i % len(ykeys)], markers[i % len(ykeys)])
+                for i in range(len(ykeys) * len(models))]
 
     label = kwargs.pop('label', '')
     mfc = kwargs.pop('markerfacecolor', None)
-    for iso_or_rat in isotopes_or_ratios:
+    for ykey in ykeys:
         for i, model in enumerate(models):
             ls, c, m = lscm.pop(0)
 
-            legend = label
-            if plot_ratio:
-                if numer_in_legend and denom_in_legend:
-                    legend += f'{ygetter.get_label(model, iso_or_rat.numer)}/{ygetter.get_label(model, iso_or_rat.denom)}'
-                elif numer_in_legend: legend += f"{ygetter.get_label(model, iso_or_rat.numer)}"
-                elif denom_in_legend: legend += f" {ygetter.get_label(model, iso_or_rat.denom)}"
-                yval = ygetter.get_data(model, iso_or_rat.numer) / ygetter.get_data(model, iso_or_rat.denom)
-            else:
-                if iso_in_legend: legend += f'{ygetter.get_label(iso_or_rat)}'
-                yval = ygetter.get_data(model, iso_or_rat)
+            legend = ygetter.get_label(model, ykey, prefix=label, key_in_label=key_in_legend,
+                                       numer_in_label=numer_in_legend, denom_in_label=denom_in_legend,
+                                       model_in_label=model_in_legend)
+            yval = ygetter.get_data(model, ykey)
+            xval = xgetter.get_data(model)
 
-            if model_in_legend: legend += f' {model.name}'
-            ax.plot(xgetter.get_data(model), yval,
+            ax.plot(xval, yval,
                     color=c, ls=ls, marker=m,
                     markerfacecolor=mfc or c,
                     label=legend.strip() or None, **kwargs)
 
-    if legend_kwargs.pop('legend', False):
-        ax.legend(**legend_kwargs)
-    ax.tick_params(left=True, right=True, top=True, labelleft=True, which='both')  # ,labelright=True)
-
-    #ax.xaxis.set_minor_locator(AutoMinorLocator())
-    #ax.yaxis.set_minor_locator(AutoMinorLocator())
+    update_axes(ax, delayed_kwargs)
 
     return ax, models
 
 
-@utils.set_default_kwargs(default_kwargs,
-                        ylabel_labelpad=20,
+@utils.set_default_kwargs(
+                        ax_kw_ylabel_labelpad=20,
                          )
-def helper_mhist_singlex_singley(models, xgetter, ygetter, xisotope, yisotope,
-                                 ax = None, where=None, where_kwargs={},
-                                 **kwargs):
+def template_mhist_xy(models, xygetter, xisotope, yisotope,
+                      ax = None, where=None, where_kwargs={},
+                      **kwargs):
     where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
-    xlabel_kwargs = utils.extract_kwargs(kwargs, 'xlabel', prefix='xlabel')
-    ylabel_kwargs = utils.extract_kwargs(kwargs, 'ylabel', prefix='ylabel')
     rose_kwargs = utils.extract_kwargs(kwargs, prefix='rose')
 
     try:
@@ -974,22 +1427,24 @@ def helper_mhist_singlex_singley(models, xgetter, ygetter, xisotope, yisotope,
     except ValueError as e:
         raise ValueError(f'Unable to convert {yisotope} into isotope string') from e
 
+
     ax = get_axes(ax)
     models = get_models(models, where=where, where_kwargs=where_kwargs)
 
     if ax.name != 'rose':
         ax = create_rose_plot(ax, **rose_kwargs)
 
-    for model in models:
-        xy = (xgetter.get_data(model, xisotope), ygetter.get_data(model, yisotope))
-        ax.mhist(xy, **kwargs)
+    kwargs.setdefault('ax_xlabel', xygetter.get_label(models[0], xisotope))
+    kwargs.setdefault('ax_ylabel', xygetter.get_label(models[0], yisotope))
+    delayed_kwargs = update_axes(ax, kwargs, 'legend')
 
-    xlabel_kwargs.setdefault('xlabel', xgetter.get_label(models[0], xisotope))
-    ylabel_kwargs.setdefault('ylabel', ygetter.get_label(models[0], yisotope))
-    if xlabel_kwargs.get('xlabel', None) is not None:
-        ax.set_xlabel(**xlabel_kwargs)
-    if ylabel_kwargs.get('ylabel', None) is not None:
-        ax.set_ylabel(**ylabel_kwargs)
+    for model in models:
+        xy = (xygetter.get_data(model, xisotope), xygetter.get_data(model, yisotope))
+        w = xygetter.get_weights(model)
+        ax.mhist(xy, weights=w, **kwargs)
+
+    update_axes(ax, delayed_kwargs)
+
 
     return ax, models
 

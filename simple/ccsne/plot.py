@@ -3,34 +3,50 @@ import logging
 
 import simple.plot
 from simple import models, utils, plot
-import simple.ccsne.utils as ccsneutils
 
 logger = logging.getLogger('SIMPLE.CCSNe.plotting')
 
-__all__ = ['plot_abundance', 'plot_intnorm', 'plot_simplenorm', 'mhist_intnorm']
-
-# Stores default kwargs for plots. Should be mapped to the prefixes of the function.
-default_kwargs = dict()
-
+__all__ = ['plot_abundance', 'plot_intnorm', 'plot_simplenorm',]
 
 # For line, text and fill there is additional keyword - show - which determines if the thing is drawn
 # For text there is also an additional keyword - y - which is the y position in xy
-default_kwargs['plot_onion_structure'] = dict(
-    default = dict(line=dict(color='black', linestyle='--', lw=2, alpha=0.75),
-                   text=dict(fontsize=10., color='black',
-                             horizontalalignment='center',
-                             xycoords=('data', 'axes fraction'), y = 1.01),
-                   fill=dict(color='lightblue', alpha=0.25)),
 
-                    # For the rest we only need to give the values that differ from the default
-                   remnant = dict(line=dict(linestyle=':'),
-                                  fill=dict(color='gray', alpha=0.5)),
-                   HeN = dict(fill=dict(show=False)),
-                   OC = dict(fill=dict(show=False)),
-                   OSi = dict(fill=dict(show=False)),
-                   Ni = dict(fill=dict(show=False)))
 
-@utils.set_default_kwargs(default_kwargs,
+
+def get_onion_layer_mask(model, layer):
+    # Returns a mask that can be used to select only data from a certain layer.
+    # If there is no onion structure then the mask will not select any data.
+    mask = np.full(model.masscoord.size, False, dtype=np.bool)
+
+    lower_bounds = getattr(model, 'onion_lbounds', None)
+    if lower_bounds is None:
+        logger.error('No onion structure defined for this model')
+        return mask
+
+    def check(desired_layer, current_layer, lbound, ubound):
+        if lbound>0:
+            if desired_layer.lower() == current_layer:
+                mask[lbound:ubound] = True
+            return lbound
+        else:
+            return ubound
+
+    layers = layer.split(',')
+    for desired_layer in layers:
+        ubound = len(mask.size)
+        ubound = check(desired_layer, 'h', lower_bounds['H'][0], ubound)
+        ubound = check(desired_layer, 'he/n', lower_bounds['He/N'][0], ubound)
+        ubound = check(desired_layer, 'he/c', lower_bounds['He/C'][0], ubound)
+        ubound = check(desired_layer, 'o/c', lower_bounds['O/C'][0], ubound)
+        ubound = check(desired_layer, 'o/ne', lower_bounds['O/Ne'][0], ubound)
+        ubound = check(desired_layer, 'o/si', lower_bounds['O/Si'][0], ubound)
+        ubound = check(desired_layer, 'si', lower_bounds['Si'][0], ubound)
+        ubound = check(desired_layer, 'ni', lower_bounds['Ni'][0], ubound)
+
+    return mask
+
+# TODO dont plot if smaller than x
+@utils.set_default_kwargs(
     # Default settings for line, text and fill
     default_line_color='black', default_line_linestyle='--', default_line_lw=2, default_line_alpha=0.75,
     default_text_fontsize=10., default_text_color='black',
@@ -43,25 +59,27 @@ default_kwargs['plot_onion_structure'] = dict(
    OC_fill_show=False,
    OSi_fill_show=False,
    Ni_fill_show=False)
-
-def plot_onion_structure(model, *, xlim = None, ylim=None, ax=None, **kwargs):
+def plot_onion_structure(model, *, ax=None, **kwargs):
     if not isinstance(model, models.ModelTemplate):
         raise ValueError(f'model must be an Model object not {type(model)}')
 
     ax = plot.get_axes(ax)
+    delayed_kwargs = plot.update_axes(ax, kwargs, 'ax_legend')
 
-    lower_bounds = getattr(model, 'onion_lower_bounds', None)
+    lower_bounds = getattr(model, 'onion_lbounds', None)
     if lower_bounds is None:
-        lower_bounds = ccsneutils.get_onion_structure(model)
+        logger.error('No onion structure defined for this model')
+        return
 
-    lbound_H = lower_bounds['H'][0]
-    lbound_HeN = lower_bounds['He/N'][0]
-    lbound_HeC = lower_bounds['He/C'][0]
-    lbound_OC = lower_bounds['O/C'][0]
-    lbound_ONe = lower_bounds['O/Ne'][0]
-    lbound_OSi = lower_bounds['O/Si'][0]
-    lbound_Si = lower_bounds['Si'][0]
-    lbound_Ni = lower_bounds['Ni'][0]
+    masscoord = model.masscoord
+    lbound_H = masscoord[lower_bounds['H'][0]]
+    lbound_HeN = masscoord[lower_bounds['He/N'][0]]
+    lbound_HeC = masscoord[lower_bounds['He/C'][0]]
+    lbound_OC = masscoord[lower_bounds['O/C'][0]]
+    lbound_ONe = masscoord[lower_bounds['O/Ne'][0]]
+    lbound_OSi = masscoord[lower_bounds['O/Si'][0]]
+    lbound_Si = masscoord[lower_bounds['Si'][0]]
+    lbound_Ni = masscoord[lower_bounds['Ni'][0]]
 
     default_line = utils.extract_kwargs(kwargs, prefix='default_line')
     default_text = utils.extract_kwargs(kwargs, prefix='default_text')
@@ -90,7 +108,7 @@ def plot_onion_structure(model, *, xlim = None, ylim=None, ax=None, **kwargs):
         if kwargs.get(f'{name}_show', True) is False:
             return
 
-        if np.isnan(lbound) or not (ubound > xlim[0]) or not (lbound < ubound): return ubound
+        if lbound<0 or not (ubound > xlim[0]) or not (lbound < ubound): return ubound
 
         if not lbound > xlim[0]:
             lbound = xlim[0]
@@ -101,16 +119,11 @@ def plot_onion_structure(model, *, xlim = None, ylim=None, ax=None, **kwargs):
         add_fill(name, [lbound, ubound])
         return lbound
 
-    if ylim is None:
-        ylim = ax.get_ylim()
-    if xlim is None:
-        xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    xlim = ax.get_xlim()
 
     # Outside-in since the last lower limit is the upper limit of the next one
 
-    # @ Gabor - I dont understand all the additional limits you imposed here?
-    # Were they just cosmetic or were they part of the limit determinations.
-    # If its the latter it should go in the function that determines the onion structure.
     ubound = np.min([model.masscoord[-1], xlim[1]])
 
     # H - Envelope
@@ -144,154 +157,122 @@ def plot_onion_structure(model, *, xlim = None, ylim=None, ax=None, **kwargs):
         add_text('remnant', r'M$_{\rm rem}$', ((lbound_rem + masscut) / 2))
         add_fill('remnant', [lbound_rem, masscut])
 
-class AbuGetter:
-    def __init__(self, attrname, unit, isotope = None):
-        self.attrname = attrname
-        self.isotope = isotope
-
-        for k, v in utils.UNITS.items():
-            if unit in v:
-                self.unit = k
-                break
-        else:
-            raise ValueError(f'Unit not recognised')
+    plot.update_axes(ax, delayed_kwargs)
 
 
-    def get_data(self, model, isotope=None):
-        if isotope is None: isotope = self.isotope
-        data = getattr(model, self.attrname)[isotope]
-        data_unit = getattr(model, f"{self.attrname}_unit", None)
-
-        if data_unit is None:
-            logger.warning('Data does not have a specified unit. Assuming it has the requested unit')
-            data_unit = self.unit
-
-        if data_unit not in utils.UNITS[self.unit]:
-            if self.unit == 'mass' and data_unit in utils.UNITS['mole']:
-                logger.info(f'Multiplying data by the isotope mass number to convert from mass to moles')
-                data = data * float(isotope.mass)
-            elif self.unit == 'mole' and data_unit in utils.UNITS['mass']:
-                logger.info(f'Dividing data by the isotope mass number to convert from moles to mass')
-                data = data / float(isotope.mass)
-            else:
-                raise ValueError(f'Unable to convert data from {data_unit} to {self.unit})')
-
-        return data
-
-    def get_label(self, model, isotope=None):
-        if isotope is None: isotope = self.isotope
-        return rf'${{}}^{{{isotope.mass}}}\mathrm{{{isotope.element}}}$'
-
-class NormGetter:
-    def __init__(self, attrname, Rvalname, isotope=None):
-        self.attrname = attrname
-        self.Rvalname = Rvalname
-        self.isotope = isotope
-
-    def get_data(self, model, isotope=None):
-        if isotope is None: isotope = self.isotope
-        norm = getattr(model, self.attrname)
-        Rval = getattr(norm, self.Rvalname)
-        return Rval[isotope]
-
-    def get_label(self, model, isotope=None):
-        if isotope is None: isotope = self.isotope
-        return getattr(model, self.attrname).label_latex[isotope]
-
-class MasscoordGetter:
+class MasscoordGetter(plot.GetterTemplate):
     def get_data(self, model, isotope=None):
         return model.masscoord
 
     def get_label(self, model=None, isotope=None):
-        return 'Mass coordinate M$_{\odot}$',
+        return 'Mass coordinate M${}_{\\odot}$'
 
-@utils.set_default_kwargs(default_kwargs,)
+@utils.set_default_kwargs()
 def plot_abundance(models, isotopes_or_ratios, *,
-                   onion=None, semilog = False, unit='mass',
+                   semilog = False,
+                   attrname='abundance', unit=None,
+                   onion=None,
                    ax = None, where=None, where_kwargs={},
                    **kwargs):
+    """
+    Plots *ykey* from a data array against the mass coordinate for different CCSNe models.
 
-    if semilog: kwargs['yscale'] = 'log'
+    Args:
+        models (): The collection of models to be plotted.
+        ykey (): Can either an isotope or a ratio of two isotopes. Accepts multiple keys seperated by ``,``.
+        semilog (bool): Whether to plot the data on the yaxis in a logarithmic scale.
+        attrname (): The name of the attribute storing the data array.
+        unit (str): The unit the data should be plotted in. If the data is stored in a different unit an attempt
+            to convert the data to *unit* is made before plotting.
+        onion (bool): Whether to plot the onion shell structure. Will only be shown in a single model is plotted.
+        ax (Axes): Axes on which to plot the data.
+        where (): A string to select which models to plot. See
+            [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
+        where_kwargs (): Keyword arguments to go with *where*.
+        kwargs: See section below for a description of acceptable keywords.
+
+    Keyword Arguments:
+        - ``model_in_legend`` Whether to add the model name to the legend label. If ``None`` the model name is
+        only added if more than one model is being plotted.
+
+        - ``linestyle`` Can be a list of linestyles that will be iterated through for each item plotted. If ``True``
+        the default list of linestyles is used.
+        - ``color`` Can be a list of colors that will be iterated through for each item plotted. If ``True``
+        the default list of colors is used.
+        - ``marker`` Can be a list of markers that will be iterated through for each item plotted. If ``True``
+        the default list of markers is used.
+        - Any keyword argument accepted by matplotlibs
+        [``plot``](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.plot.html) method.
+
+        - Keywords in the style of ``ax_<name>`` and ``fig_<name>`` can be used to update the axes and figure object.
+        Additional keyword arguments for these method calls can be set using ``ax_kw_<name>_<keyword>`` and
+        ``fig_kw_<name>_<keyword>``. See [here](simple.plot.update_axes) for more details.
+
+    """
+
+    if semilog: kwargs.detdefault('ax_yscale', 'log')
     xgetter = MasscoordGetter()
-    ygetter = AbuGetter('abundance', unit)
-    ax, model = helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, onion=onion,
-                                          ax=ax, where=where, where_kwargs=where_kwargs,
-                                          **kwargs)
+    ygetter = plot.DataGetter(attrname, desired_unit=unit)
+    ax, model = template_plot_y(models, xgetter, ygetter, isotopes_or_ratios, onion=onion,
+                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                **kwargs)
     return ax
 
-@utils.set_default_kwargs(default_kwargs,)
-def plot_intnorm(models, isotopes_or_ratios, *,
+@utils.set_default_kwargs()
+def plot_intnorm(models, ykey, *,
                  attrname = 'intnorm', onion=None,
                  ax = None, where=None, where_kwargs={},
                  **kwargs):
     """
-    Plots the slope of two internally normalised eRi compositions against the mass coordinates.
+    Plots *ykey* from the internally normalised eRi compositions against the mass coordinate for
+    different CCSNe models.
 
     Args:
         models (): The collection of models to be plotted.
-        isotopes_or_ratios (): Can either be a single isotopes_or_ratios or multiple ratios.
-        where (): Can be used to select only a subset of the models to plot.
-        where_kwargs ():
+        ykey (): Can either an isotope or a ratio of two isotopes. Accepts multiple keys seperated by ``,``.
+        attrname (): The name of the attribute storing the internally normalised data.
+        ax (Axes): Axes on which to plot the data.
+        onion (bool): Whether to plot the onion shell structure. Will only be shown in a single model is plotted.
+        where (): A string to select which models to plot. See
+            [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
+        where_kwargs (): Keyword arguments to go with *where*.
 
     """
     xgetter = MasscoordGetter()
-    ygetter = NormGetter(attrname, 'eRi')
-    ax, model = helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, onion=onion,
-                                          ax=ax, where=where, where_kwargs=where_kwargs,
-                                          **kwargs)
+    ygetter = plot.NormGetter(attrname, 'eRi')
+    ax, model = template_plot_y(models, xgetter, ygetter, ykey, onion=onion,
+                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                **kwargs)
     return ax
 
-@utils.set_default_kwargs(default_kwargs,)
+
+
+@utils.set_default_kwargs()
 def plot_simplenorm(models, isotopes_or_ratios, *,
                     attrname = 'simplenorm', onion=None,
                     ax = None, where=None, where_kwargs={}, **kwargs):
     """
-    Plots the slope of two simply normalised Ri compositions against the mass coordinates.
+    Plots *ykey* from the simply normalised Ri compositions against the mass coordinate for
+    different CCSNe models.
 
     Args:
         models (): The collection of models to be plotted.
-        isotopes_or_ratios (): Can either be a single isotopes_or_ratios or multiple ratios.
+        isotopes_or_ratios (): Can either be a single ykeys or multiple ratios.
 
     """
     xgetter = MasscoordGetter()
-    ygetter = NormGetter(attrname, 'Ri')
-    ax, model = helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, onion=onion,
-                                          ax=ax, where=where, where_kwargs=where_kwargs,
-                                          **kwargs)
-    return ax
-
-@utils.set_default_kwargs(default_kwargs,)
-def mhist_intnorm(models, xisotope, yisotope, *,
-                 attrname='intnorm',
-                 ax = None, where=None, where_kwargs={},
-                 **kwargs):
-
-    xygetter = NormGetter(attrname, 'eRi')
-    ax, model = simple.plot.helper_mhist_singlex_singley(models, xygetter, xygetter,
-                                                         xisotope, yisotope,
-                                                         ax=ax, where=where, where_kwargs=where_kwargs,
-                                                         **kwargs)
-    return ax
-
-@utils.set_default_kwargs(default_kwargs,)
-def mhist_abundance(models, xisotope, yisotope, *,
-                    unit = 'mass',
-                    ax = None, where=None, where_kwargs={},
-                    **kwargs):
-
-    xygetter = AbuGetter('abundance', unit)
-    ax, model = simple.plot.helper_mhist_singlex_singley(models, xygetter, xygetter,
-                                                         xisotope, yisotope,
-                                                         ax=ax, where=where, where_kwargs=where_kwargs,
-                                                         **kwargs)
+    ygetter = plot.NormGetter(attrname, 'Ri')
+    ax, model = template_plot_y(models, xgetter, ygetter, isotopes_or_ratios, onion=onion,
+                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                **kwargs)
     return ax
 
 
-def helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, onion=False, **kwargs):
+def template_plot_y(models, xgetter, ygetter, isotopes_or_ratios, onion=False, **kwargs):
     # Wrapper that adds the option to plot the onion structure of CCSNe models
     onion_kwargs = utils.extract_kwargs(kwargs, prefix='onion')
 
-    ax, models = plot.helper_plot_multiy_fixedx(models, xgetter, ygetter, isotopes_or_ratios, **kwargs)
+    ax, models = plot.template_plot_y(models, xgetter, ygetter, isotopes_or_ratios, **kwargs)
 
     if onion or (onion is None and len(models) == 1):
         ax.set_title(None)

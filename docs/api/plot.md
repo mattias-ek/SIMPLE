@@ -8,10 +8,22 @@ Things only available through the ``simple.plot`` namespace.
 
 :::simple.plot.get_models
 
+## XY Diagrams
+
+::: simple.plot_abundance
+
+::: simple.plot_intnorm
+
+::: simple.plot_simplenorm
+
 ## Rose Diagram
 
-See the 
+::: simple.create_rose_plot
 
-:::simple.plot.create_rose_plot
+::: simple.mhist_abundance
 
-:::simple.plot.RoseAxes
+::: simple.mhist_intnorm
+
+::: simple.mhist_simplenorm
+
+::: simple.plot.RoseAxes

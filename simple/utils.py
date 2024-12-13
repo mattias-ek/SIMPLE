@@ -8,11 +8,11 @@ import collections
 logger = logging.getLogger('SIMPLE.utils')
 
 __all__ = ['load_defaults',
-           'asarray', 'askeyarray',
-           'asisotope', 'asisotopes', 'asratio', 'asratios']
+           'asarray', 'askeyarray', 'asisolist', 'get_isotopes_of_element',
+           'aselement', 'aselements', 'asisotope', 'asisotopes', 'asratio', 'asratios']
 
 UNITS = dict(mass = ['mass', 'massfrac', 'wt', 'wt%'],
-             mole = ['mol', 'molfrac'])
+             mole = ['mole', 'moles', 'mol', 'molfrac'])
 """
 A dictionary containing the names associated with different unit types
 
@@ -20,6 +20,7 @@ Current unit types are:
 - ``mass`` that represents data being stored in a mass unit or as mass fractions.
 -  ``mole`` that represents data being stored in moles or as mole fractions.
 """
+
 class EndlessList(list):
     """
     A subclass of ``list`` that where the index will never go out of bounds. If a requested
@@ -38,17 +39,45 @@ class EndlessList(list):
         else:
             return value
 
+class NamedDict(dict):
+    """
+    A subclass of a normal ``dict`` where item in the dictionary can also be accessed as attributes.
 
-def extract_kwargs(kwargs, *keys, prefix=None, pop=True, **initial_kwargs):
+    Examples:
+        >>> nd = simple.utils.NamedDict({'a': 1, 'b': 2, 'c': 3})
+        >>> nd.a
+        1
+    """
+    def __init__(self, *args, **kwargs):
+        self.update(*args, **kwargs)
+
+    def __setattr__(self, name, value):
+        return self.__setitem__(name, value)
+
+    def __getattr__(self, name):
+        return self.__getitem__(name)
+
+    def update(self, *args, **kwargs):
+        for k, v in dict(*args, **kwargs).items():
+            self[k] = v
+
+    def setdefault(self, key, default_value):
+        if key not in self:
+            self[key] = default_value
+
+        return self[key]
+
+def extract_kwargs(kwargs, *keys, prefix=None, pop=True, remove_prefix=True, **initial_kwargs):
     """
     Extracts the given keyword arguments from ``kwargs``.
 
     Args:
         kwargs (): The dictionary from which the keyword arguments will be extracted.
         *keys (): Keyword arguments to be extracted
-        prefix (): Any keyword with this prefix will be extracted. The prefix will not be included in the keyword of
-            the returned dictionary. A ``"_"`` will be added to the end of the prefix if not already present.
+        prefix (): Any keyword with this prefix will be extracted. A ``"_"`` will be added to the end of the
+            prefix if not already present.
         pop (): Whether to remove the extracted keyword arguments from ``kwargs``.
+        remove_prefix ():  If ``True`` the prefix part of they keyword is removed from the returned dictionary.
         **initial_kwargs (): Any additional keyword arguments. Note that these will be overwritten if the same
         keyword is extracted from ``kwargs``.
 
@@ -64,12 +93,21 @@ def extract_kwargs(kwargs, *keys, prefix=None, pop=True, **initial_kwargs):
             else:
                 extracted[k] = kwargs.get(k)
 
-    if type(prefix) is str:
-        if prefix[-1] != '_': prefix += '_'
+    if not isinstance(prefix, (list, tuple)):
+        prefix = (prefix, )
+
+    for prfx in prefix:
+        if type(prfx) is not str:
+            continue
+
+        if prfx[-1] != '_': prfx += '_'
 
         for k in list(kwargs.keys()):
-            if k[:len(prefix)] == prefix:
-                name = k[len(prefix):]
+            if k[:len(prfx)] == prfx:
+                if remove_prefix:
+                    name = k[len(prfx):]
+                else:
+                    name = k
                 if pop:
                     extracted[name] = kwargs.pop(k)
                 else:
@@ -77,38 +115,22 @@ def extract_kwargs(kwargs, *keys, prefix=None, pop=True, **initial_kwargs):
 
     return extracted
 
-
-def set_default_kwargs(default_kwargs_dict, **default_kwargs):
+def set_default_kwargs(**default_kwargs):
     """
-    Decorator sets the default arguments for the function. It wraps the function so that the
+    Decorator sets the default keyword arguments for the function. It wraps the function so that the
     default kwargs are always passed to the function.
 
-    It also adds a ``update_kwargs(**new_kwargs)`` function to the wrapper that can be used to
-    update the default kwargs.
-
-    Args:
-        default_kwargs_dict (): The local dictionary where the default kwargs are stored
-        **kwargs ():
-
-    Returns:
-
+    The default_kwargs can be accessed from ``<func>.default_kwargs``. Note that you can update this dictionary,
+    but it is not possible to replace it with another.
     """
     def decorator(func):
-        funcname = func.__name__
-
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            new_kwargs = default_kwargs_dict.get(funcname, dict()).copy()
+            new_kwargs = default_kwargs.copy()
             new_kwargs.update(kwargs)
             return func(*args, **new_kwargs)
 
-        def update_kwargs(**new_kwargs):
-            d = default_kwargs_dict.setdefault(funcname, dict())
-            for k,v in new_kwargs.items():
-                d[k] = v
-
-        update_kwargs(**default_kwargs)
-        wrapper.update_kwargs = update_kwargs
+        wrapper.default_kwargs=default_kwargs
         return wrapper
     return decorator
 
@@ -143,7 +165,7 @@ def load_defaults(filename: str):
 
 
     """
-    return NamedDict(yaml.safe_load(open(filename, 'r').read()))
+    return dict(yaml.safe_load(open(filename, 'r').read()))
 
 def askeyarray(values, keys, dtype=None):
     """
@@ -218,19 +240,25 @@ def asarray(values, dtype=None, saving=False):
 
     return values
 
-def select_isolist(isolist, data, *, without_suffix=False, massunit = False, convert_unit = True):
+def select_isolist(isolist, data, *, without_suffix=False, unit = None, convert_unit = True):
     """
     Creates a subselection of ``data`` containing only the isotopes in ``isolist``.
+
+    When addining multiple isotopes together they will be added in molar proportions. If the data is in another
+    unit it will be converted to moles if possible, otherwise an exception will be raised. The data of the returned
+    array will be converted back to the original unit.
+
+    If the data is in a mass unit the data will be divided by the isotope mass number to convert to moles. The returned
+    data will be multiplied by the mass number of the final isotope to convert it back to the original unit. Note
+    however this will only be approximate as the total mass would have changed and this is not accounted for.
 
     Args:
         isolist (): Either a list of isotopes to be selected or a dictionary consisting of the
              final isotope mapped to a list of isotopes to be added together for this isotope.
         data (): A key array from which the subselection will be made.
         without_suffix (): If ``True`` the suffix will be removed from all isotope strings in ``isolist``.
-        massunit (): Whether the data is stored in a mass unit.
-        convert_unit: If ``True``  and ``mass_unit=True`` all values in ``data`` will be divided by the mass number of
-            the isotope before summing values together. The final value is then multiplied by the mass number of the
-            output isotope.
+        unit (): Unit the data is stored in.
+        convert_unit: Whether to convert the data if it is not in the correct unit.
 
     Returns:
         A new key array containing only the isotopes in ``isolist``.
@@ -244,6 +272,10 @@ def select_isolist(isolist, data, *, without_suffix=False, massunit = False, con
     new_data = []
     missing_isotopes = []
 
+    if unit is None:
+        logger.warning('No unit specified for data. Assuming the unit is "mol"')
+        unit = 'mol'
+
     if data.dtype.names is None:
         raise ValueError('``data`` must be a key arrray')
 
@@ -252,15 +284,25 @@ def select_isolist(isolist, data, *, without_suffix=False, massunit = False, con
 
         for iso in inciso:
             if iso in data.dtype.names:
-                if massunit:
-                    value += (data[iso] / float(iso.mass))
+                if convert_unit and unit.lower() not in UNITS['mole']:
+                    if unit.lower() in UNITS['mass']:
+                        logger.info('Converting model abundances from mass to moles by dividing by the mass number.')
+                        value += (data[iso] / float(iso.mass))
+                    else:
+                        raise ValueError(f'Unable to convert abundances from {unit} to moles.')
                 else:
                     value += data[iso]
             else:
                 missing_isotopes.append(iso)
 
-        if massunit:
-            new_data.append(value * float(mainiso.mass))
+        if convert_unit and unit.lower() not in UNITS['mole']:
+            if unit.lower() in UNITS['mass']:
+                logger.info('Converting final abundance back to mass units from mole units by multiplying by the '
+                            'mass number of the final isotope.')
+                new_data.append(value * float(mainiso.mass))
+            else:
+                # Should never get there
+                raise ValueError(f'Unable to convert the final abundance back to {unit} from moles.')
         else:
             new_data.append(value)
 
@@ -274,6 +316,45 @@ def select_isolist(isolist, data, *, without_suffix=False, massunit = False, con
 #######################
 ### Isotope strings ###
 #######################
+class Element(str):
+    RE = r'([a-zA-Z]{1,2})([*_: ][^/]*)?'
+    def __new__(cls, string, without_suffix=False):
+        string = string.strip()
+        m = re.fullmatch(cls.RE, string)
+        if m:
+            element, suffix = m.group(1).capitalize(), m.group(2)
+        else:
+            raise ValueError(f"String '{string}' is not a valid element")
+
+        return cls._new_(element, '' if without_suffix else suffix)
+
+    @classmethod
+    def _new_(cls, symbol, suffix):
+        self = super().__new__(cls, f"{symbol}{suffix}")
+        self.symbol = symbol
+        self.suffix = suffix
+        return self
+
+    def latex(self, dollar=True):
+        """
+        Returns a latex representation of the string e.g. Pd -> $\mathrm{Pd}$
+
+        Args:
+            dollar (bool): Whether to include the bracketing ``$`` signs.
+
+        """
+        string = fr"\mathrm{{{self.symbol}{self.suffix}}}"
+        if dollar:
+            return f"${string}$"
+        else:
+            return string
+
+    def without_suffix(self):
+        """
+        Return a new element string without the suffix.
+        """
+        return self._new_(self.symbol, '')
+
 class Isotope(str):
     """
     A subclass of string representing an isotope using the format ``<element symbol>-<mass number><suffix>`` e.g.
@@ -295,7 +376,7 @@ class Isotope(str):
     Raises:
         ValueError: If ``string`` does not represent a valid isotope.
     """
-    RE = r'((([a-zA-Z]{1,2})[-]?([0-9]{1,3}))|(([0-9]{1,3})[-]?([a-zA-Z]{1,2})))([^a-zA-Z0-9].*)?'
+    RE = r'((([a-zA-Z]{1,2})[-]?([0-9]{1,3}))|(([0-9]{1,3})[-]?([a-zA-Z]{1,2})))([*_: ].*)?'
 
     def __new__(cls, string, without_suffix=False):
         string = string.strip()
@@ -309,19 +390,22 @@ class Isotope(str):
             raise ValueError(f"String '{string}' is not a valid isotope")
 
         if '/' in suffix:
-            raise ValueError(f'Invalid character "/" encountered in suffix "{suffix}"')
-        return cls._new_(mass, element, '' if without_suffix else suffix)
+            raise ValueError(f"Suffix '{suffix}' is not allowed to contain '/'")
+
+        element = Element._new_(element, '' if without_suffix else suffix)
+        return cls._new_(mass, element)
 
     def __init__(self, string, without_suffix=False):
         # Never called. Just for the docstring.
         super(Isotope, self).__init__()
 
     @classmethod
-    def _new_(cls, mass, element, suffix):
-        self = super().__new__(cls, f"{element}-{mass}{suffix}")
+    def _new_(cls, mass, element):
+        self = super().__new__(cls, f"{element.symbol}-{mass}{element.suffix}")
         self.mass = mass
         self.element = element
-        self.suffix = suffix
+        self.symbol = element.symbol
+        self.suffix = element.suffix
         return self
 
     def latex(self, dollar=True):
@@ -332,7 +416,7 @@ class Isotope(str):
             dollar (bool): Whether to include the bracketing ``$`` signs.
 
         """
-        string = fr"{{}}^{{{self.mass}}}\mathrm{{{self.element}{self.suffix}}}"
+        string = fr"{{}}^{{{self.mass}}}\mathrm{{{self.element}}}"
         if dollar:
             return f"${string}$"
         else:
@@ -342,11 +426,11 @@ class Isotope(str):
         """
         Return a new isotope string without the suffix.
         """
-        return self._new_(self.mass, self.element, '')
+        return self._new_(self.mass, self.element.without_suffix())
 
 class Ratio(str):
     """
-    A subclass of string representing a isotopes_or_ratios of two isotopes using the format ``<numer>/<denom>`` e.g.
+    A subclass of string representing a ratio of two isotopes using the format ``<numer>/<denom>`` e.g.
     ``Pd-108/Pd-105``.
 
     Args:
@@ -358,12 +442,12 @@ class Ratio(str):
         mass (str): The denominator isotope
 
     Raises:
-        ValueError: If ``string`` does not represent a isotope isotopes_or_ratios.
+        ValueError: If ``string`` does not represent a isotope ratio.
     """
     def __new__(cls, string, without_suffix=False):
         strings = string.split('/')
         if len(strings) != 2:
-            raise ValueError(f'"{string}" is not a valid isotopes_or_ratios')
+            raise ValueError(f'"{string}" is not a valid ratio')
         numer = Isotope(strings[0], without_suffix=without_suffix)
         denom = Isotope(strings[1], without_suffix=without_suffix)
         return cls._new_(numer, denom)
@@ -399,6 +483,68 @@ class Ratio(str):
         """
         return self._new_(self.numer.without_suffix(), self.denom.without_suffix())
 
+def aselement(string, without_suffix=False, allow_invalid=False):
+    """
+    Returns a [``Element``][simple.utils.Element] representing an element symbol.
+
+    The returned element format is the capitalised element
+    symbol followed by the suffix, if present. E.g. ``Pd-104*`` where
+    ``*`` is the suffix.
+
+    The case of the element symbol is not considered.
+
+    Args:
+        string (str): A string containing an element symbol.
+        without_suffix (): If ``True`` the suffix part of the string is ignored.
+        allow_invalid ():  If ``False``, and ``string`` cannot be parsed into an element string, an exception is
+            raised. If ``True`` then ``string.strip()`` is returned instead.
+
+    Examples:
+        >>> ele = simple.asisotope("pd"); ele
+        "Pd"
+
+
+    """
+    if type(string) is Element:
+        if without_suffix:
+            return string.without_suffix()
+        else:
+            return string
+    elif isinstance(string, str):
+        string = string.strip()
+    else:
+        raise TypeError(f'``string`` must a str not {type(string)}')
+
+    try:
+        return Element(string, without_suffix=without_suffix)
+    except ValueError:
+        if allow_invalid:
+            return string
+        else:
+            raise
+
+def aselements(strings, without_suffix=False, allow_invalid=False):
+    """
+    Returns a tuple of [``Element``][simple.utils.Element] strings where each string represents an element symbol.
+
+    Args:
+        strings (): Can either be a string with element symbol seperated by a ``,`` or a sequence of strings.
+        without_suffix (): If ``True`` the suffix part of each isotope string is ignored.
+        allow_invalid ():  If ``False``, and a string cannot be parsed into an isotope string, an exception is
+            raised. If ``True`` then ``string.strip()`` is returned instead.
+
+    Examples:
+        >>> simple.asisotopes('ru, pd, cd')
+        ('Ru', 'Pd', 'Cd')
+
+        >>> simple.asisotopes(['ru', 'pd', 'cd'])
+        ('Ru', 'Pd', 'Cd')
+    """
+    if type(strings) is str:
+        strings = [s for s in strings.split(',')]
+
+    return tuple(aselement(string, without_suffix=without_suffix, allow_invalid=allow_invalid) for string in strings)
+
 def asisotope(string, without_suffix=False, allow_invalid=False):
     """
     Returns a [``Isotope``][simple.utils.Isotope] representing an isotope.
@@ -420,7 +566,7 @@ def asisotope(string, without_suffix=False, allow_invalid=False):
     Examples:
         >>> iso = simple.asisotope("104pd"); iso # pd104, 104-Pd etc are also valid
         "Pd-104"
-        >>> iso.element, iso.mass
+        >>> iso.symbol, iso.mass
         "Pd", "104"
 
     """
@@ -441,7 +587,6 @@ def asisotope(string, without_suffix=False, allow_invalid=False):
             return string
         else:
             raise
-
 
 def asisotopes(strings, without_suffix=False, allow_invalid=False):
     """
@@ -467,7 +612,7 @@ def asisotopes(strings, without_suffix=False, allow_invalid=False):
 
 def asratio(string, without_suffix=False, allow_invalid=False):
     """
-    Returns a [``Ratio``][simple.utils.Isotope] string representing the isotopes_or_ratios of two isotopes.
+    Returns a [``Ratio``][simple.utils.Isotope] string representing the ratio of two isotopes.
 
     The format of the returned string is the numerator followed by
     a ``/`` followed by the normiso. The numerator and normiso string be parsed by ``asisotope`` together with
@@ -486,7 +631,7 @@ def asratio(string, without_suffix=False, allow_invalid=False):
 
     Methods:
         latex(string): Returns a latex formatted version of the isotope.
-        without_suffix(): Returns a isotopes_or_ratios string omitting the numerator and normiso suffix.
+        without_suffix(): Returns a ratio string omitting the numerator and normiso suffix.
 
     """
     if type(string) is Ratio:
@@ -506,7 +651,7 @@ def asratio(string, without_suffix=False, allow_invalid=False):
 
 def asratios(strings, without_suffix=False, allow_invalid=False):
     """
-    Returns a tuple of [``Ratio``][simple.utils.Isotope] strings where each string represents the isotopes_or_ratios of two isotopes.
+    Returns a tuple of [``Ratio``][simple.utils.Isotope] strings where each string represents the ratio of two isotopes.
 
     Args:
         strings (): Can either be a string with isotope ratios seperated by a ``,`` or a sequence of strings.
@@ -518,7 +663,6 @@ def asratios(strings, without_suffix=False, allow_invalid=False):
         strings = [s.strip() for s in strings.split(',')]
 
     return tuple(asratio(string, without_suffix=without_suffix, allow_invalid=allow_invalid) for string in strings)
-
 
 def asisolist(isolist, without_suffix=False, allow_invalid=False):
     """
@@ -542,7 +686,7 @@ def asisolist(isolist, without_suffix=False, allow_invalid=False):
                 asisotopes(v, without_suffix=without_suffix, allow_invalid=allow_invalid)
                 for k,v in isolist.items()}
 
-def get_isotopes_of_element(isotopes, element, suffix=None, isotopes_without_suffix=False):
+def get_isotopes_of_element(isotopes, element, isotopes_without_suffix=False):
     """
     Returns a tuple of all isotopes in a sequence that contain the given element symbol.
 
@@ -562,67 +706,9 @@ def get_isotopes_of_element(isotopes, element, suffix=None, isotopes_without_suf
         >>> ("Pd-102", "Pd-104")
     """
     isotopes = asisolist(isotopes, without_suffix=isotopes_without_suffix, allow_invalid=True)
-    element = element.capitalize()
-    return tuple(iso for iso in isotopes if
-                 (type(iso) is Isotope and
-                  iso.element == element and
-                  (suffix is None or iso.suffix == suffix))
-                 )
+    element = aselement(element)
+    return tuple(iso for iso in isotopes if (type(iso) is Isotope and iso.element == element))
 
-####################
-### Attr objects ###
-####################
-class NamedDict(dict):
-    """
-    A subclass of a normal ``dict`` where item in the dictionary can also be accessed as attributes.
-
-    Examples:
-        >>> nd = simple.utils.NamedDict({'a': 1, 'b': 2, 'c': 3})
-        >>> nd.a
-        1
-    """
-    def __init__(self, *args, **kwargs):
-        self.update(*args, **kwargs)
-
-    def __setattr__(self, name, value):
-        return self.__setitem__(name, value)
-
-    def __getattr__(self, name):
-        return self.__getitem__(name)
-
-    def update(self, *args, **kwargs):
-        for k, v in dict(*args, **kwargs).items():
-            self[k] = v
-
-    def setdefault(self, key, default_value):
-        if key not in self:
-            self[key] = default_value
-
-        return self[key]
-
-
-# TODO maybe give an error if the array has object type as this probably cant be saved and loaded properly?
-class HDF5Dict(NamedDict):
-    """
-    A subclass of [NamedDict][simple.utils.NamedDict] where all values are passed to
-    [asarray][simple.asarray] before being added to the dictionary.
-
-    All contents on this dictionary should be compatiable with HDF5 files.
-
-    Examples:
-        >>> nd = simple.utils.NamedDict({'a': 1, 'b': 2, 'c': 3})
-        >>> nd.a
-        array(1)
-    """
-    def __setitem__(self, name, value):
-        value = asarray(value)
-        super().__setitem__(name, value)
-
-    def get(self, key, value, default=None):
-        if key in self:
-            return self[key]
-        else:
-            return asarray(default)
 
 ##############
 ### Select ###
@@ -717,10 +803,10 @@ class AttrEval:
     def add_ab_evaluator(self, opstr, operator):
         self.ab_evalstrings.append((opstr, f'{self.REATTR}{opstr}{self.REATTR}', operator))
 
-    def parse_where(self, evalstring):
+    def parse_where(self, where):
         eval = self.Evaluator()
 
-        evalstrings = evalstring.split('&')
+        evalstrings = where.split('&')
         for evalstr in evalstrings:
             evalstr = evalstr.strip()
             if len(evalstr) == 0: continue
@@ -735,28 +821,31 @@ class AttrEval:
                 raise ValueError(f'Unable to parse condition "{evalstr}"')
         return eval
 
-    def eval_where(self, item, evalstring, **kwargs):
-        evaluate = self.parse_where(evalstring)
-        return evaluate(item, kwargs)
+    def eval(self, item, where, **where_kwargs):
+        evaluate = self.parse_where(where)
+        return evaluate(item, where_kwargs)
 
-model_eval = AttrEval()
+    def __call__(self, item, where, **where_kwargs):
+        return self.eval(item, where, **where_kwargs)
+
+simple_eval = AttrEval()
 """
 Evaluator used to evaluate models. 
 
 The following operators are currently supported: ``==``, ``!=``, ``>=``, ``<=``, ``>``, ``<``, `` IN ``, `` NOT IN ``.
 
-Use as ``model_eval(model, where, **where_kwargs)``
+Use as ``simple_eval(model, where, **where_kwargs)``
 """
 
 
-model_eval.add_ab_evaluator('==', operator.eq)
-model_eval.add_ab_evaluator('!=', operator.ne)
-model_eval.add_ab_evaluator('>=', operator.ge)
-model_eval.add_ab_evaluator('<=', operator.le)
-model_eval.add_ab_evaluator('<', operator.lt)
-model_eval.add_ab_evaluator('>', operator.gt)
-model_eval.add_ab_evaluator(' NOT IN ', lambda a, b: not operator.contains(b, a))
-model_eval.add_ab_evaluator(' IN ', lambda a, b: operator.contains(b, a))
+simple_eval.add_ab_evaluator('==', operator.eq)
+simple_eval.add_ab_evaluator('!=', operator.ne)
+simple_eval.add_ab_evaluator('>=', operator.ge)
+simple_eval.add_ab_evaluator('<=', operator.le)
+simple_eval.add_ab_evaluator('<', operator.lt)
+simple_eval.add_ab_evaluator('>', operator.gt)
+simple_eval.add_ab_evaluator(' NOT IN ', lambda a, b: not operator.contains(b, a))
+simple_eval.add_ab_evaluator(' IN ', lambda a, b: operator.contains(b, a))
 
 
 

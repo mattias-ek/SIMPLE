@@ -11,7 +11,8 @@ Container for managing a selection of models.
 
 ## Reference models
 
-Below are the individual model classes that currently exist for SIMPLE.
+Below are the model classes for storing reference data. Also included are avaliable helper classes
+for loading data.
 
 ::: simple.models.IsoRef
     options:

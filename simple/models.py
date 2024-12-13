@@ -5,10 +5,33 @@ import logging
 
 import simple.utils as utils
 import simple.norm as norm
+from simple.utils import NamedDict
 
 __all__ = ['load_collection', 'load_models', 'new_collection']
 
 logger = logging.getLogger('SIMPLE.models')
+
+class HDF5Dict(NamedDict):
+    """
+    A subclass of [NamedDict][simple.utils.NamedDict] where all values are passed to
+    [asarray][simple.asarray] before being added to the dictionary.
+
+    All contents on this dictionary should be compatiable with HDF5 files.
+
+    Examples:
+        >>> nd = simple.utils.NamedDict({'a': 1, 'b': 2, 'c': 3})
+        >>> nd.a
+        array(1)
+    """
+    def __setitem__(self, name, value):
+        value = utils.asarray(value)
+        super().__setitem__(name, value)
+
+    def get(self, key, value, default=None):
+        if key in self:
+            return self[key]
+        else:
+            return utils.asarray(default)
 
 ##############
 ### Models ###
@@ -45,12 +68,15 @@ def load_collection(filename, dbfilename=None, *, default_isolist=None, convert_
     """
     mc = ModelCollection()
     if os.path.exists(filename) and not overwrite:
+        logger.info(f'Loading existing file: {filename}')
         mc.load_file(filename, where=where, **where_kwargs)
     elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5') and not overwrite:
+        logger.info(f'Loading existing file: {filename}.hdf5')
         mc.load_file(f'{filename}.hdf5', where=where, **where_kwargs)
     elif dbfilename is None:
         raise ValueError(f'File {filename} does not exist')
     elif os.path.exists(dbfilename):
+        logger.info(f'Creating: "{filename}" from database: "{dbfilename}"')
         mc.load_file(dbfilename, isolist=default_isolist, convert_unit=convert_unit, where=where, **where_kwargs)
         mc.save(filename)
     else:
@@ -108,7 +134,7 @@ References in collection:
         elif key in self.refs:
             return self.refs[key]
         else:
-            raise ValueError(f"No model1 or reference called '{key}' exists")
+            raise ValueError(f"No model or reference called '{key}' exists")
 
     ###################
     ### Load / Save ###
@@ -139,7 +165,7 @@ References in collection:
         logger.info(f'Time to save file: {t}')
 
     def _save_model(self, parent_group, model):
-        group = parent_group.create_group(model.name)
+        group = parent_group.create_group(model.name, track_order=True)
         for name, value in model.hdf5_attrs.items():
             v = utils.asarray(value, saving=True)
 
@@ -148,7 +174,7 @@ References in collection:
             else:
                 # Track order has to be set to true or saving will fail as there are too many
                 # columns in CCSNe values
-                group.create_dataset(name, data = v, compression = 'gzip', compression_opts = 9)
+                group.create_dataset(name, data = v, compression = 'gzip', compression_opts = 9, track_order=True)
 
     def load_file(self, filename, isolist=None, convert_unit=True, where=None, **where_kwargs):
         """
@@ -167,7 +193,7 @@ References in collection:
         with h5py.File(filename, 'r') as efile:
             for name, group in efile['models'].items():
                 model = self._load_model(efile, group, name, isolist, convert_unit, where, where_kwargs)
-                #self.models[name] = model1
+                #self.models[name] = model
 
         t = datetime.datetime.now() - t0
         logger.info(f'Time to load file: {t}')
@@ -175,7 +201,7 @@ References in collection:
     def _load_model(self, file, group, model_name, isolist, convert_unit, where, where_kwargs):
         attrs = {}
         if where is not None:
-            eval = utils.model_eval.parse_where(where)
+            eval = utils.simple_eval.parse_where(where)
 
         # Load attributes
         for name, value in group.attrs.items():
@@ -185,7 +211,7 @@ References in collection:
             raise ValueError(f"Model '{attrs[name]}' has no clsname")
 
         if where is None or eval(attrs, where_kwargs):
-            logger.info(f'Loading model1: {model_name} ({attrs["clsname"]})')
+            logger.info(f'Loading model: {model_name} ({attrs["clsname"]})')
             for name, value in group.items():
                 if not isinstance(value, h5py.Dataset): continue
                 attrs[name] = utils.asarray(value)
@@ -200,7 +226,7 @@ References in collection:
 
             return model
         else:
-            logger.info(f'Ignored model1: {model_name} ({attrs["clsname"]})')
+            logger.info(f'Ignored model: {model_name} ({attrs["clsname"]})')
             return None
 
     def _load_ref(self, file, refname):
@@ -227,7 +253,7 @@ References in collection:
         if name in self.models:
             model = self.models[name]
         else:
-            raise ValueError(f"No model1 called '{name}' exists")
+            raise ValueError(f"No model called '{name}' exists")
 
         if attr is None:
             return model
@@ -305,7 +331,7 @@ References in collection:
         Returns:
 
         """
-        eval = utils.model_eval.parse_where(where)
+        eval = utils.simple_eval.parse_where(where)
         new_collection = self.__class__()
         for model in self.models.values():
             if eval(model, where_kwargs):
@@ -381,7 +407,7 @@ class ModelTemplate:
     - ``REQUIRED_ATTRS`` - A list of attributes that must be supplied when creating the class. An exception
         will be raised if any of these attributes are missing.
     - ``REPR_ATTRS`` - A list of the attributes that values will be shown in the repr.
-    - ``NORM_ABU_KEYARRAY`` - The name of a key array containing the abundances that should be normalised. Alternatively
+    - ``ABUNDANCE_KEYARRAY`` - The name of a key array containing the abundances that should be normalised. Alternatively
         you can subclass the ``internal_normalisation`` and ``simple_normalisation`` methods for more customisation.
     - ``VALUES_KEYS_TO_ARRAY`` - If ``True`` a key array named ``<name>`` is automatically created upon model
         initialisation if attributes called.
@@ -391,7 +417,7 @@ class ModelTemplate:
     """
     REQUIRED_ATTRS = []
     REPR_ATTRS = ['name']
-    NORM_ABU_KEYARRAY = None
+    ABUNDANCE_KEYARRAY = None
     VALUES_KEYS_TO_ARRAY = True
     ISREF = False
 
@@ -415,8 +441,8 @@ class ModelTemplate:
     def __init__(self, collection, name, **hdf5_attrs):
         super().__setattr__('collection', collection)
         super().__setattr__('name', name)
-        super().__setattr__('hdf5_attrs', utils.HDF5Dict())
-        super().__setattr__('normal_attrs', utils.NamedDict())
+        super().__setattr__('hdf5_attrs', HDF5Dict())
+        super().__setattr__('normal_attrs', NamedDict())
 
         for attr in self.REQUIRED_ATTRS:
             if attr not in hdf5_attrs:
@@ -459,7 +485,7 @@ class ModelTemplate:
         return self.__getattr__(name)
 
     def __setattr__(self, name, value):
-        raise AttributeError('Use the `add_attr` method to add attributes to this object')
+        raise AttributeError('Use the `setattr` method to add attributes to this object')
 
     def __contains__(self, name):
         return name in self.hdf5_attrs or name in self.normal_attrs
@@ -555,24 +581,23 @@ class ModelTemplate:
             NotImplementedError: Raised if the data to be normalised has not been specified for this model class.
         """
         # Updates the relevant arrays inplace
-        if self.NORM_ABU_KEYARRAY is None:
+        if self.ABUNDANCE_KEYARRAY is None:
             raise NotImplementedError('The data to be normalised in has not been specified for this model')
 
-        abu = self[self.NORM_ABU_KEYARRAY]
-        abu_unit = getattr(self, f"{self.NORM_ABU_KEYARRAY}_unit", "mol")
-        abu_massunit = True if abu_unit in utils.UNITS['mass'] else False
+        abu = self[self.ABUNDANCE_KEYARRAY]
+        abu_unit = getattr(self, f"{self.ABUNDANCE_KEYARRAY}_unit", "mol")
 
-        abu = utils.select_isolist(isolist, abu, massunit=True if abu_massunit == 'mass' else False, convert_unit=convert_unit)
+        abu = utils.select_isolist(isolist, abu, unit=abu_unit, convert_unit=convert_unit)
 
-        self.setattr(self.NORM_ABU_KEYARRAY, abu, hdf5_compatible=False, overwrite=True)
+        self.setattr(self.ABUNDANCE_KEYARRAY, abu, hdf5_compatible=False, overwrite=True)
 
-        vname = f"{self.NORM_ABU_KEYARRAY}_values"
+        vname = f"{self.ABUNDANCE_KEYARRAY}_values"
         if vname in self.hdf5_attrs:
             self.setattr(vname, np.asarray(abu.tolist()), hdf5_compatible=True, overwrite=True)
         elif vname in self.normal_attrs:
             self.setattr(vname, np.asarray(abu.tolist()), hdf5_compatible=False, overwrite=True)
 
-        kname = f"{self.NORM_ABU_KEYARRAY}_keys"
+        kname = f"{self.ABUNDANCE_KEYARRAY}_keys"
         if kname in self.hdf5_attrs:
             self.setattr(kname, utils.asisotopes(abu.dtype.names), hdf5_compatible=True, overwrite=True)
         elif kname in self.normal_attrs:
@@ -591,12 +616,12 @@ class ModelTemplate:
         Raises:
             NotImplementedError: Raised if the data to be normalised has not been specified for this model class.
         """
-        if self.NORM_ABU_KEYARRAY is None:
+        if self.ABUNDANCE_KEYARRAY is None:
             raise NotImplementedError('The data to be normalised in has not been specified for this model')
 
         # The abundances to be normalised
-        abu = self[self.NORM_ABU_KEYARRAY]
-        abu_unit = getattr(self, f"{self.NORM_ABU_KEYARRAY}_unit", "mol")
+        abu = self[self.ABUNDANCE_KEYARRAY]
+        abu_unit = getattr(self, f"{self.ABUNDANCE_KEYARRAY}_unit", "mol")
 
         # Isotope masses
         stdmass = self.get_ref(self.refid_isomass, 'data')
@@ -626,11 +651,11 @@ class ModelTemplate:
         Raises:
             NotImplementedError: Raised if the data to be normalised has not been specified for this model class.
         """
-        if self.NORM_ABU_KEYARRAY is None:
+        if self.ABUNDANCE_KEYARRAY is None:
             raise NotImplementedError('The data to be normalised has not been specified for this model')
 
-        abu = self[self.NORM_ABU_KEYARRAY]
-        abu_unit = getattr(self, f"{self.NORM_ABU_KEYARRAY}_unit", "mol")
+        abu = self[self.ABUNDANCE_KEYARRAY]
+        abu_unit = getattr(self, f"{self.ABUNDANCE_KEYARRAY}_unit", "mol")
 
         stdabu = self.get_ref(self.refid_isoabu, 'data')
         stdabu_unit = self.get_ref(self.refid_isoabu, 'data_unit')

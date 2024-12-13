@@ -19,11 +19,9 @@ Function specifically for plotting CCSNe data.
 
 :::simple.ccsne.plot_simplenorm
 
-:::simple.ccsne.mhist_intnorm
-
 ## Import model data
 
-The following functions are used to load the raw data from different CCSNe models. These all
+The following functions are used to load and process the raw data from different CCSNe models. These all
 return a ``dict`` containing mapping the name of the model to another dictionary containing 
 the attributes of that model. 
 
@@ -38,3 +36,5 @@ the attributes of that model.
 :::simple.ccsne.load_Ra02
 
 :::simple.ccsne.load_LC18
+
+:::simple.ccsne.calc_default_onion_structure

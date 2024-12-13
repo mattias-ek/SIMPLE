@@ -29,16 +29,6 @@ load_models:
         Ti-49*: Ti-49,V-49,Cr-49,Sc-49,Ca-49,K-49
         Ti-50: Ti-50
         Ti-50*: Ti-50,Sc-50,Ca-50
-        Ni-58:  Ni-58
-        Ni-58*: Ni-58,Cu-58
-        Ni-60:  Ni-60
-        Ni-60*: Ni-60,Cu-60,Zn-60,Co-60,Fe-60
-        Ni-61:  Ni-61
-        Ni-61*: Ni-61,Cu-61,Zn-61,Co-61,Fe-61
-        Ni-62: Ni-62
-        Ni-62*: Ni-62,Cu-62,Zn-62,Co-62,Fe-62
-        Ni-64: Ni-64
-        Ni-64*: Ni-64,Cu-64
         Fe-54:  Fe-54
         Fe-54*: Fe-54,Co-54
         Fe-56: Fe-56
@@ -47,6 +37,16 @@ load_models:
         Fe-57*: Fe-57,Ni-57,Co-57,Mn-57,Cr-57
         Fe-58: Fe-58
         Fe-58*: Fe-58,Co-58,Mn-58,Cr-58
+        Ni-58: Ni-58
+        Ni-58*: Ni-58,Cu-58
+        Ni-60: Ni-60
+        Ni-60*: Ni-60,Cu-60,Zn-60,Co-60,Fe-60
+        Ni-61: Ni-61
+        Ni-61*: Ni-61,Cu-61,Zn-61,Co-61,Fe-61
+        Ni-62: Ni-62
+        Ni-62*: Ni-62,Cu-62,Zn-62,Co-62,Fe-62
+        Ni-64: Ni-64
+        Ni-64*: Ni-64,Cu-64
         Zn-64: Zn-64
         Zn-64*: Zn-64,Ga-64,Ge-64,As-64,Se-64
         Zn-66: Zn-66

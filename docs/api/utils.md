@@ -4,7 +4,7 @@ Additional functions and classes available in the ``simpe.utils`` module.
 
 ::: simple.utils.UNITS
 
-:::simple.utils.EndlessList
+::: simple.utils.Element
 
 ::: simple.utils.Isotope
 
@@ -12,11 +12,18 @@ Additional functions and classes available in the ``simpe.utils`` module.
 
 ::: simple.utils.select_isolist
 
-::: simple.utils.get_isotopes_of_element
+<!---
+Functions and classes without complete documentation.
 
-::: simple.utils.NamedDict
+These are all helper classes and only really relevant for package developers
 
-::: simple.utils.HDF5Dict
+::: simple.utils.EndlessList
 
-::: simple.utils.model_eval
+::: simple.utils.extract_kwargs
 
+::: simple.utils.set_default_kwargs
+
+::: simple.utils.AttrEval
+
+::: simple.utils.simple_eval
+-->
