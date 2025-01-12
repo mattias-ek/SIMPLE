@@ -1,53 +1,19 @@
-# API documentation
+# The ``simple`` namespace
 
-All the functions available through the ``simple`` namespace.
+The ``simple`` namespace contains everything necessary for normal usage of the package.
 
-## Model stuff
-::: simple.new_collection
+Further object and thing are 
 
-::: simple.load_collection
+## `simple``
+::: simple
+    options:
+        show_root_heading: False
+        show_root_members_full_path: true
+        show_root_toc_entry: false
 
-## String stuff
-::: simple.asarray
-
-::: simple.askeyarray
-
-::: simple.aselement
-
-::: simple.aselements
-
-::: simple.asisotope
-
-::: simple.asisotopes
-
-::: simple.asratio
-
-::: simple.asratios
-
-::: simple.asisolist
-
-::: simple.get_isotopes_of_element
-
-## Plotting
-### xy plots
-
-::: simple.plot_abundance
-
-::: simple.plot_intnorm
-
-::: simple.plot_simplenorm
-
-### Rose plots
-::: simple.create_rose_plot
-
-::: simple.mhist_abundance
-
-::: simple.mhist_intnorm
-
-::: simple.mhist_simplenorm
-
-## Miscellaneous
-::: simple.load_defaults
-
-
-
+## simple.ccsne
+::: simple.ccsne
+    options:
+        show_root_heading: False
+        show_root_members_full_path: true
+        show_root_toc_entry: false

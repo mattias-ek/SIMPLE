@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.axes import Axes
 from matplotlib.ticker import AutoMinorLocator
+import functools
 
 import numpy as np
 import warnings
@@ -819,6 +820,11 @@ class GetterTemplate:
     """
     Helper object for extracting data from models. To be used together with the helper plotting functions.
     """
+    def __init__(self):
+        # This caches the data of the last used model only.
+        # This approach shouldn't cause any memory leaks
+        self._get_data_ = functools.lru_cache(maxsize=1)(self._get_data_)
+
     def get_data(self, model, key=None):
         """
         Extract the data from model.
@@ -830,6 +836,9 @@ class GetterTemplate:
         """
         raise NotImplementedError()
 
+    def _get_data_(self, model):
+        raise NotImplementedError()
+
     def get_label(self, model, key=None):
         raise NotImplementedError()
 
@@ -838,62 +847,43 @@ class GetterTemplate:
 
 class DataGetter(GetterTemplate):
     def __init__(self, attrname, key = None, desired_unit=None, default_weight=1):
+        super().__init__()
         self.attrname = attrname
         self.key = key
         self.desired_unit = desired_unit
         self.default_weight = default_weight
 
+    def get_data(self, model, key=None):
+        data, data_unit = self._get_data_(model)
 
-    def get_data(self, model, key=None, desired_unit=None):
-        data = getattr(model, self.attrname)
-        data_unit = getattr(model, f"{self.attrname}_unit", None)
-
-        return self._get_data_(data, data_unit, key, desired_unit)
-
-    def _get_data_(self, data, data_unit, key, desired_unit):
         if key is None: key = self.key
-        if desired_unit is None: desired_unit = self.desired_unit
 
         try:
             key = utils.asisotope(key)
         except ValueError:
             pass
         else:
-            return self._get_value_(data, data_unit, key, desired_unit)
+            return data[key]
 
         try:
             key = utils.asratio(key)
         except ValueError:
             raise ValueError(f'Unable to parse {key} into an isotope or ratio string')
         else:
-            return (self._get_value_(data, data_unit, key.numer, desired_unit) /
-                    self._get_value_(data, data_unit, key.denom, desired_unit))
+            return (data[key.numer] / data[key.denom])
 
-    def _get_value_(self, data, data_unit, isotope, desired_unit):
-        value = data[isotope]
+    def _get_data_(self, model, desired_unit=None):
+        desired_unit = desired_unit or self.desired_unit
 
-        if desired_unit is None:
-            pass
-        elif data_unit is None:
-            logger.warning('Data does not have a specified unit. Assuming it has the requested unit')
-        elif desired_unit in utils.UNITS['mass'] and data_unit in utils.UNITS['mass']:
-            pass
-        elif desired_unit in utils.UNITS['mole'] and data_unit in utils.UNITS['mole']:
-            pass
-        elif desired_unit in utils.UNITS['mass'] and data_unit in utils.UNITS['mole']:
-            logger.info(f'Multiplying data by the isotope mass number to convert from mole to mass')
-            value = value * float(isotope.mass)
-        elif desired_unit in utils.UNITS['mole'] and data_unit in utils.UNITS['mass']:
-            logger.info(f'Dividing data by the isotope mass number to convert from mass to mole')
-            value = value / float(isotope.mass)
-        else:
-            raise ValueError(f'Unable to convert data from {data_unit} to {desired_unit})')
+        data = getattr(model, self.attrname)
+        data_unit = getattr(model, f"{self.attrname}_unit", None)
 
-        return value
+        data = model.convert_keyarray(data, data_unit, desired_unit)
+        return data, self.desired_unit or data_unit
 
     def get_label(self, model, key=None, prefix = '',
                   key_in_label= True, numer_in_label=True, denom_in_label=True,
-                  model_in_label=False):
+                  model_in_label=False, unit_in_label=True):
         if key is None: key = self.key
 
         label = prefix
@@ -915,6 +905,12 @@ class DataGetter(GetterTemplate):
             else:
                 label += self._get_label_(model, key) + ' '
 
+            if unit_in_label:
+                _, data_unit = self._get_data_(model)
+
+                if data_unit:
+                    label += f'[{data_unit}] '
+
         if model_in_label:
             return (label + model.name).strip()
         else:
@@ -923,31 +919,40 @@ class DataGetter(GetterTemplate):
     def _get_label_(self, model, isotope):
         return rf'${{}}^{{{isotope.mass}}}\mathrm{{{isotope.element}}}$'
 
-    def get_weights(self, model, weights=None, desired_unit=None):
+    def get_weights(self, model, weights=None):
+        if weights is None: weights = self.default_weight
+
+        if type(weights) is str:
+            return self._get_weight_(model, weights)
+        else:
+            return weights
+
         data = getattr(model, self.attrname)
         data_unit = getattr(model, f"{self.attrname}_unit", None)
 
-        return self._get_weight_(data, data_unit, weights, desired_unit)
+        data = model.convert_keyarray(data, data_unit)
 
-    def _get_weight_(self, data, data_unit, weights, desired_unit):
-        if weights is None: weights = self.default_weight
-        if desired_unit is None: desired_unit = self.desired_unit
+        return self._get_weight_(data, weights)
 
-        if type(weights) == str:
+    def _get_weights_(self, model, weights):
+        data, unit = self._get_data_(model, self.desired_unit)
+        return self._calc_weight_(data, weights)
+
+    def _calc_weight_(self, data, string):
+        try:
+            isotopes = utils.asisotopes(string)
+        except ValueError:
             try:
-                isotopes = utils.asisotopes(weights)
+                element = utils.aselement(string)
             except ValueError:
-                try:
-                    element = utils.aselement(weights)
-                except ValueError:
-                    raise ValueError(f'Unable to parse "{weights}" into a list of isotope string or an element string')
-                else:
-                    isotopes = utils.get_isotopes_of_element(data.dtype.names, element)
+                raise ValueError(f'Unable to parse "{string}" into a list of isotope string or an element string')
+            else:
+                isotopes = utils.get_isotopes_of_element(data.dtype.names, element)
 
-            weights = 0
-            for iso in isotopes:
-                if iso in data.dtype.names:
-                    weights += self._get_data_(data, data_unit, iso, desired_unit)
+        weights = 0
+        for iso in isotopes:
+            if iso in data.dtype.names:
+                weights += data[iso]
 
         return weights
 
@@ -959,26 +964,22 @@ class NormGetter(DataGetter):
         self.weights_attrname = weights_attrname
         self.weights_desired_unit = weights_desired_unit
 
-    def get_data(self, model, key=None):
+    def _get_data_(self, model):
         norm = getattr(model, self.attrname)
         data = getattr(norm, self.Rvalname)
-        return self._get_data_(data, None, key, None)
+
+        return data, None
 
     def _get_label_(self, model, isotope=None):
         return getattr(model, self.attrname).label_latex[isotope]
 
-    def get_weights(self, model, weights=None, desired_unit=None):
-        if desired_unit is None: desired_unit = self.weights_desired_unit
-
+    def _get_weights_(self, model, weights):
         if self.weights_attrname is None:
-            norm = getattr(model, self.attrname)
-            data = getattr(norm, self.Rvalname)
-            data_unit = None
+            data, data_unit = self._get_data_(model, self.weights_desired_unit)
         else:
-            data = getattr(model, self.weights_attrname)
-            data_unit = getattr(model, f"{self.weights_attrname}_unit", None)
+            data = model.get_keyarray(self.weights_attrname, self.weights_desired_unit)
 
-        return self._get_weight_(data, data_unit, weights, desired_unit)
+        return self._calc_weight_(data, weights)
 
 
 ################
@@ -987,7 +988,7 @@ class NormGetter(DataGetter):
 @utils.set_default_kwargs()
 def plot_abundance(models, xkey, ykey, *,
                  attrname = 'abundance', unit=None,
-                 ax = None, where=None, where_kwargs={},
+                 mask = None, ax = None, where=None, where_kwargs={},
                  **kwargs):
     """
     Plots *xkey* against *ykey* from a data array.
@@ -1025,13 +1026,13 @@ def plot_abundance(models, xkey, ykey, *,
     """
     xygetter = DataGetter(attrname, desired_unit=unit)
     ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
-                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
                                 **kwargs)
     return ax
 @utils.set_default_kwargs()
 def plot_simplenorm(models, xkey, ykey, *,
                  attrname = 'simplenorm',
-                 ax = None, where=None, where_kwargs={},
+                 mask = None, ax = None, where=None, where_kwargs={},
                  **kwargs):
     """
     Plots *xkey* against *ykey* from the simply normalised Ri compositions.
@@ -1067,14 +1068,14 @@ def plot_simplenorm(models, xkey, ykey, *,
     """
     xygetter = NormGetter(attrname, 'eRi')
     ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
-                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
                                 **kwargs)
     return ax
 
 @utils.set_default_kwargs()
 def plot_intnorm(models, xkey, ykey, *,
                  attrname = 'intnorm',
-                 ax = None, where=None, where_kwargs={},
+                 mask = None, ax = None, where=None, where_kwargs={},
                  **kwargs):
     """
     Plots *xkey* against *ykey* from the internally normalised eRi compositions.
@@ -1110,7 +1111,7 @@ def plot_intnorm(models, xkey, ykey, *,
     """
     xygetter = NormGetter(attrname, 'eRi')
     ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
-                                ax=ax, where=where, where_kwargs=where_kwargs,
+                                mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
                                 **kwargs)
     return ax
 
@@ -1122,14 +1123,14 @@ def plot_intnorm(models, xkey, ykey, *,
 def mhist_intnorm(models, xisotope, yisotope, *,
                  attrname='intnorm',
                  weights = 1, weights_attrname='abundance', weights_desired_unit='mole',
-                 ax = None, where=None, where_kwargs={},
+                 mask = None, ax = None, where=None, where_kwargs={},
                  **kwargs):
 
     xygetter = NormGetter(attrname, 'eRi',
                           default_weight=weights, weights_attrname=weights_attrname, weights_desired_unit=weights_desired_unit)
 
     ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
-                                  ax=ax, where=where, where_kwargs=where_kwargs,
+                                  mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
                                   **kwargs)
     return ax
 
@@ -1137,21 +1138,21 @@ def mhist_intnorm(models, xisotope, yisotope, *,
 def mhist_simplenorm(models, xisotope, yisotope, *,
                  attrname='simplenorm',
                  weights = 1, weights_attrname='abundance', weights_desired_unit='mole',
-                 ax = None, where=None, where_kwargs={},
+                 mask = None, ax = None, where=None, where_kwargs={},
                  **kwargs):
 
     xygetter = NormGetter(attrname, 'eRi',
                           default_weight=weights, weights_attrname=weights_attrname, weights_desired_unit=weights_desired_unit)
 
     ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
-                                  ax=ax, where=where, where_kwargs=where_kwargs,
+                                  mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
                                   **kwargs)
     return ax
 
 @utils.set_default_kwargs()
 def mhist_abundance(models, xisotope, yisotope, *,
                     attrname='intnorm', unit=None, default_weight=1,
-                    ax = None, where=None, where_kwargs={},
+                    mask = None, ax = None, where=None, where_kwargs={},
                     **kwargs):
 
     xygetter = DataGetter(attrname, desired_unit=unit, default_weight=default_weight)
@@ -1160,13 +1161,13 @@ def mhist_abundance(models, xisotope, yisotope, *,
 
 
     ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
-                                  ax=ax, where=where, where_kwargs=where_kwargs,
+                                  mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
                                   **kwargs)
     return ax
 
-#############################
-### Getter plot functions ###
-#############################
+###############################
+### Template plot functions ###
+###############################
 # These aid in plotting the same thing for different models.
 @utils.set_default_kwargs(
     linestyle=True, color=True, marker=False,
@@ -1179,7 +1180,7 @@ def mhist_abundance(models, xisotope, yisotope, *,
     )
 
 def template_plot_xy(models, xgetter, ygetter, xkey, ykey,
-                     ax = None, where=None, where_kwargs={},
+                     mask = None, ax = None, where=None, where_kwargs={},
                      **kwargs):
     """
     Template function for a xy plot.
@@ -1252,6 +1253,11 @@ def template_plot_xy(models, xgetter, ygetter, xkey, ykey,
         xval = xgetter.get_data(model, xkey)
         yval = ygetter.get_data(model, ykey)
 
+        if mask is not None:
+            mask = model.get_mask(mask, y=yval, x=xval)
+            xval = xval[mask]
+            yval = yval[mask]
+
         ax.plot(xval, yval,
                 color=c, ls=ls, marker=m,
                 markerfacecolor=mfc or c,
@@ -1272,7 +1278,7 @@ def template_plot_xy(models, xgetter, ygetter, xkey, ykey,
     )
 
 def template_plot_y(models, xgetter, ygetter, ykeys, *,
-                    ax = None, where=None, where_kwargs={},
+                    mask = None, ax = None, where=None, where_kwargs={},
                     **kwargs):
     """
     Template function for plotting different y values against a static x value.
@@ -1384,13 +1390,13 @@ def template_plot_y(models, xgetter, ygetter, ykeys, *,
         lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(ykeys) * len(models))]
     else:
         # Each model has the same linestyle and each ykeys a different color
-        lscm = [(linestyles[i//len(models)], colors[i % len(ykeys)], markers[i % len(ykeys)])
+        lscm = [(linestyles[i // len(ykeys)], colors[i % len(ykeys)], markers[i // len(ykeys)])
                 for i in range(len(ykeys) * len(models))]
 
     label = kwargs.pop('label', '')
     mfc = kwargs.pop('markerfacecolor', None)
-    for ykey in ykeys:
-        for i, model in enumerate(models):
+    for i, model in enumerate(models):
+        for ykey in ykeys:
             ls, c, m = lscm.pop(0)
 
             legend = ygetter.get_label(model, ykey, prefix=label, key_in_label=key_in_legend,
@@ -1398,6 +1404,11 @@ def template_plot_y(models, xgetter, ygetter, ykeys, *,
                                        model_in_label=model_in_legend)
             yval = ygetter.get_data(model, ykey)
             xval = xgetter.get_data(model)
+
+            if mask is not None:
+                parsed_mask = model.get_mask(mask, y=yval, x=xval)
+                xval = xval[parsed_mask]
+                yval = yval[parsed_mask]
 
             ax.plot(xval, yval,
                     color=c, ls=ls, marker=m,
@@ -1413,7 +1424,7 @@ def template_plot_y(models, xgetter, ygetter, ykeys, *,
                         ax_kw_ylabel_labelpad=20,
                          )
 def template_mhist_xy(models, xygetter, xisotope, yisotope,
-                      ax = None, where=None, where_kwargs={},
+                      mask = None, ax = None, where=None, where_kwargs={},
                       **kwargs):
     where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
     rose_kwargs = utils.extract_kwargs(kwargs, prefix='rose')
@@ -1439,9 +1450,17 @@ def template_mhist_xy(models, xygetter, xisotope, yisotope,
     delayed_kwargs = update_axes(ax, kwargs, 'legend')
 
     for model in models:
-        xy = (xygetter.get_data(model, xisotope), xygetter.get_data(model, yisotope))
+        xval = xygetter.get_data(model, xisotope)
+        yval = xygetter.get_data(model, yisotope)
         w = xygetter.get_weights(model)
-        ax.mhist(xy, weights=w, **kwargs)
+
+        if mask is not None:
+            mask = model.get_mask(mask, y=yval, x=xval, slope=yval/xval, w=w)
+            xval = xval[mask]
+            yval = yval[mask]
+            w = w[mask]
+
+        ax.mhist((xval, yval), weights=w, **kwargs)
 
     update_axes(ax, delayed_kwargs)
 

@@ -6,6 +6,10 @@ logger = logging.getLogger('SIMPLE.norm')
 
 __all__ = []
 
+IntNormMethods = {}
+
+@utils.shortcut('better', mass_coef = 'better')
+@utils.shortcut('simplified', mass_coef = 'simplified')
 def intnorm_linear(abu_i, abu_j, abu_k,
                    mass_i, mass_j, mass_k,
                    std_i, std_j, std_k,
@@ -193,27 +197,30 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
                 largest_offset=largest_offset, min_dilution_factor=min_dilution_factor,
                 method='largest_offset')
 
-
 def intnorm_precision(abu_up, abu_down, abu_norm,
                       mass_up, mass_down, mass_norm,
                       solar_up, solar_down, solar_norm,
                       dilution_step = 0.1, precision = 0.01):
-    # Im not sure I understand this well enough to implement so I'll leave ir for now
-    # The way the method works means it needs to calculate a ykeys between two slopes to work
-    # Also the give_ratio_gm method is very inefficent...
     pass
 
+IntNormMethods['linear'] = intnorm_linear
+IntNormMethods['better_linear'] = intnorm_linear.better
+IntNormMethods['simplified_linear'] = intnorm_linear.simplified
+IntNormMethods['largest_offset'] = intnorm_largest_offset
 
-def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_factor=1, relative_enrichment=True,
-                           abu_unit=None, stdabu_unit=None, convert_unit=True,
+def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
+                           enrichment_factor=1, relative_enrichment=True,
+                           std_enrichment_factor=1, std_relative_enrichment=True,
                            method='largest_offset', **method_kwargs):
     """
     Normalise the abundances of ``abu`` relative to the ykeys ``normrat`` using the internal normalisation procedure
     commonly used for data measured by mass spectrometers.
 
-    Multiple normalisations can be done at once by supplying a list of normalising ratios. If doing multiple elements
-    at once then ``isotopes``, if not ``None``, and optionally ``enrichement_factor`` must be lists the same length
-    as ``normrat``. If ``enrichment_factor`` is a single value it is applied to all elements.
+    Multiple normalisations can be done at once by supplying a list of normalising isotopes. If doing multiple
+    elements at once then ``isotopes``, if not ``None``, and optionally ``enrichment_factor`` and
+    ``std_enrichement_factor``, must be lists with the same
+     length as ``normiso``. If ``enrichment_factor``/``std_enrichment_factor`` is a single value it is applied to
+     all elements.
 
     Args:
         abu (): A [keyarray][simple.askeyarray] containing the abundances to be normalised.
@@ -223,14 +230,13 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         stdmass (): A [keyarray][simple.askeyarray] containing the isotope masses.
         stdabu (): A [keyarray][simple.askeyarray] containing the reference abundances.
         enrichment_factor (): Enrichment factor applied to ``abu``. Useful when doing multiple elements at once.
-        relative_enrichment (): If ''True'' the abundances of all ``isotopes`` are simply multiplied by
+        relative_enrichment (): If ''True'' the abundances of all ``isotopes`` in ``abu`` are multiplied by
             ``enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1
-            before **then** multiplied by ``enrichment_factor``.
-        abu_unit (str): The unit of ``abu````. If these are not in moles and ``convert_unit`` is ``True``, they will
-            be converted to moles. An exception is raised if the values cannot be converted.
-        stdabu_unit (str): The unit of ``stdabu````. If these are not in moles and ``convert_unit`` is ``True``, they will
-            be converted to moles. An exception is raised if the values cannot be converted.
-        convert_unit (bool): Whether to convert abundances from mass fractions to molar fractions.
+            and **then** multiplied by ``enrichment_factor``.
+        std_enrichment_factor (): Enrichment factor applied to ``stdabu``. Useful when doing multiple elements at once.
+        std_relative_enrichment (): If ''True'' the abundances of all ``isotopes`` in ``stdabu`` are multiplied by
+            ``std_enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1
+            and **then** multiplied by ``std_enrichment_factor``.
         method (string): The method used. See options in section below.
         **method_kwargs (): Additional arguments for the chosen ``method``.
 
@@ -239,10 +245,8 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
     The ``normrat`` numerator and denominator isotopes will be appended to ``isotopes`` if not initially included.
     This is done before the enrichment factor calculation.
 
-    The enrichment factor is relative to the molar abundance.
-
     The enrichment factor should only be used in conjunction with the ``largest_offset`` method. It might not work as
-     expected for other methods. It will have no impact on the ``linear`` method for example.
+    expected for other methods.
 
     **Methods**
 
@@ -266,33 +270,16 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
                 where i=Pd-104, k=Pd-108 and j=Pd-105.
             - Additional attrs might be supplied by the different methods.
     """
+    methodfunc = IntNormMethods.get(method.lower(), None)
+    if methodfunc is None:
+        raise ValueError('``method`` must be  "largest_offset" or "linear"')
+
     if abu.dtype.names is None:
         raise ValueError('``abu`` must be a keyarray')
-    if stdmass.dtype.names is None:
+    if stdmass is not None and stdmass.dtype.names is None:
         raise ValueError('``stdmass`` must be a keyarray')
-    if stdabu.dtype.names is None:
+    if stdabu is not None and stdabu.dtype.names is None:
         raise ValueError('``stdabu`` must be a keyarray')
-
-    if abu_unit is None:
-        logger.warning('No unit given for abu abundances. Assuming they are in moles')
-        abu_unit = 'mol'
-    if stdabu_unit is None:
-        logger.warning('No unit given for stdabu abundances. Assuming they are in moles')
-        stdabu_unit = 'mol'
-
-    if method.lower() == 'largest_offset':
-        methodfunc = intnorm_largest_offset
-    elif method.lower() == 'linear':
-        methodfunc = intnorm_linear
-    # Keep for legacy reasons
-    elif method.lower() == 'simplified_linear':
-        methodfunc = intnorm_linear
-        method_kwargs['mass_coef'] = 'simplified'
-    elif method.lower() == 'better_linear':
-        methodfunc = intnorm_linear
-        method_kwargs['mass_coef'] = 'better'
-    else:
-        raise ValueError('``method`` must be  "largest_offset" or "linear"')
 
     if isinstance(normrat, (list, tuple)):
         if isotopes is None:
@@ -306,17 +293,24 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         else:
             enrichment_factor = [enrichment_factor] * len(normrat)
 
+        if isinstance(std_enrichment_factor, (list, tuple)):
+            if len(std_enrichment_factor) != len(normrat):
+                raise ValueError('``solar_enrichment_factor`` must be an iterable the same length as ``normiso``')
+        else:
+            std_enrichment_factor = [std_enrichment_factor] * len(normrat)
+
     else:
         isotopes = (isotopes,)
         normrat = (normrat,)
         enrichment_factor = (enrichment_factor,)
+        std_enrichment_factor = (std_enrichment_factor,)
 
     all_iso_up, all_iso_down, all_iso_norm = (), (), ()
     all_abu_up, all_abu_down, all_abu_norm = [], [], []
     all_mass_up, all_mass_down, all_mass_norm = [], [], []
     all_solar_up, all_solar_down, all_solar_norm = [], [], []
 
-    for numerators, rat, abu_factor in zip(isotopes, normrat, enrichment_factor):
+    for numerators, rat, abu_factor, solar_factor in zip(isotopes, normrat, enrichment_factor, std_enrichment_factor):
         rat = utils.asratio(rat)
 
         if rat.numer.symbol != rat.denom.symbol:
@@ -334,7 +328,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         if rat.numer not in numerators:
             numerators += (rat.numer,)
         if rat.denom not in numerators:
-            numerators += (rat.denom, )
+            numerators += (rat.denom,)
 
         logger.info(
             f'Internally normalising {numerators} to {normrat} with an enrichment factor of {enrichment_factor}')
@@ -347,12 +341,6 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         all_iso_norm += tuple(rat.numer for n in numerators)
 
         abu_up = np.array([abu[numerator] for numerator in numerators])
-        if convert_unit and abu_unit.lower() not in utils.UNITS['mole']:
-            if abu_unit.lower() in utils.UNITS['mass']:
-                logger.info('Converting model abundances from mass to moles by dividing by the mass number.')
-                abu_up = abu_up / [[float(numerator.mass)] for numerator in numerators]
-            else:
-                raise ValueError(f'Unable to convert abundances from {abu_unit} to moles.')
 
         if relative_enrichment is False:
             # Renormalise so that the sum of all isotopes = 1
@@ -373,13 +361,12 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
         all_mass_norm.append(np.ones(mass_up.shape) * mass_up[numeri])
 
         solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in numerators])
-        if convert_unit and stdabu_unit.lower() not in utils.UNITS['mole']:
-            if stdabu_unit.lower() in utils.UNITS['mass']:
-                logger.info('Converting standard abundances from mass to moles by dividing by the mass number.')
-                solar_up = solar_up / [[float(numerator.mass)] for numerator in numerators]
-            else:
-                raise ValueError(f'Unable to convert abundances from {stdabu_unit} to moles.')
+        if std_relative_enrichment is False:
+            # Renormalise so that the sum of all isotopes = 1
+            # This works for both ndim = 1 & 2 as long as it is done before transpose
+            solar_up = solar_up / solar_up.sum(axis=0)
 
+        solar_up = solar_up * solar_factor
         all_solar_up.append(solar_up)
         all_solar_down.append(np.ones(solar_up.shape) * solar_up[denomi])
         all_solar_norm.append(np.ones(solar_up.shape) * solar_up[numeri])
@@ -422,8 +409,10 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu, enrichment_f
 
     return utils.NamedDict(result)
 
-def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, relative_enrichment=True,
-                         abu_unit=False, stdabu_unit=False, convert_unit=True):
+def simple_normalisation(abu, isotopes, normiso, stdabu,
+                         enrichment_factor=1, relative_enrichment=True,
+                         std_enrichment_factor=1, std_relative_enrichment=True,
+                         dilution_factor=None):
     """
     Normalise the abundances of ``abu`` relative to a specified isotope ``normiso`` as commonly done for
     stardust data.
@@ -435,8 +424,10 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
     $$
 
     Multiple normalisations can be done at once by supplying a list of normalising isotopes. If doing multiple
-    elements at once then ``isotopes``, if not ``None``, and optionally ``enrichment_factor`` must be lists the same
-     length as ``normiso``. If ``enrichment_factor`` is a single value it is applied to all elements.
+    elements at once then ``isotopes``, if not ``None``, and optionally ``enrichment_factor`` and
+    ``std_enrichement_factor``, must be lists with the same
+     length as ``normiso``. If ``enrichment_factor``/``std_enrichment_factor`` is a single value it is applied to
+     all elements.
 
     Args:
         abu (): A [keyarray][simple.askeyarray] containing the abundances to be normalised.
@@ -446,23 +437,18 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
         stdmass (): A [keyarray][simple.askeyarray] containing the isotope masses.
         stdabu (): A [keyarray][simple.askeyarray] containing the reference abundances.
         enrichment_factor (): Enrichment factor applied to ``abu``. Useful when doing multiple elements at once.
-        relative_enrichment (): If ''True'' the abundances of all ``isotopes`` are simply multiplied by
+        relative_enrichment (): If ''True'' the abundances of all ``isotopes`` in ``abu`` are multiplied by
             ``enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1
-            before **then** multiplied by ``enrichment_factor``.
-        abu_unit (str): The unit of ``abu````. If these are not in moles and ``convert_unit`` is ``True``, they will
-            be converted to moles. An exception is raised if the values cannot be converted.
-        stdabu_unit (str): The unit of ``stdabu````. If these are not in moles and ``convert_unit`` is ``True``, they will
-            be converted to moles. An exception is raised if the values cannot be converted.
-        convert_unit (bool): Whether to convert abundances from mass fractions to molar fractions.
+            and **then** multiplied by ``enrichment_factor``.
+        std_enrichment_factor (): Enrichment factor applied to ``stdabu``. Useful when doing multiple elements at once.
+        std_relative_enrichment (): If ''True'' the abundances of all ``isotopes`` in ``stdabu`` are multiplied by
+            ``std_enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1
+            and **then** multiplied by ``std_enrichment_factor``.
 
 
     **Notes**
     The ``normiso`` will be appended to ``isotopes`` if not initially included. This is done before the enrichment
     factor calculation.
-
-    The enrichment factor is relative to the molar abundance.
-
-    The enrichment factor currently has no effect on this calculation.
 
     Returns:
         dict: A dictionary containing the results of the normalisation. The dictionary at minimum contains the following attrs:
@@ -480,13 +466,6 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
     if stdabu.dtype.names is None:
         raise ValueError('``stdabu`` must be a keyarray')
 
-    if abu_unit is None:
-        logger.warning('No unit given for abu abundances. Assuming they are in moles')
-        abu_unit = 'mole'
-    if stdabu_unit is None:
-        logger.warning('No unit given for stdabu abundances. Assuming they are in moles')
-        stdabu_unit = 'mole'
-
     if isinstance(normiso, (list, tuple)):
         if isotopes is None:
             isotopes = [None] * len(normiso)
@@ -499,15 +478,22 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
         else:
             enrichment_factor = [enrichment_factor] * len(normiso)
 
+        if isinstance(std_enrichment_factor, (list, tuple)):
+            if len(std_enrichment_factor) != len(normiso):
+                raise ValueError('``solar_enrichment_factor`` must be an iterable the same length as ``normiso``')
+        else:
+            std_enrichment_factor = [std_enrichment_factor] * len(normiso)
+
     else:
         isotopes = (isotopes,)
         normiso = (normiso,)
         enrichment_factor = (enrichment_factor,)
+        std_enrichment_factor = (std_enrichment_factor,)
 
     all_abu_up, all_abu_down = [], []
     all_solar_up, all_solar_down = [], []
     all_iso_up, all_iso_down = (), ()
-    for numerators, denominator, abu_factor in zip(isotopes, normiso, enrichment_factor):
+    for numerators, denominator, abu_factor, solar_factor in zip(isotopes, normiso, enrichment_factor, std_enrichment_factor):
         denominator = utils.asisotope(denominator)
 
         if numerators is None:
@@ -526,12 +512,6 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
         all_iso_down += tuple(denominator for n in numerators)
 
         abu_up = np.array([abu[numerator] for numerator in numerators])
-        if convert_unit and abu_unit.lower() not in utils.UNITS['mole']:
-            if abu_unit.lower() in utils.UNITS['mass']:
-                logger.info('Converting model abundances from mass to moles by dividing by the mass number.')
-                abu_up = abu_up / [[float(numerator.mass)] for numerator in numerators]
-            else:
-                raise ValueError(f'Unable to convert abundances from {abu_unit} to moles.')
 
         if relative_enrichment is False:
             # Renormalise so that the sum of all isotopes = 1
@@ -539,19 +519,18 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
             abu_up = abu_up / abu_up.sum(axis=0)
 
         abu_up = abu_up * abu_factor
-
         all_abu_up.append(abu_up)
 
         # Same isotope for all isotopes
         all_abu_down.append(np.ones(abu_up.shape) * abu_up[denomi])
 
         solar_up = np.array([stdabu[numerator.without_suffix()] for numerator in numerators])
-        if convert_unit and stdabu_unit.lower() not in utils.UNITS['mole']:
-            if stdabu_unit.lower() in utils.UNITS['mass']:
-                logger.info('Converting standard abundances from mass to moles by dividing by the mass number.')
-                solar_up = solar_up / [[float(numerator.mass)] for numerator in numerators]
-            else:
-                raise ValueError(f'Unable to convert abundances from {stdabu_unit} to moles.')
+        if std_relative_enrichment is False:
+            # Renormalise so that the sum of all isotopes = 1
+            # This works for both ndim = 1 & 2 as long as it is done before transpose
+            solar_up = solar_up / solar_up.sum(axis=0)
+
+        solar_up = solar_up * solar_factor
         all_solar_up.append(solar_up)
         all_solar_down.append(np.ones(solar_up.shape) * solar_up[denomi])
 
@@ -562,10 +541,19 @@ def simple_normalisation(abu, isotopes, normiso, stdabu, enrichment_factor=1, re
     all_solar_up = np.atleast_2d(np.concatenate(all_solar_up, axis=0).transpose())
     all_solar_down = np.atleast_2d(np.concatenate(all_solar_down, axis=0).transpose())
 
-    # There is only one way to do this so no need for a separate function
-    Rij = (all_abu_up/all_abu_down)/(all_solar_up/all_solar_down) - 1.0
+    if dilution_factor is None or np.isinf(dilution_factor):
+        all_smp_up = all_abu_up
+        all_smp_down = all_abu_down
+        df = np.inf
+    else:
+        all_smp_up = all_abu_up * dilution_factor + all_solar_up
+        all_smp_down = all_abu_down * dilution_factor + all_solar_down
+        df = dilution_factor
 
-    result = dict(Ri_values = Rij, Ri_keys=all_iso_up, Ri = utils.askeyarray(Rij, all_iso_up))
+    # There is only one way to do this so no need for a separate function
+    Rij = (all_smp_up/all_smp_down)/(all_solar_up/all_solar_down) - 1.0
+
+    result = dict(Ri_values = Rij, Ri_keys=all_iso_up, Ri = utils.askeyarray(Rij, all_iso_up), dilution_factor = df)
     result['ij_key'] = dict(zip(all_iso_up, utils.asratios([f'{n}/{d}' for n, d in zip(all_iso_up, all_iso_down)])))
 
     # The labels assume that both the numerator and denominator is the same element.

@@ -2,7 +2,7 @@ import re, operator
 import numpy as np
 import logging
 import yaml
-import functools
+import functools, itertools
 import collections
 
 logger = logging.getLogger('SIMPLE.utils')
@@ -17,6 +17,7 @@ UNITS = dict(mass = ['mass', 'massfrac', 'wt', 'wt%'],
 A dictionary containing the names associated with different unit types
 
 Current unit types are:
+
 - ``mass`` that represents data being stored in a mass unit or as mass fractions.
 -  ``mole`` that represents data being stored in moles or as mole fractions.
 """
@@ -66,6 +67,18 @@ class NamedDict(dict):
             self[key] = default_value
 
         return self[key]
+
+def shortcut(name, **updated_kwargs):
+    def inner(func):
+        def wrapper(*args, **kwargs):
+            new_kwargs = updated_kwargs.copy()
+            new_kwargs.update(kwargs)
+            return func(*args, **new_kwargs)
+
+        setattr(func, name, wrapper)
+        return func
+    return inner
+
 
 def extract_kwargs(kwargs, *keys, prefix=None, pop=True, remove_prefix=True, **initial_kwargs):
     """
@@ -240,41 +253,31 @@ def asarray(values, dtype=None, saving=False):
 
     return values
 
-def select_isolist(isolist, data, *, without_suffix=False, unit = None, convert_unit = True):
+def select_isolist(isolist, data, *, without_suffix=False):
     """
     Creates a subselection of ``data`` containing only the isotopes in ``isolist``.
 
-    When addining multiple isotopes together they will be added in molar proportions. If the data is in another
-    unit it will be converted to moles if possible, otherwise an exception will be raised. The data of the returned
-    array will be converted back to the original unit.
+    If multiple input isotopes are given for an output isotope in ``isolist`` the values of the input isotopes will
+    be added together. Any isotopes missing from ``data`` will be given a value of 0.
 
-    If the data is in a mass unit the data will be divided by the isotope mass number to convert to moles. The returned
-    data will be multiplied by the mass number of the final isotope to convert it back to the original unit. Note
-    however this will only be approximate as the total mass would have changed and this is not accounted for.
+    When using this function to account for radioactive decay you want the unit of ``data`` to be in moles.
 
     Args:
         isolist (): Either a list of isotopes to be selected or a dictionary consisting of the
              final isotope mapped to a list of isotopes to be added together for this isotope.
         data (): A key array from which the subselection will be made.
         without_suffix (): If ``True`` the suffix will be removed from all isotope strings in ``isolist``.
-        unit (): Unit the data is stored in.
-        convert_unit: Whether to convert the data if it is not in the correct unit.
+
 
     Returns:
         A new key array containing only the isotopes in ``isolist``.
 
-    Examples:
-        >>>
     """
     isolist = asisolist(isolist, without_suffix=without_suffix)
     data = np.asarray(data)
 
     new_data = []
     missing_isotopes = []
-
-    if unit is None:
-        logger.warning('No unit specified for data. Assuming the unit is "mol"')
-        unit = 'mol'
 
     if data.dtype.names is None:
         raise ValueError('``data`` must be a key arrray')
@@ -284,27 +287,11 @@ def select_isolist(isolist, data, *, without_suffix=False, unit = None, convert_
 
         for iso in inciso:
             if iso in data.dtype.names:
-                if convert_unit and unit.lower() not in UNITS['mole']:
-                    if unit.lower() in UNITS['mass']:
-                        logger.info('Converting model abundances from mass to moles by dividing by the mass number.')
-                        value += (data[iso] / float(iso.mass))
-                    else:
-                        raise ValueError(f'Unable to convert abundances from {unit} to moles.')
-                else:
-                    value += data[iso]
+                value += data[iso]
             else:
                 missing_isotopes.append(iso)
 
-        if convert_unit and unit.lower() not in UNITS['mole']:
-            if unit.lower() in UNITS['mass']:
-                logger.info('Converting final abundance back to mass units from mole units by multiplying by the '
-                            'mass number of the final isotope.')
-                new_data.append(value * float(mainiso.mass))
-            else:
-                # Should never get there
-                raise ValueError(f'Unable to convert the final abundance back to {unit} from moles.')
-        else:
-            new_data.append(value)
+        new_data.append(value)
 
     result = askeyarray(np.array(new_data).transpose(), isolist.keys())
 
@@ -715,98 +702,173 @@ def get_isotopes_of_element(isotopes, element, isotopes_without_suffix=False):
 ##############
 # More complicated regex that gets more information from the text but is slower to execute.
 # REATTR = r'(?:([ ]*[+-]?[0-9]*([.]?)[0-9]*(?:[Ee]?[+-]?[0-9]+)?[ ]*)|(?:[ ]*([.]?)(?:(?:[ ]*[{](.*)[}][ ]*)|(.*))))' # number, is_float, is_attr, kwarg, string
-
-
-class AttrEval:
-    REATTR = r'(?:[ ]*([+-]?[0-9]*[.]?[0-9]*(?:[Ee]?[+-]?[0-9]+)?)[ ]*|(.*))'  # number, string
+REATTR = r'(?:[ ]*([+-]?[0-9]*[.]?[0-9]*(?:[Ee]?[+-]?[0-9]+)?)[ ]*|(.*))'  # number, string
+REINDEX = r'([-]?[0-9]*)[:]([-]?[0-9]*)[:]?([-]?[0-9]*)|([-]?[0-9]+)'
+class EvalArg:
+    NoAttr = object()
 
     class NoAttributeError(AttributeError):
         pass
 
-    class Arg:
-        NoAttr = object()
+    def __repr__(self):
+        return f"({self.value}, {self.is_attr}, {self.is_kwarg})"
 
-        def __repr__(self):
-            return f"({self.value}, {self.is_attr}, {self.is_kwarg})"
-
-        def __init__(self, number, string):
-            if number is not None:
-                if '.' in number:
-                    v = float(number.strip())
-                else:
-                    v = int(number)
-                self.value = v
-                self.is_attr = False
-                self.is_kwarg = False
+    def __init__(self, number, string):
+        if number is not None:
+            if '.' in number:
+                v = float(number.strip())
             else:
-                string = string.strip()
-                if string[0] == '.':
-                    is_attr = True
-                    string = string[1:].strip()
-                else:
-                    is_attr = False
-                if string[0] == '{' and string[-1] == '}':
-                    is_kwarg = True
-                    string = string[1:-1].strip()
-                else:
-                    is_kwarg = False
+                v = int(number)
+            self.value = v
+            self.is_attr = False
+            self.is_kwarg = False
+        else:
+            string = string.strip()
+            if string[0] == '.':
+                is_attr = True
+                string = string[1:].strip()
+            else:
+                is_attr = False
+            if string[0] == '{' and string[-1] == '}':
+                is_kwarg = True
+                string = string[1:-1].strip()
+            else:
+                is_kwarg = False
 
-                self.value = string
-                self.is_attr = is_attr
-                self.is_kwarg = is_kwarg
+            self.value = string
+            self.is_attr = is_attr
+            self.is_kwarg = is_kwarg
+            if self.is_attr is False and self.is_kwarg is False:
+                if string == 'True':
+                    self.value = True
+                elif string == 'False':
+                    self.value = False
+                elif string == 'None':
+                    self.value = None
 
-        def __call__(self, item, kwargs):
-            v = self.value
-            if self.is_kwarg:
-                w = kwargs.get(v, self.NoAttr)
+
+    def __call__(self, item, kwargs):
+        v = self.value
+        if self.is_kwarg:
+            w = kwargs.get(v, self.NoAttr)
+            if w is self.NoAttr:
+                raise self.NoAttributeError(f'No keyword argument called "{v}" found in {kwargs}')
+            else:
+                v = w
+
+        if self.is_attr:
+            if isinstance(item, dict):
+                w = item.get(v, self.NoAttr)
                 if w is self.NoAttr:
-                    raise AttrEval.NoAttributeError(f'No keyword argument called "{v}" found in {kwargs}')
+                    raise self.NoAttributeError(f'No item "{v}" found in {item}')
+                else:
+                    v = w
+            else:
+                w = getattr(item, v, self.NoAttr)
+                if w is self.NoAttr:
+                    raise self.NoAttributeError(f'No attribute called "{v}" found in {item}')
                 else:
                     v = w
 
-            if self.is_attr:
-                if isinstance(item, dict):
-                    w = item.get(v, self.NoAttr)
-                    if w is self.NoAttr:
-                        raise AttrEval.NoAttributeError(f'No item "{v}" found in {item}')
-                    else:
-                        v = w
+        return v
+
+class BoolEvaluator:
+    def __init__(self):
+        self._evaluators = []
+        self._and = True
+
+    def add(self, operator, *args):
+        self._evaluators.append((operator, args))
+
+    def __call__(self, item, kwargs=None):
+        result = False
+        for operator, args in self._evaluators:
+            if operator is None and len(args) == 1:
+                val = args[0]
+                if type(val) is EvalArg:
+                    r = val(item, kwargs)
                 else:
-                    w = getattr(item, v, self.NoAttr)
-                    if w is self.NoAttr:
-                        raise AttrEval.NoAttributeError(f'No attribute called "{v}" found in {item}')
-                    else:
-                        v = w
+                    r = val
 
-            return v
-
-    class Evaluator:
-        def __init__(self):
-            self._evaluators = []
-
-        def add(self, operator, *args):
-            self._evaluators.append((operator, args))
-
-        def __call__(self, item, kwargs):
-            for operator, args in self._evaluators:
-                try:
-                    if not operator(*(arg(item, kwargs) for arg in args)):
-                        return False
-                except AttrEval.NoAttributeError:
-                    return False
+                if type(r) is str:
+                    r = False
             else:
-                return True
+                try:
+                    r = operator(*(arg(item, kwargs) for arg in args))
+                except EvalArg.NoAttributeError:
+                    r = False
 
+            if r:
+                result = True
+            elif self._and:
+                return False
+
+        return result
+
+    def eval(self, item, kwargs=None):
+        return self.__call__(item, kwargs)
+
+class MaskEvaluator(BoolEvaluator):
+    def __call__(self, item, shape, kwargs=None):
+        result = []
+        for operator, args in self._evaluators:
+            if operator is None and len(args) == 1:
+                val = args[0]
+                if type(val) is EvalArg:
+                    val = val(item, kwargs)
+
+                if type(val) is int or type(val) is slice:
+                    result.append(np.full(shape, False))
+                    try:
+                        result[-1][val] = True
+                    except IndexError:
+                        pass # Out of bounds error
+
+                elif type(val) is str:
+                    result.append(False)
+                else:
+                    result.append(val)
+            else:
+                try:
+                    result.append(operator(*(arg(item, kwargs) for arg in args)))
+                except:
+                    result.append(np.full(shape, False))
+
+        if len(result) == 0:
+            return np.full(shape, True)
+        else:
+            if self._and:
+                op = np.logical_and
+            else:
+                op = np.logical_or
+            try:
+                r = functools.reduce(op, result)
+                return np.full(shape, r, dtype=bool)
+            except:
+                return np.full(shape, False)
+
+class AttrEval:
     def __init__(self):
         self.ab_evalstrings = []
 
     def add_ab_evaluator(self, opstr, operator):
-        self.ab_evalstrings.append((opstr, f'{self.REATTR}{opstr}{self.REATTR}', operator))
+        self.ab_evalstrings.append((opstr, f'{REATTR}{opstr}{REATTR}', operator))
 
     def parse_where(self, where):
-        eval = self.Evaluator()
+        eval = BoolEvaluator()
 
-        evalstrings = where.split('&')
+        if type(where) is not str:
+            eval.add(None, where)
+            return eval
+
+        if "&" in where and "|" in where:
+            raise ValueError('Where strings cannot contain both & and |')
+        elif "|" in where:
+            evalstrings = where.split('|')
+            eval._and = False
+        else:
+            evalstrings = where.split('&')
+
         for evalstr in evalstrings:
             evalstr = evalstr.strip()
             if len(evalstr) == 0: continue
@@ -815,10 +877,14 @@ class AttrEval:
                 # The first check significantly speeds up the evaluation
                 if (opstr in evalstr) and (m := re.fullmatch(regex, evalstr.strip())):
                     a_number, a_string, b_number, b_string = m.groups()
-                    eval.add(opfunc, self.Arg(a_number, a_string), self.Arg(b_number, b_string))
+                    eval.add(opfunc, EvalArg(a_number, a_string), EvalArg(b_number, b_string))
                     break
             else:
-                raise ValueError(f'Unable to parse condition "{evalstr}"')
+                if (m := re.fullmatch(REATTR, evalstr.strip())):
+                    a_number, a_string = m.groups()
+                    eval.add(None, EvalArg(a_number, a_string))
+                else:
+                    raise ValueError(f'Unable to parse condition "{evalstr}"')
         return eval
 
     def eval(self, item, where, **where_kwargs):
@@ -828,16 +894,65 @@ class AttrEval:
     def __call__(self, item, where, **where_kwargs):
         return self.eval(item, where, **where_kwargs)
 
+class MaskEval:
+    def __init__(self):
+        self.ab_evalstrings = []
+
+    def add_ab_evaluator(self, opstr, operator):
+        self.ab_evalstrings.append((opstr, f'{REATTR}{opstr}{REATTR}', operator))
+
+    def parse_mask(self, mask):
+        eval = MaskEvaluator()
+
+        if type(mask) is not str:
+            eval.add(None, mask)
+            return eval
+
+        if "&" in mask and "|" in mask:
+            raise ValueError('Mask string cannot contain & and |')
+        elif "|" in mask:
+            evalstrings = mask.split('|')
+            eval._and = False
+        else:
+            evalstrings = mask.split('&')
+
+        for evalstr in evalstrings:
+            evalstr = evalstr.strip()
+            if len(evalstr) == 0:
+                pass
+
+            elif (m := re.fullmatch(REINDEX, evalstr)):
+                start, stop, step, index = m.groups()
+                if index is not None:
+                    eval.add(None, int(index))
+                else:
+                    eval.add(None, slice(int(start) if start.strip() else None,
+                                                        int(stop) if stop.strip() else None,
+                                                        int(step) if step.strip() else None))
+            else:
+                for opstr, regex, opfunc in self.ab_evalstrings:
+                    # The first check significantly speeds up the evaluation
+                    if (opstr in evalstr) and (m := re.fullmatch(regex, evalstr.strip())):
+                        a_number, a_string, b_number, b_string = m.groups()
+                        eval.add(opfunc, EvalArg(a_number, a_string), EvalArg(b_number, b_string))
+                        break
+                else:
+                    if (m := re.fullmatch(REATTR, evalstr.strip())):
+                        a_number, a_string = m.groups()
+                        eval.add(None, EvalArg(a_number, a_string))
+                    else:
+                        raise ValueError(f'Unable to parse condition "{evalstr}"')
+        return eval
+
+    def eval(self, item, mask, shape, **mask_kwargs):
+        evaluate = self.parse_mask(mask)
+        return evaluate(item, shape, mask_kwargs)
+
+    def __call__(self, item, mask, shape, **mask_kwargs):
+        return self.eval(item, mask, shape, **mask_kwargs)
+
+
 simple_eval = AttrEval()
-"""
-Evaluator used to evaluate models. 
-
-The following operators are currently supported: ``==``, ``!=``, ``>=``, ``<=``, ``>``, ``<``, `` IN ``, `` NOT IN ``.
-
-Use as ``simple_eval(model, where, **where_kwargs)``
-"""
-
-
 simple_eval.add_ab_evaluator('==', operator.eq)
 simple_eval.add_ab_evaluator('!=', operator.ne)
 simple_eval.add_ab_evaluator('>=', operator.ge)
@@ -847,6 +962,12 @@ simple_eval.add_ab_evaluator('>', operator.gt)
 simple_eval.add_ab_evaluator(' NOT IN ', lambda a, b: not operator.contains(b, a))
 simple_eval.add_ab_evaluator(' IN ', lambda a, b: operator.contains(b, a))
 
-
+mask_eval = MaskEval()
+mask_eval.add_ab_evaluator('==', operator.eq)
+mask_eval.add_ab_evaluator('!=', operator.ne)
+mask_eval.add_ab_evaluator('>=', operator.ge)
+mask_eval.add_ab_evaluator('<=', operator.le)
+mask_eval.add_ab_evaluator('<', operator.lt)
+mask_eval.add_ab_evaluator('>', operator.gt)
 
 

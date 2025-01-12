@@ -2,6 +2,7 @@ import datetime, os, csv
 import numpy as np
 import h5py
 import logging
+import re
 
 import simple.utils as utils
 import simple.norm as norm
@@ -103,8 +104,8 @@ class ModelCollection:
         return f'{self.__class__.__name__}(models={{{models}}}, refs={{{refs}}})'
 
     def _repr_markdown_(self):
-        models = "\n".join([f'- [{i}] {k} ({v.__class__.__name__})' for i, (k, v) in enumerate(self.models.items())])
-        refs = "\n".join([f'- {k} ({v.__class__.__name__})' for k, v in self.refs.items()])
+        models = "\n".join([f'- **[{i}]** ``{k}`` ({v.__class__.__name__})' for i, (k, v) in enumerate(self.models.items())])
+        refs = "\n".join([f'- ``{k}`` ({v.__class__.__name__})' for k, v in self.refs.items()])
         return f"""
 Models in collection:
 
@@ -210,7 +211,7 @@ References in collection:
         if 'clsname' not in attrs:
             raise ValueError(f"Model '{attrs[name]}' has no clsname")
 
-        if where is None or eval(attrs, where_kwargs):
+        if where is None or eval.eval(attrs, where_kwargs):
             logger.info(f'Loading model: {model_name} ({attrs["clsname"]})')
             for name, value in group.items():
                 if not isinstance(value, h5py.Dataset): continue
@@ -315,9 +316,9 @@ References in collection:
         """
         Returns a copy of the collection containing only the models which match the ``where`` argument.
 
-        Use ``&`` to combine multiple evaluations. To evaluate an attribute put a dot before the name e.g.
-        ``.mass == 15``. To use one of the ``where_kwargs`` values put the name of the kwarg within pointy brackets
-        e.g. ``.mass == {mass_kwarg}``.
+        Use ``&`` or ``|`` to combine multiple evaluations. To evaluate an attribute of each model put a
+        dot before the name e.g. ``.mass == 15``. To use one of the ``where_kwargs`` values put the name
+        of the kwarg within pointy brackets e.g. ``.mass == {mass_kwarg}``.
 
         The available operators for evaluations are ``==``, ``!=``, ``>``, ``>=``, ``<``, ``<=``,
         `` IN ``, and `` NOT IN ``.
@@ -329,12 +330,13 @@ References in collection:
             **where_kwargs (): Arguments used for the evaluation.
 
         Returns:
+            bool
 
         """
         eval = utils.simple_eval.parse_where(where)
         new_collection = self.__class__()
         for model in self.models.values():
-            if eval(model, where_kwargs):
+            if eval.eval(model, where_kwargs):
                 model.copy(new_collection)
 
         return new_collection
@@ -546,7 +548,7 @@ class ModelTemplate:
         Returns:
             The new model
         """
-        new_model = ModelTemplate(to_collection, self.name, **self.hdf5_attrs)
+        new_model = self.__class__(to_collection, self.name, **self.hdf5_attrs)
 
         for k, v in self.hdf5_attrs.items():
             # Make sure ref are in new models object
@@ -558,6 +560,154 @@ class ModelTemplate:
             new_model.setattr(k, v, hdf5_compatible=False, overwrite=True)
 
         return new_model
+
+    def get_mask(self, mask, shape = None, **mask_attrs):
+        """
+        Returns a selection mask for an array with ``shape``.
+
+        This function is used by plotting functions to plot only a sub selction of the data. The mask string
+        can an integer representing an index, a slice or a condition that generates a mask. Use ``&`` or ``|``
+        to combine multiple indexes and/or conditions.
+
+        Supplied attributes can be accesed by putting a dot infront of the name, e.g. ``.data > 1``. The available
+        operators for mask conditions are ``==``, ``!=``, ``>``, ``>=``, ``<``, ``<=``.
+
+        The result of the mask evaluation must be broadcastable with ``shape``. If it is not an all ``False`` mask is
+        returned.
+
+        **Note**
+        - It is not possible to mix ``&`` and ``|`` seperators. Doing so will raise an exception.
+        - Any text not precceded by a dot will be evaluated as text. Text on its own will always be evaluated
+        as ``False``.
+        - An empty string will be evaluated as ``True``
+
+
+        Args:
+            mask (): String or object that will be evaluated to create a mask.
+            shape (): Shape of the returned mask. If omitted the shape of the default abundance array is used.
+            **mask_attrs (): Attributes to be used during the evaluation.
+
+        Examples:
+            >>> a = np.array([0,1,2,3,4])
+            >>> model.get_mask('3', a.shape)
+            array([False, False, False,  True,  False])
+
+            >>> model.get_mask('1:3', a.shape)
+            array([False, True, True,  False,  False])
+
+            >>> model.get_mask('.data >= 1 & .data < 3', a.shape, data=a)
+            array([False, True, True,  False,  False])
+
+            >>> model.get_mask('.data >= 1 | .data > 3', a.shape, data=a)
+            rray([True, True, False,  False,  True])
+
+        Returns:
+            A boolean numpy array with ``shape``.
+
+        """
+        if shape is None:
+            if self.ABUNDANCE_KEYARRAY is None:
+                raise ValueError("Shape is required as there is no default key array associated with this model")
+            else:
+                shape = getattr(self, self.ABUNDANCE_KEYARRAY).shape
+
+        return utils.mask_eval.eval(mask_attrs, mask, shape, **mask_attrs)
+
+    def convert_keyarray(self, array, unit, desired_unit):
+        """
+        Return a copy of the array converted to the desired unit.
+
+        Supported units are the [mole and mass units][simple.utils.UNITS]. Converting between the *mass* and *mole** units is done by
+        dividing/multiplying the values by the mass number.
+
+        Always return a copy of ``array`` even if not conversion takes place.
+
+        Args:
+            array (): A key array.
+            unit (): The current unit of the data in ``array``. If ``None`` the unit is assumed to be that of the
+            ``desired_unit``.
+            desired_unit (): The unit the array should be converted to. If ``None`` no conversion is made
+            and the original array`is returned.
+
+        Raises:
+            ValueError: If the array cannot be converted from ``unit`` to ``desired_unit``.
+
+        Returns:
+            A copy of ``array`` with the desired unit.
+        """
+        array = array.copy()
+        if unit is None:
+            logger.warning(f"the key array does not have an assigned unit. Assuming the unit is the desired unit")
+            return array
+        elif desired_unit is None:
+            logger.info(f"No desired unit specified. Assuming the desired unit is the current unit")
+            return array
+
+        if unit in utils.UNITS['mole']:
+            if desired_unit.lower() in utils.UNITS['mole']:
+                logger.info('Both array unit and desired unit are ``mole`` units.')
+                return array
+            elif desired_unit.lower() in utils.UNITS['mass']:
+                logger.info('Converting array from ``mole`` to ``mass`` unit by multiplying the data by the mass number')
+                for key in array.dtype.names:
+                    try:
+                        m = float(utils.asisotope(key).mass)
+                    except ValueError:
+                        pass # Leaves non-isotope values unchanged
+                    else:
+                        array[key] *= m
+                return array
+
+        elif unit in utils.UNITS['mass']:
+            if desired_unit.lower() in utils.UNITS['mass']:
+                logger.info('Both array unit and desired unit are ``mass`` units.')
+                return array
+            elif desired_unit.lower() in utils.UNITS['mole']:
+                logger.info('Converting array from ``mass`` to ``mole`` unit by dividing the data by the mass number')
+                for key in array.dtype.names:
+                    try:
+                        m = float(utils.asisotope(key).mass)
+                    except ValueError:
+                        pass # Leaves non-isotope values unchanged
+                    else:
+                        array[key] /= m
+                return array
+
+        raise ValueError(f"Unable to convert from '{unit}' to '{desired_unit}'")
+
+    def get_keyarray(self, name=None, desired_unit=None):
+        """
+        Returns a copy of the named array with the desired unit.
+
+        Args:
+            name (): Name of the array to return. If ``None`` the default abundance array is returned.
+            desired_unit (): The desired unit of the returned array.
+
+        Returns:
+            A copy of the array with the desired unit.
+        """
+        if name is None:
+            if self.ABUNDANCE_KEYARRAY is None:
+                raise ValueError("No default array associated with this model")
+            else:
+                name = self.ABUNDANCE_KEYARRAY
+        try:
+            a = self[name]
+        except KeyError:
+            raise AttributeError(f"This model has no attribute called '{name}'")
+        else:
+            if not isinstance(a, np.ndarray) or a.dtype.names is None:
+                raise TypeError(f"Model attribute '{name}' is not a keyarray")
+
+        if desired_unit is None:
+            return a.copy()
+        else:
+            unit = getattr(self, f"{name}_unit", None)
+            if unit is None:
+                logger.warning(f"Keyarray '{name}' has no unit attribute. Assuming unit is {desired_unit}")
+                return a.copy()
+            else:
+                return self.convert_keyarray(a, unit, desired_unit)
 
     def select_isolist(self, isolist, convert_unit=True):
         """
@@ -584,10 +734,13 @@ class ModelTemplate:
         if self.ABUNDANCE_KEYARRAY is None:
             raise NotImplementedError('The data to be normalised in has not been specified for this model')
 
-        abu = self[self.ABUNDANCE_KEYARRAY]
-        abu_unit = getattr(self, f"{self.ABUNDANCE_KEYARRAY}_unit", "mol")
+        abu = self.get_keyarray(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
 
-        abu = utils.select_isolist(isolist, abu, unit=abu_unit, convert_unit=convert_unit)
+        abu = utils.select_isolist(isolist, abu)
+
+        if convert_unit:
+            original_unit = getattr(self, f"{self.ABUNDANCE_KEYARRAY}_unit", "mol")
+            abu = self.convert_keyarray(abu, 'mol', original_unit)
 
         self.setattr(self.ABUNDANCE_KEYARRAY, abu, hdf5_compatible=False, overwrite=True)
 
@@ -603,7 +756,8 @@ class ModelTemplate:
         elif kname in self.normal_attrs:
             self.setattr(kname, utils.asisotopes(abu.dtype.names), hdf5_compatible=False, overwrite=True)
 
-    def internal_normalisation(self, normrat, *, isotopes = None, enrichment_factor=1, relative_enrichment=True,
+    def internal_normalisation(self, normrat, *, isotopes = None,
+                               enrichment_factor=1, relative_enrichment=True,
                                convert_unit=True, attrname='intnorm',
                                method='largest_offset', **method_kwargs):
         """
@@ -620,27 +774,26 @@ class ModelTemplate:
             raise NotImplementedError('The data to be normalised in has not been specified for this model')
 
         # The abundances to be normalised
-        abu = self[self.ABUNDANCE_KEYARRAY]
-        abu_unit = getattr(self, f"{self.ABUNDANCE_KEYARRAY}_unit", "mol")
+        abu = self.get_keyarray(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
 
         # Isotope masses
-        stdmass = self.get_ref(self.refid_isomass, 'data')
+        ref_stdmass = self.get_ref(self.refid_isomass)
+        stdmass = ref_stdmass.get_keyarray('data')
 
         # The reference abundances. Typically, the initial values of the model
-        stdabu = self.get_ref(self.refid_isoabu, 'data')
-        stdabu_unit = self.get_ref(self.refid_isoabu, 'data_unit')
+        ref_stdabu = self.get_ref(self.refid_isoabu)
+        stdabu = ref_stdabu.get_keyarray('data', 'mol' if convert_unit else None)
+
 
         result = norm.internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
                                              enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
-                                             abu_unit=abu_unit, stdabu_unit=stdabu_unit,
-                                             convert_unit=convert_unit,
                                              method=method, **method_kwargs)
 
         self.setattr(attrname, result, hdf5_compatible=False, overwrite=True)
         return result
 
     def simple_normalisation(self, normiso, *, isotopes = None, enrichment_factor = 1, relative_enrichment=True,
-                             convert_unit=True, attrname='simplenorm'):
+                             convert_unit=True, attrname='simplenorm', dilution_factor = None):
         """
         Normalise the appropriate data of the model. See
         [simple_normalisation][simple.norm.simple_normalisation] for a description of the procedure and a
@@ -654,16 +807,14 @@ class ModelTemplate:
         if self.ABUNDANCE_KEYARRAY is None:
             raise NotImplementedError('The data to be normalised has not been specified for this model')
 
-        abu = self[self.ABUNDANCE_KEYARRAY]
-        abu_unit = getattr(self, f"{self.ABUNDANCE_KEYARRAY}_unit", "mol")
+        abu = self.get_keyarray(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
 
-        stdabu = self.get_ref(self.refid_isoabu, 'data')
-        stdabu_unit = self.get_ref(self.refid_isoabu, 'data_unit')
+        ref_stdabu = self.get_ref(self.refid_isoabu)
+        stdabu = ref_stdabu.get_keyarray('data', 'mol' if convert_unit else None)
 
         result = norm.simple_normalisation(abu, isotopes, normiso, stdabu,
                                            enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
-                                           abu_unit=abu_unit, stdabu_unit=stdabu_unit,
-                                           convert_unit=convert_unit)
+                                           dilution_factor=dilution_factor)
 
         self.setattr(attrname, result, hdf5_compatible=False, overwrite=True)
         return result

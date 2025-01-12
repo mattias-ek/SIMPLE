@@ -392,17 +392,6 @@ def test_select_isolist():
         assert result.dtype.names == correct_keys
         np.testing.assert_array_equal(result, correct_array)
 
-    # array - unit = 'mass'
-    if True:
-        correct_keys = utils.asisotopes(['ar40', 'fe56*', 'pd105'])
-        correct_values = np.array([[3 * 40, 2 * 56, 2 * 105], [3 * 40 * 2, 2 * 56 * 2, 2 * 105 * 2]])
-        correct_array = utils.askeyarray(correct_values, correct_keys)
-
-        result = utils.select_isolist(isolist, array, unit='mass')
-        assert isinstance(result, np.ndarray)
-        assert result.dtype.names == correct_keys
-        np.testing.assert_array_equal(result, correct_array)
-
     # array - without_suffix=True
     if True:
         correct_keys = utils.asisotopes(['ar40', 'fe56', 'pd105'])
@@ -564,9 +553,11 @@ def test_model_eval():
     class Item:
         a = 'A'
         b = 3.6
+        true = True
+        false = False
 
     eval = utils.simple_eval
-    dattrs = {"a": 'A', 'b': 3.6}
+    dattrs = {"a": 'A', 'b': 3.6, 'true': True, 'false': False}
     oattrs = Item()
 
     # == and !=
@@ -641,14 +632,173 @@ def test_model_eval():
         result = eval.eval(attrs, '.a == A & .b > 3 & x NOT IN {arg}', arg=['x', 'y', 'z'])
         assert result is False
 
-    ##########
-    # Errors #
-    ##########
+        ####
+        result = eval.eval(attrs, '.a == A | .b > 3 | x IN {arg}', arg=['x', 'y', 'z'])
+        assert result is True
+
+        result = eval.eval(attrs, '.a != A | .b > 3 | x IN {arg}', arg=['x', 'y', 'z'])
+        assert result is True
+
+        result = eval.eval(attrs, '.a != A | .b < 3 | x IN {arg}', arg=['x', 'y', 'z'])
+        assert result is True
+
+        result = eval.eval(attrs, '.a != A | .b < 3 | x NOT IN {arg}', arg=['x', 'y', 'z'])
+        assert result is False
+
+    # Single attr
     for attrs in [oattrs, dattrs]:
-        with pytest.raises(ValueError):
-            eval.eval(attrs, '.a = A')
+        result = eval.eval(attrs, 'text')
+        assert result is False
+
+        result = eval.eval(attrs, 'true')
+        assert result is False
+
+        result = eval.eval(attrs, 'True')
+        assert result is True
+
+        result = eval.eval(attrs, '.true')
+        assert result is True
+
+        result = eval.eval(attrs, 0)
+        assert result is False
+
+        result = eval.eval(attrs, 1)
+        assert result is True
+
+        result = eval.eval(attrs, '.b')
+        assert result is True
+
+        result = eval.eval(attrs, True)
+        assert result is True
+
+        result = eval.eval(attrs, False)
+        assert result is False
 
 
+
+def test_mask_eval():
+    eval = utils.mask_eval
+
+    correct = np.full(11, False)
+    correct[10] = True
+
+    result = eval.eval({}, 10, 11)
+    np.testing.assert_array_equal(result, correct)
+
+    result = eval.eval({}, -1, 11)
+    np.testing.assert_array_equal(result, correct)
+
+    result = eval.eval({}, '10', 11)
+    np.testing.assert_array_equal(result, correct)
+
+    result = eval.eval({}, '-1', 11)
+    np.testing.assert_array_equal(result, correct)
+
+    #--------------------------------
+    correct = np.full(11, False)
+    correct[slice(1,2,3)] = True
+
+    result = eval.eval({}, slice(1,2,3), 11)
+    np.testing.assert_array_equal(result, correct)
+
+    result = eval.eval({}, '1:2:3', 11)
+    np.testing.assert_array_equal(result, correct)
+
+    # --------------------------------
+    correct = np.full(11, False)
+    correct[:10] = True
+
+    result = eval.eval({}, ':10', 11)
+    np.testing.assert_array_equal(result, correct)
+
+    # --------------------------------
+    correct = np.full(11, False)
+    correct[-5:] = True
+
+    result = eval.eval({}, '-5:', 11)
+    np.testing.assert_array_equal(result, correct)
+
+    # --------------------------------
+    correct = np.full(11, True)
+
+    result = eval.eval({}, '', 11)
+    np.testing.assert_array_equal(result, correct)
+
+    ##################################
+    array = np.array([1, 2, 3, 4, 5])
+
+    result = eval.eval({'data': array}, '.data > 3', 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, True, True]))
+
+    result = eval.eval({'data': array}, '3 >= {data}', 5, **{'data': array})
+    np.testing.assert_array_equal(result, np.array([True, True, True, False, False]))
+
+    result = eval.eval({'data': array}, 'data > 3', 5)
+    np.testing.assert_array_equal(result, [False, False, False, False, False])
+
+    result = eval.eval({'data': array}, '.data > 3 & .data < 5', 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, True, False]))
+
+    result = eval.eval({'data': array}, '.data > 3 | .data <= 2', 5)
+    np.testing.assert_array_equal(result, np.array([True, True, False, True, True]))
+
+    result = eval.eval({'data': array}, '-1 | .data <= 2', 5)
+    np.testing.assert_array_equal(result, np.array([True, True, False, False, True]))
+
+    result = eval.eval({'data': array}, '.data > 1 & :3', 5)
+    np.testing.assert_array_equal(result, np.array([False, True, True, False, False]))
+
+    result = eval.eval({'data': array}, '.data > 1 & :3 & 2', 5)
+    np.testing.assert_array_equal(result, np.array([False, False, True, False, False]))
+
+    with pytest.raises(ValueError):
+        result = eval.eval({'data': array}, '.data > 1 & :3 | 2', 5)
+
+    ############################
+    result = eval.eval({'data': array}, [False, False, True, False, False], 5)
+    np.testing.assert_array_equal(result, np.array([False, False, True, False, False]))
+
+    # Incorrect shape
+    result = eval.eval({'data': array}, [False, False, True, False], 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    result = eval.eval({'data': array}, [True], 5)
+    np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
+
+    result = eval.eval({'data': array}, True, 5)
+    np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
+
+    # Non-zero floats have a boolean value of True
+    result = eval.eval({'data': array}, 2.0, 5)
+    np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
+
+    # Zero value floats have a boolean value of False
+    result = eval.eval({'data': array}, 0.0, 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    # None has a boolean value of True
+    result = eval.eval({'data': array}, None, 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    ###################
+    result = eval.eval({'data': array, 'i': 3, 'slice':slice(None, 2)}, '.i', 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, True, False]))
+
+    result = eval.eval({'data': array, 'i': 3, 'slice': slice(None, 2)}, '.slice', 5)
+    np.testing.assert_array_equal(result, np.array([True, True, False, False, False]))
+
+    result = eval.eval({'data': array, 'i': 3, 'slice': slice(None, 2)}, '.slice | .i', 5)
+    np.testing.assert_array_equal(result, np.array([True, True, False, True, False]))
+
+def test_shortcut():
+    @utils.shortcut('b', text='b')
+    def func(*, text = 'a'):
+        return text
+
+    assert func() == 'a'
+    assert func(text='b') == 'b'
+    assert func.b() == 'b'
+    assert func.b(text='a') == 'a'
 
 
 

@@ -7,8 +7,7 @@ import logging
 
 logger = logging.getLogger('SIMPLE.CCSNe.models')
 
-__all__ = ['CCSNe', 'calc_default_onion_structure',
-           'load_LC18', 'load_Ra02', 'load_La22', 'load_Pi16', 'load_Ri18', 'load_Si18']
+__all__ = []
 
 #############
 ### Utils ###
@@ -91,7 +90,7 @@ def calc_default_onion_structure(abundance, keys, masscoord):
         logging.info("Lower boundary of the Ni layer: " + str(mass[ini]))
         boundaries.append(ini)
 
-    return utils.askeyarray(boundaries, shells,dtype=np.int64)
+    return utils.askeyarray(boundaries, shells, dtype=np.int64)
 
 
 ###################
@@ -121,8 +120,73 @@ class CCSNe(models.ModelTemplate):
     REQUIRED_ATTRS = ['type', 'dataset', 'citation', 'mass', 'masscoord',
                       'abundance_values', 'abundance_keys', 'abundance_unit',
                       'refid_isoabu', 'refid_isomass']
-    REPR_ATTRS = ['prefixes', 'type', 'dataset', 'mass']
+    REPR_ATTRS = ['name', 'type', 'dataset', 'mass']
     ABUNDANCE_KEYARRAY = 'abundance'
+
+    def get_mask(self, mask, shape = None, **mask_attrs):
+        """
+        Returns a selection mask for an array with ``shape``.
+
+        This function is used by plotting functions to plot only a sub selction of the data. The mask string
+        can an integer representing an index, a slice or a condition that generates a mask. Use ``&`` or ``|``
+        to combine multiple indexes and/or conditions.
+
+        Supplied attributes can be accesed by putting a dot infront of the name, e.g. ``.data > 1``. The available
+        operators for mask conditions are ``==``, ``!=``, ``>``, ``>=``, ``<``, ``<=``.
+
+        The result of the mask evaluation must be broadcastable with ``shape``. If it is not an all ``False`` mask is
+        returned.
+
+        Masks for the different onion layers are included as attributes.
+
+        **Note**
+        - It is not possible to mix ``&`` and ``|`` seperators. Doing so will raise an exception.
+        - Any text not precceded by a dot will be evaluated as text. Text on its own will always be evaluated
+        as ``False``.
+        - An empty string will be evaluated as ``True``
+
+
+        Args:
+            mask (): String or object that will be evaluated to create a mask.
+            shape (): Shape of the returned mask. If omitted the shape of the default abundance array is used.
+            **mask_attrs (): Attributes to be used during the evaluation.
+
+        Examples:
+            >>> a = np.array([0,1,2,3,4])
+            >>> model.get_mask('3', a.shape)
+            array([False, False, False,  True,  False])
+
+            >>> model.get_mask('1:3', a.shape)
+            array([False, True, True,  False,  False])
+
+            >>> model.get_mask('.data >= 1 & .data < 3', a.shape, data=a)
+            array([False, True, True,  False,  False])
+
+            >>> model.get_mask('.data >= 1 | .data > 3', a.shape, data=a)
+            rray([True, True, False,  False,  True])
+
+        Returns:
+            A boolean numpy array with ``shape``.
+        """
+        onion_lbounds = getattr(self, 'onion_lbounds', None)
+        if onion_lbounds is not None:
+            shells = {}
+            keys = onion_lbounds.dtype.names
+            ubound = None
+            for key in keys:
+                lbound = int(onion_lbounds[key][0])
+                if lbound >= 0:
+                    shells[key] = slice(lbound, ubound)
+                    ubound = lbound
+                else:
+                    shells[key] = slice(0, 0)
+
+            shells.update(mask_attrs)
+            mask_attrs = shells
+
+        return super().get_mask(mask, shape, **mask_attrs)
+
+
 
 z_names = ['Neut', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al',
            'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co',

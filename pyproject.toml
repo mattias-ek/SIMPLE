@@ -5,6 +5,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["simple", "simple.*"]
 
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+
 [project]
 name = "SIMPLE"
 version = "0.2.2"

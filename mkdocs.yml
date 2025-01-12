@@ -9,11 +9,18 @@ plugins:
           options:
             show_source: true
             show_root_heading: true
+            show_root_full_path: true
             merge_init_into_class: true
             show_symbol_type_toc: true
             show_symbol_type_heading: true
+            show_category_heading: false
+            show_bases: true
+            group_by_category: true
+            docstring_section_style: list
+            show_if_no_docstring: true
+            filters: ["!^_", "!^logger$"]
             #separate_signature: true
-            members_order: source
+            #members_order: source
 
 theme:
   name: material
@@ -22,18 +29,22 @@ nav:
     - Home: index.md
     - User Guide: user-guide.md
     - Tutorials:
-        - Part 2 - Normalising and plotting data: examples/ccsne_tutorial2.ipynb
+        - Part 1 - Selecting the isolist: examples/ccsne_tutorial1.ipynb
+        - Part 2 - Normalising data: examples/ccsne_tutorial2.ipynb
     - Examples:
         - Create CCSNe database: examples/create_simple_db.ipynb
         - CCSNE Exmple: examples/simple_mattias_version.ipynb
-        - Rose Diagrams: example/rose_diagram.ipynb
-    - API:
+        - Rose Diagrams: examples/rose_diagram.ipynb
+    - API Reference:
       - simple: api/simple.md
-      - simple.plot: api/plot.md
-      - simple.norm: api/norm.md
-      - simple.models: api/models.md
-      - simple.utils: api/utils.md
-      - simple.ccsne: api/ccsne.md
+      - Main Modules:
+        - simple.plot: api/plot.md
+        - simple.norm: api/norm.md
+        - simple.models: api/models.md
+        - simple.utils: api/utils.md
+      - CCSNe Modules:
+        - simple.ccsne.models: api/ccsne-models.md
+        - simple.ccsne.plot: api/ccsne-plot.md
     - About: about.md
     - License: license.md
 

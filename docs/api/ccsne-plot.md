@@ -1,6 +1,6 @@
-# simple.utils
+# simple.ccsne.plot
 
-::: simple.utils
+::: simple.ccsne.plot
     options:
         show_root_heading: False
         show_root_members_full_path: true
