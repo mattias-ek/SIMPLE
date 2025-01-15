@@ -29,8 +29,8 @@ nav:
     - Home: index.md
     - User Guide: user-guide.md
     - Tutorials:
-        - Part 1 - Selecting the isolist: examples/ccsne_tutorial1.ipynb
-        - Part 2 - Normalising data: examples/ccsne_tutorial2.ipynb
+        - Part 1 - Getting Started: examples/ccsne_tutorial1.ipynb
+        - Part 2 - Normalising abundances: examples/ccsne_tutorial2.ipynb
     - Examples:
         - Create CCSNe database: examples/create_simple_db.ipynb
         - CCSNE Exmple: examples/simple_mattias_version.ipynb
