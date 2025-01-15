@@ -5,9 +5,12 @@ import yaml
 import functools, itertools
 import collections
 
+SimpleLogger = logging.getLogger('SIMPLE')
+SimpleLogger.addHandler(logging.StreamHandler())
+
 logger = logging.getLogger('SIMPLE.utils')
 
-__all__ = ['load_defaults',
+__all__ = ['load_defaults', 'set_logging_level',
            'asarray', 'askeyarray', 'asisolist', 'get_isotopes_of_element',
            'aselement', 'aselements', 'asisotope', 'asisotopes', 'asratio', 'asratios']
 
@@ -22,6 +25,18 @@ Current unit types are:
 -  ``mole`` that represents data being stored in moles or as mole fractions.
 """
 
+def set_logging_level(level):
+    if level.upper() == 'DEBUG':
+        level = logging.DEBUG
+    elif level.upper() == 'INFO':
+        level = logging.INFO
+    elif level.upper() == 'WARNING':
+        level = logging.WARNING
+    elif level.upper() == 'ERROR':
+        level = logging.ERROR
+
+    SimpleLogger.setLevel(level)
+
 class EndlessList(list):
     """
     A subclass of ``list`` that where the index will never go out of bounds. If a requested
@@ -34,11 +49,11 @@ class EndlessList(list):
     """
     # Index will never go out of bounds. It will just start from the beginning if larger than the initial list.
     def __getitem__(self, index):
-        value = super().__getitem__(index % len(self))
         if type(index) == slice:
-            return EndlessList(value)
+            return EndlessList(super().__getitem__(index))
         else:
-            return value
+
+            return super().__getitem__(index % len(self))
 
 class NamedDict(dict):
     """
@@ -76,6 +91,12 @@ def shortcut(name, **updated_kwargs):
             return func(*args, **new_kwargs)
 
         setattr(func, name, wrapper)
+        return func
+    return inner
+
+def update_docs(**kwargs):
+    def inner(func):
+        func.__doc__ = func.__doc__.format(**kwargs)
         return func
     return inner
 

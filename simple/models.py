@@ -337,7 +337,7 @@ References in collection:
         new_collection = self.__class__()
         for model in self.models.values():
             if eval.eval(model, where_kwargs):
-                model.copy(new_collection)
+                model.copy_to(new_collection)
 
         return new_collection
 
@@ -347,7 +347,7 @@ References in collection:
         """
         new_collection = self.__class__()
         for model in self.models.values():
-            model.copy(new_collection)
+            model.copy_to(new_collection)
 
         return new_collection
 
@@ -541,20 +541,20 @@ class ModelTemplate:
         super().__setattr__('name', name)
         self.collection.models[self.name] = self
 
-    def copy(self, to_collection):
+    def copy_to(self, collection):
         """
-        Create a shallow copy of the current model in the ``to_collection`` collection.
+        Create a shallow copy of the current model in ``collection``.
 
         Returns:
             The new model
         """
-        new_model = self.__class__(to_collection, self.name, **self.hdf5_attrs)
+        new_model = self.__class__(collection, self.name, **self.hdf5_attrs)
 
         for k, v in self.hdf5_attrs.items():
             # Make sure ref are in new models object
             if k[:6] == 'refid_':
-                if type(v) is str and v not in to_collection.refs:
-                    to_collection.refs[v] = self.collection.refs[v]
+                if type(v) is str and v not in collection.refs:
+                    collection.refs[v] = self.collection.refs[v]
 
         for k, v in self.normal_attrs.items():
             new_model.setattr(k, v, hdf5_compatible=False, overwrite=True)

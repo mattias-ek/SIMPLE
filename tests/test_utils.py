@@ -18,14 +18,15 @@ def test_asisotope():
     ###############
     # Test suffix #
     ###############
-    for string in '102Pd*, 102pd** , Pd102 suffix '.split(','):
+    for suffix in ['*', '_', ':', '*s', '_s', ':s', ' s']:
+        string = 'Pd102' + suffix
         iso = utils.asisotope(string)
         assert type(iso) is utils.Isotope
         assert isinstance(iso, str)
         assert iso != 'Pd-102'
         assert iso.mass == '102'
         assert iso.symbol == 'Pd'
-        assert iso.suffix != ''
+        assert iso.suffix == suffix
         assert type(iso.element) is utils.Element
         assert iso.element != 'Pd'
 
@@ -77,7 +78,7 @@ def test_asisotope():
     ################
     # Test invalid #
     ################
-    for string in 'invalid, mattias , Pd-1022, 1022pd, Pd102A, 102-Pdd, 102pd1, *102pd, 102pda, 102pd-, 102pd/'.split(','):
+    for string in 'invalid , Pd-1022, 1022pd, Pd102A, 102-Pdd, 102pd1, *102pd, 102pda, 102pd/ 102pd*/'.split(','):
         with pytest.raises(ValueError):
             utils.asisotope(string)
 
@@ -765,9 +766,6 @@ def test_mask_eval():
     result = eval.eval({'data': array}, [True], 5)
     np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
 
-    result = eval.eval({'data': array}, True, 5)
-    np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
-
     # Non-zero floats have a boolean value of True
     result = eval.eval({'data': array}, 2.0, 5)
     np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
@@ -790,6 +788,35 @@ def test_mask_eval():
     result = eval.eval({'data': array, 'i': 3, 'slice': slice(None, 2)}, '.slice | .i', 5)
     np.testing.assert_array_equal(result, np.array([True, True, False, True, False]))
 
+    ###############
+    result = eval.eval({'data': array}, 'one', 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    result = eval.eval({'data': array}, '7', 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    result = eval.eval({'data': array}, 7, 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    ################
+    result = eval.eval({'data': array}, None, 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    result = eval.eval({'data': array}, 'None', 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    result = eval.eval({'data': array}, False, 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    result = eval.eval({'data': array}, 'False', 5)
+    np.testing.assert_array_equal(result, np.array([False, False, False, False, False]))
+
+    result = eval.eval({'data': array}, True, 5)
+    np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
+
+    result = eval.eval({'data': array}, 'True', 5)
+    np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
+
 def test_shortcut():
     @utils.shortcut('b', text='b')
     def func(*, text = 'a'):
@@ -799,6 +826,22 @@ def test_shortcut():
     assert func(text='b') == 'b'
     assert func.b() == 'b'
     assert func.b(text='a') == 'a'
+
+def test_EndlessList():
+    l = utils.EndlessList([1, 2, 3])
+    assert type(l) is utils.EndlessList
+    assert l[0] == 1
+    assert l[2] == 3
+    assert l[3] == 1
+    assert l[5] == 3
+    assert l[7] == 2
+
+    l2 = l[1:]
+    assert type(l2) is utils.EndlessList
+    assert l2[0] == 2
+    assert l2[1] == 3
+    assert l2[2] == 2
+    assert l2[3] == 3
 
 
 

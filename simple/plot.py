@@ -18,6 +18,8 @@ __all__ = ['create_rose_plot',
            'plot_intnorm', 'plot_simplenorm', 'plot_abundance']
 
 
+
+
 # colours appropriate for colour blindness
 # Taken from https://davidmathlogic.com/colorblind/#%23000000-%23E69F00-%2356B4E9-%23009E73-%23F0E442-%230072B2-%23D55E00-%23CC79A7
 all_colors=utils.EndlessList(["#D55E00", "#56B4E9", "#009E73", "#E69F00", "#CC79A7", "#0072B2", "#F0E442"])
@@ -201,7 +203,7 @@ def get_cmap(name):
     except:
         return mpl.cm.get_cmap(name)
 
-def update_axes(ax, kwargs, *delay, delay_all=False):
+def update_axes(ax, kwargs, *, delay=None, update_ax = True, update_fig = True, delay_all=False):
     """
     Updates the axes and figure objects.
 
@@ -227,6 +229,7 @@ def update_axes(ax, kwargs, *delay, delay_all=False):
     Returns
         dict: A dictionary containing the delayed method calls.
     """
+
     axes_meth = utils.extract_kwargs(kwargs, prefix='ax')
     axes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
 
@@ -236,6 +239,10 @@ def update_axes(ax, kwargs, *delay, delay_all=False):
     # Special cases
     if 'size' in figure_meth: figure_meth.setdefault('size_inches', figure_meth.pop('size'))
 
+    if delay is None:
+        delay = []
+    elif type(delay) is str:
+        delay = [delay]
     delayed_kwargs = {}
 
     def update(obj, name, meth_kwargs, kw_kwargs):
@@ -264,8 +271,11 @@ def update_axes(ax, kwargs, *delay, delay_all=False):
 
             method(*(arg if type(arg) is tuple else (arg,)), **var_kwargs)
 
-    update(ax, 'ax', axes_meth, axes_kw)
-    update(ax.get_figure(), 'fig', figure_meth, figure_kw)
+    if update_ax:
+        update(ax, 'ax', axes_meth, axes_kw)
+
+    if update_fig:
+        update(ax.get_figure(), 'fig', figure_meth, figure_kw)
 
     return delayed_kwargs
 
@@ -923,7 +933,7 @@ class DataGetter(GetterTemplate):
         if weights is None: weights = self.default_weight
 
         if type(weights) is str:
-            return self._get_weight_(model, weights)
+            return self._get_weights_(model, weights)
         else:
             return weights
 
@@ -988,7 +998,8 @@ class NormGetter(DataGetter):
 @utils.set_default_kwargs()
 def plot_abundance(models, xkey, ykey, *,
                  attrname = 'abundance', unit=None,
-                 mask = None, ax = None, where=None, where_kwargs={},
+                 mask = None, mask_na = True, ax = None, where=None, where_kwargs={},
+                 update_ax = True, update_fig = True,
                  **kwargs):
     """
     Plots *xkey* against *ykey* from a data array.
@@ -1004,6 +1015,8 @@ def plot_abundance(models, xkey, ykey, *,
         where (): A string to select which models to plot. See
             [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
         where_kwargs (): Keyword arguments to go with *where*.
+        update_ax (bool): Whether to update the plot axes.
+        update_fig (bool): Whether to update the plot figure.
         kwargs: See section below for a description of acceptable keywords.
 
     Keyword Arguments:
@@ -1021,18 +1034,20 @@ def plot_abundance(models, xkey, ykey, *,
 
         - Keywords in the style of ``ax_<name>`` and ``fig_<name>`` can be used to update the axes and figure object.
         Additional keyword arguments for these method calls can be set using ``ax_kw_<name>_<keyword>`` and
-        ``fig_kw_<name>_<keyword>``. See [here](simple.plot.update_axes) for more details.
+        ``fig_kw_<name>_<keyword>``. See [here][simple.plot.update_axes] for more details.
 
     """
     xygetter = DataGetter(attrname, desired_unit=unit)
-    ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
-                                mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
+    ax, model = template_plot_xy(models, xygetter, xygetter, xkey, ykey,
+                                mask=mask, mask_na=mask_na, ax=ax, where=where, where_kwargs=where_kwargs,
+                                update_ax=update_ax, update_fig=update_fig,
                                 **kwargs)
     return ax
 @utils.set_default_kwargs()
 def plot_simplenorm(models, xkey, ykey, *,
                  attrname = 'simplenorm',
-                 mask = None, ax = None, where=None, where_kwargs={},
+                 mask = None, mask_na = True, ax = None, where=None, where_kwargs={},
+                 update_ax = True, update_fig = True,
                  **kwargs):
     """
     Plots *xkey* against *ykey* from the simply normalised Ri compositions.
@@ -1046,6 +1061,8 @@ def plot_simplenorm(models, xkey, ykey, *,
         where (): A string to select which models to plot. See
             [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
         where_kwargs (): Keyword arguments to go with *where*.
+        update_ax (bool): Whether to update the plot axes.
+        update_fig (bool): Whether to update the plot figure.
         kwargs: See section below for a description of acceptable keywords.
 
     Keyword Arguments:
@@ -1068,14 +1085,16 @@ def plot_simplenorm(models, xkey, ykey, *,
     """
     xygetter = NormGetter(attrname, 'eRi')
     ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
-                                mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
+                                mask=mask, mask_na=mask_na, ax=ax, where=where, where_kwargs=where_kwargs,
+                                update_ax=update_ax, update_fig=update_fig,
                                 **kwargs)
     return ax
 
 @utils.set_default_kwargs()
 def plot_intnorm(models, xkey, ykey, *,
                  attrname = 'intnorm',
-                 mask = None, ax = None, where=None, where_kwargs={},
+                 mask = None, mask_na = True, ax = None, where=None, where_kwargs={},
+                 update_ax = True, update_fig = True,
                  **kwargs):
     """
     Plots *xkey* against *ykey* from the internally normalised eRi compositions.
@@ -1111,7 +1130,8 @@ def plot_intnorm(models, xkey, ykey, *,
     """
     xygetter = NormGetter(attrname, 'eRi')
     ax, model = template_plot_y(models, xygetter, xygetter, xkey, ykey,
-                                mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
+                                mask=mask, mask_na=mask_na, ax=ax, where=where, where_kwargs=where_kwargs,
+                                update_ax=update_ax, update_fig=update_fig,
                                 **kwargs)
     return ax
 
@@ -1124,6 +1144,7 @@ def mhist_intnorm(models, xisotope, yisotope, *,
                  attrname='intnorm',
                  weights = 1, weights_attrname='abundance', weights_desired_unit='mole',
                  mask = None, ax = None, where=None, where_kwargs={},
+                 update_ax = True, update_fig = True,
                  **kwargs):
 
     xygetter = NormGetter(attrname, 'eRi',
@@ -1131,6 +1152,7 @@ def mhist_intnorm(models, xisotope, yisotope, *,
 
     ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
                                   mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
+                                  update_ax=update_ax, update_fig=update_fig,
                                   **kwargs)
     return ax
 
@@ -1139,6 +1161,7 @@ def mhist_simplenorm(models, xisotope, yisotope, *,
                  attrname='simplenorm',
                  weights = 1, weights_attrname='abundance', weights_desired_unit='mole',
                  mask = None, ax = None, where=None, where_kwargs={},
+                 update_ax = True, update_fig = True,
                  **kwargs):
 
     xygetter = NormGetter(attrname, 'eRi',
@@ -1146,6 +1169,7 @@ def mhist_simplenorm(models, xisotope, yisotope, *,
 
     ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
                                   mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
+                                  update_ax=update_ax, update_fig=update_fig,
                                   **kwargs)
     return ax
 
@@ -1153,15 +1177,14 @@ def mhist_simplenorm(models, xisotope, yisotope, *,
 def mhist_abundance(models, xisotope, yisotope, *,
                     attrname='intnorm', unit=None, default_weight=1,
                     mask = None, ax = None, where=None, where_kwargs={},
+                    update_ax = True, update_fig = True,
                     **kwargs):
 
     xygetter = DataGetter(attrname, desired_unit=unit, default_weight=default_weight)
 
-    #numerators = utils.get_isotopes_of_element(abu.dtype.names, rat.denom.element, rat.denom.suffix)
-
-
     ax, model = template_mhist_xy(models, xygetter, xisotope, yisotope,
                                   mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
+                                  update_ax=update_ax, update_fig=update_fig,
                                   **kwargs)
     return ax
 
@@ -1170,17 +1193,18 @@ def mhist_abundance(models, xisotope, yisotope, *,
 ###############################
 # These aid in plotting the same thing for different models.
 @utils.set_default_kwargs(
-    linestyle=True, color=True, marker=False,
+    linestyle=False, color=True, marker=True,
     ax_kw_xlabel_fontsize=15,
     ax_kw_ylabel_fontsize=15,
     markersize=4,
-    ax_legend=dict(loc='upper right'),
+    ax_legend=True,
     model_in_legend=None,
     ax_tick_params=dict(axis='both', left=True, right=True, top=True)
     )
 
 def template_plot_xy(models, xgetter, ygetter, xkey, ykey,
-                     mask = None, ax = None, where=None, where_kwargs={},
+                     mask = None, mask_na = True, ax = None, where=None, where_kwargs={},
+                     update_ax = True, update_fig = True,
                      **kwargs):
     """
     Template function for a xy plot.
@@ -1235,7 +1259,7 @@ def template_plot_xy(models, xgetter, ygetter, xkey, ykey,
     kwargs.setdefault('ax_xlabel', xgetter.get_label(models[0], xkey))
     kwargs.setdefault('ax_ylabel', ygetter.get_label(models[0], ykey))
 
-    delayed_kwargs = update_axes(ax, kwargs, 'ax_legend')
+    delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
 
     # Get the linestyle, color and marker for each thing to be plotted.
     lscm = [(linestyles[i], colors[i], markers[i]) for i in range(len(models))]
@@ -1245,25 +1269,36 @@ def template_plot_xy(models, xgetter, ygetter, xkey, ykey,
     for i, model in enumerate(models):
         ls, c, m = lscm.pop(0)
 
-        if model_in_legend:
-            legend = f'{label} {model.name}'
+        if label is None or label is False:
+            legend = None
         else:
-            legend = label
+            if model_in_legend:
+                legend = f'{label} {model.name}'.strip()
+            else:
+                legend = label.strip() or None
 
         xval = xgetter.get_data(model, xkey)
         yval = ygetter.get_data(model, ykey)
 
         if mask is not None:
-            mask = model.get_mask(mask, y=yval, x=xval)
-            xval = xval[mask]
-            yval = yval[mask]
+            xval = np.asarray(xval)
+            yval = np.asarray(yval)
+            imask = model.get_mask(mask, y=yval, x=xval)
+            if mask_na and np.issubdtype(yval.dtype, np.floating) and np.issubdtype(xval.dtype, np.floating):
+                xval = xval.copy()
+                yval = yval.copy()
+                xval[np.logical_not(imask)] = np.nan
+                yval[np.logical_not(imask)] = np.nan
+            else:
+                xval = xval[imask]
+                yval = yval[imask]
 
         ax.plot(xval, yval,
                 color=c, ls=ls, marker=m,
                 markerfacecolor=mfc or c,
-                label=legend.strip() or None, **kwargs)
+                label=legend, **kwargs)
 
-    update_axes(ax, delayed_kwargs)
+    update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
 
     return ax, models
 
@@ -1272,13 +1307,14 @@ def template_plot_xy(models, xgetter, ygetter, xkey, ykey,
     ax_kw_xlabel_fontsize=15,
     ax_kw_ylabel_fontsize=15,
     markersize=4,
-    ax_legend=dict(loc='upper right'),
+    ax_legend=True,
     y_in_legend=None, model_in_legend=None,
     ax_tick_params=dict(axis='both', left=True, right=True, top=True)
     )
 
 def template_plot_y(models, xgetter, ygetter, ykeys, *,
-                    mask = None, ax = None, where=None, where_kwargs={},
+                    mask = None, mask_na = True, ax = None, where=None, where_kwargs={},
+                    update_ax = True, update_fig = True,
                     **kwargs):
     """
     Template function for plotting different y values against a static x value.
@@ -1350,10 +1386,10 @@ def template_plot_y(models, xgetter, ygetter, ykeys, *,
         numer_in_legend = y_in_legend
         denom_in_legend = y_in_legend
         if len(n) == 1:
-            ylabel = f"Slope of {ygetter.get_label(models[0], ykeys[0].numer)}"
+            ylabel = f"{ygetter.get_label(models[0], ykeys[0].numer)}"
             if numer_in_legend is None: numer_in_legend = False
         else:
-            ylabel = 'Slope of A'
+            ylabel = 'A'
             if numer_in_legend is None:numer_in_legend = True
 
         if len(d) == 1:
@@ -1370,7 +1406,7 @@ def template_plot_y(models, xgetter, ygetter, ykeys, *,
             ylabel = f"{ygetter.get_label(models[0], ykeys[0])}"
             if key_in_legend is None: key_in_legend = False
         else:
-            ylabel = r'${\mathrm{R}}_{\mathrm{i}}$'
+            ylabel = r'${\mathrm{A}}$'
             if key_in_legend is None: key_in_legend = True
     kwargs.setdefault('ax_ylabel', ylabel)
     kwargs.setdefault('ax_xlabel', xgetter.get_label(models[0], None))
@@ -1382,7 +1418,7 @@ def template_plot_y(models, xgetter, ygetter, ykeys, *,
     else:
         if model_in_legend is None: model_in_legend = True
 
-    delayed_kwargs = update_axes(ax, kwargs, 'ax_legend')
+    delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
 
     # Get the linestyle, color and marker for each thing to be plotted.
     if (len(models) == 1 or len(ykeys) == 1):
@@ -1399,23 +1435,34 @@ def template_plot_y(models, xgetter, ygetter, ykeys, *,
         for ykey in ykeys:
             ls, c, m = lscm.pop(0)
 
-            legend = ygetter.get_label(model, ykey, prefix=label, key_in_label=key_in_legend,
-                                       numer_in_label=numer_in_legend, denom_in_label=denom_in_legend,
-                                       model_in_label=model_in_legend)
+            if label is None or label is False:
+                legend = None
+            else:
+                legend = ygetter.get_label(model, ykey, prefix=label, key_in_label=key_in_legend,
+                                           numer_in_label=numer_in_legend, denom_in_label=denom_in_legend,
+                                           model_in_label=model_in_legend).strip() or None
             yval = ygetter.get_data(model, ykey)
             xval = xgetter.get_data(model)
 
             if mask is not None:
-                parsed_mask = model.get_mask(mask, y=yval, x=xval)
-                xval = xval[parsed_mask]
-                yval = yval[parsed_mask]
+                xval = np.asarray(xval)
+                yval = np.asarray(yval)
+                imask = model.get_mask(mask, y=yval, x=xval)
+                if mask_na and np.issubdtype(xval.dtype, np.floating) and np.issubdtype(yval.dtype, np.floating):
+                    xval = xval.copy()
+                    yval = yval.copy()
+                    xval[np.logical_not(imask)] = np.nan
+                    yval[np.logical_not(imask)] = np.nan
+                else:
+                    xval = xval[imask]
+                    yval = yval[imask]
 
             ax.plot(xval, yval,
                     color=c, ls=ls, marker=m,
                     markerfacecolor=mfc or c,
-                    label=legend.strip() or None, **kwargs)
+                    label=legend, **kwargs)
 
-    update_axes(ax, delayed_kwargs)
+    update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
 
     return ax, models
 
@@ -1425,6 +1472,7 @@ def template_plot_y(models, xgetter, ygetter, ykeys, *,
                          )
 def template_mhist_xy(models, xygetter, xisotope, yisotope,
                       mask = None, ax = None, where=None, where_kwargs={},
+                      update_ax = True, update_fig = True,
                       **kwargs):
     where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
     rose_kwargs = utils.extract_kwargs(kwargs, prefix='rose')
@@ -1447,7 +1495,7 @@ def template_mhist_xy(models, xygetter, xisotope, yisotope,
 
     kwargs.setdefault('ax_xlabel', xygetter.get_label(models[0], xisotope))
     kwargs.setdefault('ax_ylabel', xygetter.get_label(models[0], yisotope))
-    delayed_kwargs = update_axes(ax, kwargs, 'legend')
+    delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
 
     for model in models:
         xval = xygetter.get_data(model, xisotope)
@@ -1462,7 +1510,7 @@ def template_mhist_xy(models, xygetter, xisotope, yisotope,
 
         ax.mhist((xval, yval), weights=w, **kwargs)
 
-    update_axes(ax, delayed_kwargs)
+    update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
 
 
     return ax, models

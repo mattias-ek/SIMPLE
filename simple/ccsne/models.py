@@ -169,22 +169,30 @@ class CCSNe(models.ModelTemplate):
             A boolean numpy array with ``shape``.
         """
         onion_lbounds = getattr(self, 'onion_lbounds', None)
+        shell_a = np.full(self.abundance.shape, 'undefined')
         if onion_lbounds is not None:
-            shells = {}
+            shell_d = {}
             keys = onion_lbounds.dtype.names
             ubound = None
             for key in keys:
                 lbound = int(onion_lbounds[key][0])
                 if lbound >= 0:
-                    shells[key] = slice(lbound, ubound)
+                    i = slice(lbound, ubound)
+                    shell_d[key] = i
+                    shell_a[i] = key
                     ubound = lbound
                 else:
-                    shells[key] = slice(0, 0)
+                    shell_d[key] = slice(0, 0)
 
-            shells.update(mask_attrs)
-            mask_attrs = shells
+                # Remnant is everything inside the lowermost shell.
+                i = slice(None, ubound)
+                shell_d['Mrem'] = i
+                shell_a[i] = 'Mrem'
 
-        return super().get_mask(mask, shape, **mask_attrs)
+            shell_d.update(mask_attrs)
+            mask_attrs = shell_d
+
+        return super().get_mask(mask, shape, shell = shell_a, **mask_attrs)
 
 
 
