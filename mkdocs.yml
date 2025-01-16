@@ -19,7 +19,7 @@ plugins:
             docstring_section_style: list
             show_if_no_docstring: true
             filters: ["!^_", "!^logger$"]
-            #separate_signature: true
+            separate_signature: true
             #members_order: source
 
 theme:
