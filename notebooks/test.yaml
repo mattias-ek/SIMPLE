@@ -3,7 +3,7 @@ load_models:
     filename: test.hdf5
 
     # The prefixes of the raw file
-    dbfilename: ../data/SIMPLE_CCSNeV1_mass.hdf5
+    dbfilename: data/SIMPLE_CCSNe_v2.hdf5
 
     default_isolist:
         # The prefixes of the isotope followed by a list of the isotopes to be summed up to give its value.
@@ -83,7 +83,7 @@ simple_normalisation:
     relative_enrichment: true
 
 plot_slopes_example:
-    isotopes_or_ratios: 'Ni-58*/Ni-62*, Ni-60*/Ni-62*, Ni-61*/Ni-62*, Ni-62*/Ni-62*, Ni-64*/Ni-62*'
+    ykey: 'Ni-58*/Ni-62*, Ni-60*/Ni-62*, Ni-61*/Ni-62*, Ni-62*/Ni-62*, Ni-64*/Ni-62*'
     where: '.mass==25 & .dataset == Ri18'
 
 old_norm:

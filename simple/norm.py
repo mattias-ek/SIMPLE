@@ -13,7 +13,7 @@ IntNormMethods = {}
 def intnorm_linear(abu_i, abu_j, abu_k,
                    mass_i, mass_j, mass_k,
                    std_i, std_j, std_k,
-                   mass_coef = 'better'):
+                   mass_coef = 'better', dilution_factor=None):
     """
     Internally normalise the abundances using the linearised internal normalisation procedure.
 
@@ -69,6 +69,13 @@ def intnorm_linear(abu_i, abu_j, abu_k,
     mass_i, mass_j, mass_k = np.atleast_2d(mass_i), np.atleast_2d(mass_j), np.atleast_2d(mass_k)
     std_i, std_j, std_k = np.atleast_2d(std_i), np.atleast_2d(std_j), np.atleast_2d(std_k)
 
+    if dilution_factor is None or dilution_factor <= 0:
+        df = 0
+    else:
+        abu_i = abu_i / dilution_factor + std_i
+        abu_j = abu_j / dilution_factor + std_j
+        df = dilution_factor
+
     rho_ij = ((abu_i / abu_j) / (std_i / std_j)) - 1.0
     rho_kj = ((abu_k / abu_j) / (std_k / std_j)) - 1.0
 
@@ -82,7 +89,7 @@ def intnorm_linear(abu_i, abu_j, abu_k,
     # Equation 7 in Lugaro et al., 2023
     eR_smp_ij = (rho_ij - Q * rho_kj) * 10_000
     return dict(eRi_values=eR_smp_ij,
-                method='linear', mass_coeff=mass_coef)
+                method='linear', mass_coeff=mass_coef, dilution_factor=df)
 
 
 
@@ -412,7 +419,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
 def simple_normalisation(abu, isotopes, normiso, stdabu,
                          enrichment_factor=1, relative_enrichment=True,
                          std_enrichment_factor=1, std_relative_enrichment=True,
-                         dilution_factor=None):
+                         dilution_factor=0):
     """
     Normalise the abundances of ``abu`` relative to a specified isotope ``normiso`` as commonly done for
     stardust data.
@@ -541,13 +548,13 @@ def simple_normalisation(abu, isotopes, normiso, stdabu,
     all_solar_up = np.atleast_2d(np.concatenate(all_solar_up, axis=0).transpose())
     all_solar_down = np.atleast_2d(np.concatenate(all_solar_down, axis=0).transpose())
 
-    if dilution_factor is None or np.isinf(dilution_factor):
+    if dilution_factor is None or dilution_factor <= 0:
         all_smp_up = all_abu_up
         all_smp_down = all_abu_down
-        df = np.inf
+        df = 0
     else:
-        all_smp_up = all_abu_up * dilution_factor + all_solar_up
-        all_smp_down = all_abu_down * dilution_factor + all_solar_down
+        all_smp_up = all_abu_up / dilution_factor + all_solar_up
+        all_smp_down = all_abu_down / dilution_factor + all_solar_down
         df = dilution_factor
 
     # There is only one way to do this so no need for a separate function
