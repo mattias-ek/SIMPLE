@@ -8,12 +8,12 @@ __all__ = []
 
 IntNormMethods = {}
 
-@utils.shortcut('better', mass_coef = 'better')
-@utils.shortcut('simplified', mass_coef = 'simplified')
+@utils.add_shortcut('better', mass_coef ='better')
+@utils.add_shortcut('simplified', mass_coef ='simplified')
 def intnorm_linear(abu_i, abu_j, abu_k,
                    mass_i, mass_j, mass_k,
                    std_i, std_j, std_k,
-                   mass_coef = 'better', dilution_factor=None):
+                   mass_coef = 'better', dilution_factor=None, *, msg_prefix=''):
     """
     Internally normalise the abundances using the linearised internal normalisation procedure.
 
@@ -64,7 +64,10 @@ def intnorm_linear(abu_i, abu_j, abu_k,
             - ``mass_coef``: The value of the ``mass_coef`` parameter.
             - ``method``: The method used to normalise the abundances. Always ``"linear"`` for this method.
     """
-
+    if msg_prefix:
+        msg_prefix = f'{msg_prefix}-linear'
+    else:
+        msg_prefix = f'linear'
     abu_i, abu_j, abu_k = np.atleast_2d(abu_i), np.atleast_2d(abu_j), np.atleast_2d(abu_k)
     mass_i, mass_j, mass_k = np.atleast_2d(mass_i), np.atleast_2d(mass_j), np.atleast_2d(mass_k)
     std_i, std_j, std_k = np.atleast_2d(std_i), np.atleast_2d(std_j), np.atleast_2d(std_k)
@@ -84,7 +87,7 @@ def intnorm_linear(abu_i, abu_j, abu_k,
     elif mass_coef.lower() == 'simplified':
         Q = (mass_i - mass_j) / (mass_k - mass_j)
     else:
-        raise ValueError('``mass_coef`` must be either "better" or "simplified"')
+        raise ValueError(f'{msg_prefix}: ``mass_coef`` must be either "better" or "simplified"')
 
     # Equation 7 in Lugaro et al., 2023
     eR_smp_ij = (rho_ij - Q * rho_kj) * 10_000
@@ -97,7 +100,7 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
                            mass_i, mass_j, mass_k,
                            std_i, std_j, std_k,
                            largest_offset = 1, min_dilution_factor=0.1, max_iterations=100,
-                           largest_offset_rtol = 1E-4):
+                           largest_offset_rtol = 1E-4, *, msg_prefix=''):
     """
     Creates and internally normalises a synthetic sample such that the largest offset is equal to the specified value.
 
@@ -149,6 +152,11 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
             - ``min_dilution_factor``: The ``min_dilution_factor`` parameter.
             - ``method``: The method used to normalise the abundances. Always ``"largest_offset"`` for this method.
     """
+    if msg_prefix:
+        msg_prefix = f'{msg_prefix}-largest_offset'
+    else:
+        msg_prefix = 'largest_offset'
+
     # Make sure everything is at least 2d
     abu_i,  abu_j, abu_k = np.atleast_2d(abu_i), np.atleast_2d(abu_j), np.atleast_2d(abu_k)
     mass_i, mass_j, mass_k = np.atleast_2d(mass_i), np.atleast_2d(mass_j), np.atleast_2d(mass_k)
@@ -164,7 +172,7 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
     dilution_factor = np.full((abu_i.shape[0], 1), min_dilution_factor, dtype=np.float64)
 
     first_time = True
-    logger.info(f'Internally normalising {abu_i.shape[0]} rows using the largest offset method.')
+    logger.info(f'{msg_prefix}: Internally normalising {abu_i.shape[0]} rows using the largest offset method.')
     for i in range (max_iterations):
         smp_up = std_i + (abu_i / dilution_factor)
         smp_down = std_j + (abu_j / dilution_factor)
@@ -182,8 +190,8 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
             ignore = offset < largest_offset
             include = np.invert(ignore)
             if ignore.any():
-                logger.warning(f'{np.count_nonzero(ignore)} rows out of {ignore.size} have largest offsets smaller than'
-                            f' {largest_offset} at the minimum dilution factor of {min_dilution_factor}. '
+                logger.warning(f'{msg_prefix}: {np.count_nonzero(ignore)} rows out of {ignore.size} have largest offsets smaller than'
+                            f' {largest_offset} ε-units at the minimum dilution factor of {min_dilution_factor}. '
                             f'These rows are set to nan.')
             first_time = False
 
@@ -193,12 +201,12 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
         else:
             break
     else:
-        logger.warning(f'Not all {abu_i.shape[0]} rows converged after {max_iterations}. '
+        logger.warning(f'{msg_prefix}: Not all {abu_i.shape[0]} rows converged after {max_iterations}. '
                        f'{np.count_nonzero(np.invert(isclose))} non-converged rows set to nan.')
 
     if ignore.any():
         eR_smp_ij[ignore.flatten(), :] = np.nan
-        dilution_factor[ignore] = np.nan
+        dilution_factor[ignore.flatten()] = np.nan
 
     return dict(eRi_values = eR_smp_ij, dilution_factor = dilution_factor,
                 largest_offset=largest_offset, min_dilution_factor=min_dilution_factor,
@@ -207,7 +215,7 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
 def intnorm_precision(abu_up, abu_down, abu_norm,
                       mass_up, mass_down, mass_norm,
                       solar_up, solar_down, solar_norm,
-                      dilution_step = 0.1, precision = 0.01):
+                      dilution_step = 0.1, precision = 0.01, *, msg_prefix=''):
     pass
 
 IntNormMethods['linear'] = intnorm_linear
@@ -218,9 +226,9 @@ IntNormMethods['largest_offset'] = intnorm_largest_offset
 def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
                            enrichment_factor=1, relative_enrichment=True,
                            std_enrichment_factor=1, std_relative_enrichment=True,
-                           method='largest_offset', **method_kwargs):
+                           method='largest_offset', *, msg_prefix='', **method_kwargs):
     """
-    Normalise the abundances of ``abu`` relative to the ykeys ``normrat`` using the internal normalisation procedure
+    Normalise the abundances of ``abu`` relative to the keys ``normrat`` using the internal normalisation procedure
     commonly used for data measured by mass spectrometers.
 
     Multiple normalisations can be done at once by supplying a list of normalising isotopes. If doing multiple
@@ -233,7 +241,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
         abu (): A [keyarray][simple.askeyarray] containing the abundances to be normalised.
         isotopes (): The numerator isotopes (i) in the calculation. If ``None`` all the isotopes in ``abu`` with the
             same element symbol and suffix as ``normrat`` will be selected.
-        normrat (): The ykeys (kj) used for internal normalisation.
+        normrat (): The keys (kj) used for internal normalisation.
         stdmass (): A [keyarray][simple.askeyarray] containing the isotope masses.
         stdabu (): A [keyarray][simple.askeyarray] containing the reference abundances.
         enrichment_factor (): Enrichment factor applied to ``abu``. Useful when doing multiple elements at once.
@@ -269,40 +277,45 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
 
             - ``eRi``: A key array containing the eRi values for each column in ``eRi_keys``.
             - ``eRi_keys``: The numerator isotopes for each column in ``eRi_values``.
-            - ``ij_key``, ``kj_key``: Dictionaries mapping ``eRi_keys`` to the numerator-denominator ykeys (ij) and the
-                normalising ykeys (kj) for each column in ``eRi``.
-            - ``label``, ``label_latex``: Dictionaries mapping ``eRi_keys`` to plain text and latex labels suitable
+            - ``ij_key``, ``kj_key``: Dictionaries mapping ``eRi_keys`` to the numerator-denominator keys (ij) and the
+                normalising keys (kj) for each column in ``eRi``.
+            - ``label_args``, ``label_latex``: Dictionaries mapping ``eRi_keys`` to plain text and latex labels suitable
                 for plotting. Contains the ε symbol followed by the numerator isotope and the last digit of each mass in
-                the normalising ykeys, in brackets. E.g. ε104Pd(85) and $\\epsilon{}^{105}\\mathrm{Pd}_{(85)}$,
+                the normalising keys, in brackets. E.g. ε104Pd(85) and $\\epsilon{}^{105}\\mathrm{Pd}_{(85)}$,
                 where i=Pd-104, k=Pd-108 and j=Pd-105.
             - Additional attrs might be supplied by the different methods.
     """
+    if msg_prefix:
+        msg_prefix = f'{msg_prefix}-intnorm'
+    else:
+        msg_prefix = 'intnorm'
+
     methodfunc = IntNormMethods.get(method.lower(), None)
     if methodfunc is None:
-        raise ValueError('``method`` must be  "largest_offset" or "linear"')
+        raise ValueError(f'{msg_prefix}: ``method`` must be  "largest_offset" or "linear"')
 
     if abu.dtype.names is None:
-        raise ValueError('``abu`` must be a keyarray')
+        raise ValueError(f'{msg_prefix}: ``abu`` must be a keyarray')
     if stdmass is not None and stdmass.dtype.names is None:
-        raise ValueError('``stdmass`` must be a keyarray')
+        raise ValueError(f'{msg_prefix}: ``stdmass`` must be a keyarray')
     if stdabu is not None and stdabu.dtype.names is None:
-        raise ValueError('``stdabu`` must be a keyarray')
+        raise ValueError(f'{msg_prefix}: ``stdabu`` must be a keyarray')
 
     if isinstance(normrat, (list, tuple)):
         if isotopes is None:
             isotopes = [None] * len(normrat)
         elif not isinstance(isotopes, (list, tuple)) or len(isotopes) != len(normrat):
-            raise ValueError('``isotopes`` must be an iterable the same length as ``normrat``')
+            raise ValueError(f'{msg_prefix}: ``isotopes`` must be an iterable the same length as ``normrat``')
 
         if isinstance(enrichment_factor, (list, tuple)):
             if len(enrichment_factor) != len(normrat):
-                raise ValueError('``enrichment_factor`` must be an iterable the same length as ``normrat``')
+                raise ValueError(f'{msg_prefix}: ``enrichment_factor`` must be an iterable the same length as ``normrat``')
         else:
             enrichment_factor = [enrichment_factor] * len(normrat)
 
         if isinstance(std_enrichment_factor, (list, tuple)):
             if len(std_enrichment_factor) != len(normrat):
-                raise ValueError('``solar_enrichment_factor`` must be an iterable the same length as ``normiso``')
+                raise ValueError(f'{msg_prefix}: ``solar_enrichment_factor`` must be an iterable the same length as ``normiso``')
         else:
             std_enrichment_factor = [std_enrichment_factor] * len(normrat)
 
@@ -321,11 +334,11 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
         rat = utils.asratio(rat)
 
         if rat.numer.symbol != rat.denom.symbol:
-            raise ValueError('The ``normrat`` numerator and normiso isotopes must be of the same element')
+            raise ValueError(f'{msg_prefix}: The ``normrat`` numerator and normiso isotopes must be of the same element')
 
         if numerators is None:
             if rat.numer.suffix != rat.denom.suffix:
-                raise ValueError('The ``normrat`` numerator and normiso isotopes must have the same suffix '
+                raise ValueError(f'{msg_prefix}: The ``normrat`` numerator and normiso isotopes must have the same suffix '
                                  'for auto discovery of numerator isotopes')
 
             numerators = utils.get_isotopes_of_element(abu.dtype.names, rat.denom.element)
@@ -337,8 +350,21 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
         if rat.denom not in numerators:
             numerators += (rat.denom,)
 
-        logger.info(
-            f'Internally normalising {numerators} to {normrat} with an enrichment factor of {enrichment_factor}')
+        logger.info(f'{msg_prefix}: Internally normalising {numerators} to {rat}.')
+
+        if relative_enrichment is False:
+            logger.info(f'{msg_prefix}: Applying absolute enrichment factor to model abundances. '
+                        f'Setting the sum of all isotopes to {abu_factor}')
+        elif abu_factor != 1:
+            logger.info(f'{msg_prefix}: Applying relative enrichment factor to model abundances. '
+                        f'Multiplying all isotopes by {abu_factor}.')
+
+        if std_relative_enrichment is False:
+            logger.info(f'{msg_prefix}: Applying absolute enrichment factor to standard abundances. '
+                        f'Setting the sum of all isotopes to {solar_factor}')
+        elif solar_factor != 1:
+            logger.info(f'{msg_prefix}: Applying relative enrichment factor to standard abundances. '
+                        f'Multiplying all isotopes by {solar_factor}.')
 
         numeri = numerators.index(rat.numer)
         denomi = numerators.index(rat.denom)
@@ -394,20 +420,20 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
     result = methodfunc(all_abu_up, all_abu_down, all_abu_norm,
                         all_mass_up, all_mass_down, all_mass_norm,
                         all_solar_up, all_solar_down, all_solar_norm,
-                        **method_kwargs)
+                        msg_prefix=msg_prefix, **method_kwargs)
 
     result['eRi'] = utils.askeyarray(result['eRi_values'], all_iso_up)
     result['eRi_keys'] = all_iso_up
 
     # Create mappings linking the values keys to the different isotopes used in the equations
-    result['ij_key'] = dict(zip(all_iso_up, utils.asratios([f'{n}/{d}' for n, d in zip(all_iso_up, all_iso_down)])))
-    result['kj_key'] = dict(zip(all_iso_up, utils.asratios([f'{n}/{d}' for n, d in zip(all_iso_norm, all_iso_down)])))
+    result['ij_keys'] = dict(zip(all_iso_up, utils.asratios([f'{n}/{d}' for n, d in zip(all_iso_up, all_iso_down)])))
+    result['kj_keys'] = dict(zip(all_iso_up, utils.asratios([f'{n}/{d}' for n, d in zip(all_iso_norm, all_iso_down)])))
 
     # Labels suitable for plotting
-    result['label'] = dict(zip(all_iso_up, [f'ε{i}({kj.numer.mass[-1]}{kj.denom.mass[-1]})'
-                              for i, kj in result['kj_key'].items()]))
-    result['label_latex'] = dict(zip(all_iso_up, [fr'$\epsilon{i.latex(dollar=False)}{{}}_{{({kj.numer.mass[-1]}{kj.denom.mass[-1]})}}$'
-                                    for i, kj in result['kj_key'].items()]))
+    result['eRi_keylabels'] = dict(zip(all_iso_up, [f'ε{i}({kj.numer.mass[-1]}{kj.denom.mass[-1]})'
+                              for i, kj in result['kj_keys'].items()]))
+    result['eRi_keylabels_latex'] = dict(zip(all_iso_up, [fr'$\epsilon{i.latex(dollar=False)}{{}}_{{({kj.numer.mass[-1]}{kj.denom.mass[-1]})}}$'
+                                    for i, kj in result['kj_keys'].items()]))
 
     # Flattens arrays that are meant for the second dimension, so they are compatible with keyarrays.
     for k, v in result.items():
@@ -416,10 +442,10 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
 
     return utils.NamedDict(result)
 
-def simple_normalisation(abu, isotopes, normiso, stdabu,
-                         enrichment_factor=1, relative_enrichment=True,
-                         std_enrichment_factor=1, std_relative_enrichment=True,
-                         dilution_factor=0):
+def standard_normalisation(abu, isotopes, normiso, stdabu,
+                           enrichment_factor=1, relative_enrichment=True,
+                           std_enrichment_factor=1, std_relative_enrichment=True,
+                           dilution_factor=0, *, msg_prefix=''):
     """
     Normalise the abundances of ``abu`` relative to a specified isotope ``normiso`` as commonly done for
     stardust data.
@@ -462,32 +488,37 @@ def simple_normalisation(abu, isotopes, normiso, stdabu,
 
             - ``Ri``: A key array containing the eRi values for each column in ``Ri_keys``.
             - ``Ri_keys``: The numerator isotopes for each column in ``Ri_values``.
-            - ``ij_key``: Dictionaries mapping ``Ri_keys`` to the numerator-denominator ykeys (ij) for each column
+            - ``ij_keys``: Dictionaries mapping ``Ri_keys`` to the numerator-denominator keys (ij) for each column
                 in ``Ri``.
-            - ``label``, ``label_latex``: Dictionaries mapping ``Ri_keys`` to plain text and latex labels suitable
-                for plotting. Consists of the ij mass ykeys followed by the element symbol of the numerator.
+            - ``Ri_keylabels``, ``Ri_keylabels_latex``: Dictionaries mapping ``Ri_keys`` to plain text and latex labels suitable
+                for plotting. Consists of the ij mass keys followed by the element symbol of the numerator.
                 E.g. 104/105Pd and ${}^{104/105}\\mathrm{Pd}$, where i=Pd-104 and j=Pd-105.
     """
+    if msg_prefix:
+        msg_prefix = f'{msg_prefix}-ratnorm'
+    else:
+        msg_prefix = 'ratnorm'
+
     if abu.dtype.names is None:
-        raise ValueError('``abu`` must be a keyarray')
+        raise ValueError(f'{msg_prefix}: ``abu`` must be a keyarray')
     if stdabu.dtype.names is None:
-        raise ValueError('``stdabu`` must be a keyarray')
+        raise ValueError(f'{msg_prefix}: ``stdabu`` must be a keyarray')
 
     if isinstance(normiso, (list, tuple)):
         if isotopes is None:
             isotopes = [None] * len(normiso)
         elif not isinstance(isotopes, (list, tuple)) or len(isotopes) != len(normiso):
-            raise ValueError('``isotopes`` must be an iterable the same length as ``normiso``')
+            raise ValueError(f'{msg_prefix}: ``isotopes`` must be an iterable the same length as ``normiso``')
 
         if isinstance(enrichment_factor, (list, tuple)):
             if len(enrichment_factor) != len(normiso):
-                raise ValueError('``enrichment_factor`` must be an iterable the same length as ``normiso``')
+                raise ValueError(f'{msg_prefix}: ``enrichment_factor`` must be an iterable the same length as ``normiso``')
         else:
             enrichment_factor = [enrichment_factor] * len(normiso)
 
         if isinstance(std_enrichment_factor, (list, tuple)):
             if len(std_enrichment_factor) != len(normiso):
-                raise ValueError('``solar_enrichment_factor`` must be an iterable the same length as ``normiso``')
+                raise ValueError(f'{msg_prefix}: ``solar_enrichment_factor`` must be an iterable the same length as ``normiso``')
         else:
             std_enrichment_factor = [std_enrichment_factor] * len(normiso)
 
@@ -511,7 +542,21 @@ def simple_normalisation(abu, isotopes, normiso, stdabu,
         if denominator not in numerators:
             numerators += (denominator,)
 
-        logger.info(f'Normalising {numerators} to {denominator} with an enrichment factor of {abu_factor}')
+        logger.info(f'{msg_prefix}: Normalising {numerators} to {denominator}.')
+
+        if relative_enrichment is False:
+            logger.info(f'{msg_prefix}: Applying absolute enrichment factor to model abundances. '
+                        f'Setting the sum of all isotopes to {abu_factor}')
+        elif abu_factor != 1:
+            logger.info(f'{msg_prefix}: Applying relative enrichment factor to model abundances. '
+                        f'Multiplying all isotopes by {abu_factor}.')
+
+        if std_relative_enrichment is False:
+            logger.info(f'{msg_prefix}: Applying absolute enrichment factor to standard abundances. '
+                        f'Setting the sum of all isotopes to {solar_factor}')
+        elif solar_factor != 1:
+            logger.info(f'{msg_prefix}: Applying relative enrichment factor to standard abundances. '
+                        f'Multiplying all isotopes by {solar_factor}.')
 
         denomi = numerators.index(denominator)
 
@@ -561,13 +606,13 @@ def simple_normalisation(abu, isotopes, normiso, stdabu,
     Rij = (all_smp_up/all_smp_down)/(all_solar_up/all_solar_down) - 1.0
 
     result = dict(Ri_values = Rij, Ri_keys=all_iso_up, Ri = utils.askeyarray(Rij, all_iso_up), dilution_factor = df)
-    result['ij_key'] = dict(zip(all_iso_up, utils.asratios([f'{n}/{d}' for n, d in zip(all_iso_up, all_iso_down)])))
+    result['ij_keys'] = dict(zip(all_iso_up, utils.asratios([f'{n}/{d}' for n, d in zip(all_iso_up, all_iso_down)])))
 
     # The labels assume that both the numerator and denominator is the same element.
-    result['label'] = dict(zip(all_iso_up, [f'{ij.numer.mass}/{ij.denom.mass}{ij.numer.element}' for ij in result['ij_key'].values()]))
-    result['label_latex'] = dict(
+    result['Ri_keylabels'] = dict(zip(all_iso_up, [f'{ij.numer.mass}/{ij.denom.mass}{ij.numer.element}' for ij in result['ij_keys'].values()]))
+    result['Ri_keylabels_latex'] = dict(
         zip(all_iso_up, [fr'${{}}^{{{ij.numer.mass}/{ij.denom.mass}}}\mathrm{{{ij.numer.element}}}$'
-                         for ij in result['ij_key'].values()]))
+                         for ij in result['ij_keys'].values()]))
 
     for k, v in result.items():
         if isinstance(v, np.ndarray) and v.ndim == 2 and v.shape[1] == 1:

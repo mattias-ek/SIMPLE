@@ -1,6 +1,6 @@
-# simple.ccsne.models
+# simple.ccsne
 
-::: simple.ccsne.models
+::: simple.ccsne
     options:
         members_order: source
         group_by_category: true

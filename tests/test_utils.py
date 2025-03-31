@@ -3,6 +3,45 @@ from simple import utils
 import numpy as np
 from numpy.testing import assert_equal
 
+def test_get_last_attr():
+    class Item:
+        def __init__(self, **kwargs):
+            for k, v in kwargs.items():
+                self.__setattr__(k, v)
+
+    a = Item(name = 'A', b = {'name': 'B', 'c': Item(name='C')})
+
+    result = utils.get_last_attr(a, '.name')
+    assert result == 'A'
+
+    result = utils.get_last_attr(a, 'name')
+    assert result == 'A'
+
+    result = utils.get_last_attr(a, '.b')
+    assert result is a.b
+
+    result = utils.get_last_attr(a, 'b')
+    assert result is a.b
+
+    result = utils.get_last_attr(a, '.b.name')
+    assert result is 'B'
+
+    result = utils.get_last_attr(a, 'b.name')
+    assert result is 'B'
+
+    result = utils.get_last_attr(a, '.b.c')
+    assert result is a.b['c']
+
+    result = utils.get_last_attr(a, 'b.c')
+    assert result is a.b['c']
+
+    result = utils.get_last_attr(a, '.b.c.name')
+    assert result == 'C'
+
+    result = utils.get_last_attr(a, 'b.c.name')
+    assert result == 'C'
+
+
 def test_asisotope():
     for string in '102Pd, 102pd , Pd102,pd102 , 102-Pd, 102-pd, Pd-102, pd-102'.split(','):
         iso = utils.asisotope(string)
@@ -676,7 +715,6 @@ def test_model_eval():
         assert result is False
 
 
-
 def test_mask_eval():
     eval = utils.mask_eval
 
@@ -818,7 +856,7 @@ def test_mask_eval():
     np.testing.assert_array_equal(result, np.array([True, True, True, True, True]))
 
 def test_shortcut():
-    @utils.shortcut('b', text='b')
+    @utils.add_shortcut('b', text='b')
     def func(*, text = 'a'):
         return text
 

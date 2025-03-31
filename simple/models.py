@@ -371,8 +371,8 @@ References in collection:
                                          convert_unit=convert_unit, attrname=attrname,
                                          method=method, **method_kwargs)
 
-    def simple_normalisation(self, normiso, enrichment_factor=1, relative_enrichment=True,
-                             convert_unit=True, attrname = 'simplenorm'):
+    def standard_normalisation(self, normiso, enrichment_factor=1, relative_enrichment=True,
+                             convert_unit=True, attrname = 'stdnorm'):
         """
         Normalise the appropriate data of the model. See
         [simple_normalisation][simple.norm.simple_normalisation] for a description of the procedure and a
@@ -384,9 +384,16 @@ References in collection:
             NotImplementedError: Raised if the data to be normalised has not been specified for this model class.
         """
         for model in self.models.values():
-            model.simple_normalisation(normiso, enrichment_factor=enrichment_factor,
-                                       relative_enrichment=relative_enrichment,
-                                       convert_unit=convert_unit, attrname=attrname)
+            model.standard_normalisation(normiso, enrichment_factor=enrichment_factor,
+                                         relative_enrichment=relative_enrichment,
+                                         convert_unit=convert_unit, attrname=attrname)
+
+    @utils.deprecation_warning('``simple_normalisation`` has been deprecated. Use ``standard_normalisation`` instead')
+    def simple_normalisation(self, *args, **kwargs):
+        """
+        Deprecated Method. Use ``standard_normalisation`` instead.
+        """
+        return self.standard_normalisation(*args, **kwargs)
 
 # A dict containing all model classes that exist.
 # A model is automatically added to the dict when created.
@@ -410,7 +417,7 @@ class ModelTemplate:
         will be raised if any of these attributes are missing.
     - ``REPR_ATTRS`` - A list of the attributes that values will be shown in the repr.
     - ``ABUNDANCE_KEYARRAY`` - The name of a key array containing the abundances that should be normalised. Alternatively
-        you can subclass the ``internal_normalisation`` and ``simple_normalisation`` methods for more customisation.
+        you can subclass the ``internal_normalisation`` and ``standard_normalisation`` methods for more customisation.
     - ``VALUES_KEYS_TO_ARRAY`` - If ``True`` a key array named ``<name>`` is automatically created upon model
         initialisation if attributes called.
         ``<name>_values`` and ``<name>_keys`` exits.
@@ -607,13 +614,13 @@ class ModelTemplate:
         """
         if shape is None:
             if self.ABUNDANCE_KEYARRAY is None:
-                raise ValueError("Shape is required as there is no default key array associated with this model")
+                raise ValueError(f"{self.name}: Shape is required as there is no default key array associated with this model")
             else:
                 shape = getattr(self, self.ABUNDANCE_KEYARRAY).shape
 
         return utils.mask_eval.eval(mask_attrs, mask, shape, **mask_attrs)
 
-    def convert_keyarray(self, array, unit, desired_unit):
+    def convert_array(self, array, unit, desired_unit, *, attrname = ''):
         """
         Return a copy of the array converted to the desired unit.
 
@@ -625,30 +632,33 @@ class ModelTemplate:
         Args:
             array (): A key array.
             unit (): The current unit of the data in ``array``. If ``None`` the unit is assumed to be that of the
-            ``desired_unit``.
+            ``desired_unit_args``.
             desired_unit (): The unit the array should be converted to. If ``None`` no conversion is made
             and the original array`is returned.
 
         Raises:
-            ValueError: If the array cannot be converted from ``unit`` to ``desired_unit``.
+            ValueError: If the array cannot be converted from ``unit`` to ``desired_unit_args``.
 
         Returns:
             A copy of ``array`` with the desired unit.
         """
         array = array.copy()
-        if unit is None:
-            logger.warning(f"the key array does not have an assigned unit. Assuming the unit is the desired unit")
-            return array
-        elif desired_unit is None:
-            logger.info(f"No desired unit specified. Assuming the desired unit is the current unit")
-            return array
+
+        if desired_unit is None:
+            logger.debug(f"{self.name}{('.' + attrname) if attrname else ''}: No desired unit specified. Assuming the desired unit is the current unit")
+            return array, unit
+        elif unit is None:
+            logger.warning(f"{self.name}{('.' + attrname) if attrname else ''}: Array does not have an assigned unit. Assuming the unit is the desired unit")
+            return array, desired_unit
 
         if unit in utils.UNITS['mole']:
             if desired_unit.lower() in utils.UNITS['mole']:
-                logger.info('Both array unit and desired unit are ``mole`` units.')
-                return array
+                logger.debug(f"{self.name}{('.' + attrname) if attrname else ''}:Both array unit and desired unit are ``mole`` units.")
+                return array, unit
             elif desired_unit.lower() in utils.UNITS['mass']:
-                logger.info('Converting array from ``mole`` to ``mass`` unit by multiplying the data by the mass number')
+                if array.dtype.names is None:
+                    raise ValueError(f"{self.name}{('.' + attrname) if attrname else ''}: Can only convert isotope key arrays")
+                logger.info(f"{self.name}{('.' + attrname) if attrname else ''}: Converting array from ``mole`` to ``mass`` unit by multiplying the data by the mass number")
                 for key in array.dtype.names:
                     try:
                         m = float(utils.asisotope(key).mass)
@@ -656,14 +666,17 @@ class ModelTemplate:
                         pass # Leaves non-isotope values unchanged
                     else:
                         array[key] *= m
-                return array
+                return array, desired_unit
 
         elif unit in utils.UNITS['mass']:
             if desired_unit.lower() in utils.UNITS['mass']:
-                logger.info('Both array unit and desired unit are ``mass`` units.')
-                return array
+                logger.debug(f"{self.name}{('.' + attrname) if attrname else ''}: Both array unit and desired unit are ``mass`` units.")
+                return array, unit
             elif desired_unit.lower() in utils.UNITS['mole']:
-                logger.info('Converting array from ``mass`` to ``mole`` unit by dividing the data by the mass number')
+                if array.dtype.names is None:
+                    raise ValueError(f"{self.name}{('.' + attrname) if attrname else ''}: Can only convert isotope key arrays")
+
+                logger.info(f"{self.name}{('.' + attrname) if attrname else ''}: Converting array from ``mass`` to ``mole`` unit by dividing the data by the mass number")
                 for key in array.dtype.names:
                     try:
                         m = float(utils.asisotope(key).mass)
@@ -671,11 +684,11 @@ class ModelTemplate:
                         pass # Leaves non-isotope values unchanged
                     else:
                         array[key] /= m
-                return array
+                return array, desired_unit
 
-        raise ValueError(f"Unable to convert from '{unit}' to '{desired_unit}'")
+        raise ValueError(f"{self.name}{('.' + attrname) if attrname else ''}: Unable to convert from '{unit}' to '{desired_unit}'")
 
-    def get_keyarray(self, name=None, desired_unit=None):
+    def get_array(self, name=None, desired_unit=None):
         """
         Returns a copy of the named array with the desired unit.
 
@@ -688,26 +701,75 @@ class ModelTemplate:
         """
         if name is None:
             if self.ABUNDANCE_KEYARRAY is None:
-                raise ValueError("No default array associated with this model")
+                raise ValueError(f"{self.name}: No default array associated with this model")
             else:
                 name = self.ABUNDANCE_KEYARRAY
+
         try:
-            a = self[name]
+            a = utils.get_last_attr(self, name)
         except KeyError:
-            raise AttributeError(f"This model has no attribute called '{name}'")
+            raise AttributeError(f"{self.name}: This model has no attribute called '{name}'")
         else:
-            if not isinstance(a, np.ndarray) or a.dtype.names is None:
-                raise TypeError(f"Model attribute '{name}' is not a keyarray")
+            if not isinstance(a, np.ndarray):
+                raise TypeError(f"{self.name}: Model attribute '{name}' is not an array")
+
+        unit = utils.get_last_attr(self, f"{name}_unit", None)
+        if desired_unit is None:
+            return a.copy(), unit
+        elif unit is None:
+            logger.warning(f"{self.name}: Keyarray '{name}' has no unit attribute. Assuming unit is {desired_unit}")
+            return a.copy(), desired_unit
+        else:
+            return self.convert_array(a, unit, desired_unit, attrname=name)
 
         if desired_unit is None:
-            return a.copy()
+            return a.copy(), desired_unit
         else:
-            unit = getattr(self, f"{name}_unit", None)
+            unit = utils.get_last_attr(self, f"{name}_unit", None)
             if unit is None:
-                logger.warning(f"Keyarray '{name}' has no unit attribute. Assuming unit is {desired_unit}")
-                return a.copy()
+                logger.warning(f"{self.name}: Keyarray '{name}' has no unit attribute. Assuming unit is {desired_unit}")
+                return a.copy(), desired_unit
             else:
-                return self.convert_keyarray(a, unit, desired_unit)
+                return self.convert_array(a, unit, desired_unit)
+
+    def get_array_labels(self, name=None, latex=True):
+        if name is None:
+            if self.ABUNDANCE_KEYARRAY is None:
+                raise ValueError(f"{self.name}: No default array associated with this model")
+            else:
+                name = self.ABUNDANCE_KEYARRAY
+
+        data_label = None
+        key_labels = None
+        if latex:
+            data_label = utils.get_last_attr(self, f"{name}_label_latex", None)
+            key_labels = utils.get_last_attr(self, f"{name}_keylabels_latex", None)
+
+        if data_label is None:
+            data_label = utils.get_last_attr(self, f"{name}_label", None)
+
+        if key_labels is None:
+            key_labels = utils.get_last_attr(self, f"{name}_keylabels", None)
+
+        if data_label is None:
+            data_label = utils.parse_attrname(name)
+
+        if key_labels is None:
+            a = utils.get_last_attr(self, name, None)
+            if a is not None and isinstance(a, np.ndarray) and a.dtype.names is not None:
+                try:
+                    key_labels = utils.asisotopes(a.dtype.names)
+                except Exception as error:
+                    key_labels = None
+                else:
+                    if latex:
+                        key_labels = {k: k.latex() for k in key_labels}
+                    else:
+                        key_labels = {k: k for k in key_labels}
+            else:
+                key_labels = None
+
+        return data_label, key_labels
 
     def select_isolist(self, isolist, convert_unit=True):
         """
@@ -732,15 +794,15 @@ class ModelTemplate:
         """
         # Updates the relevant arrays inplace
         if self.ABUNDANCE_KEYARRAY is None:
-            raise NotImplementedError('The data to be normalised in has not been specified for this model')
+            raise NotImplementedError(f'{self.name}: The data to be normalised in has not been specified for this model')
 
-        abu = self.get_keyarray(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
+        abu, abu_unit = self.get_array(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
 
         abu = utils.select_isolist(isolist, abu)
 
         if convert_unit:
             original_unit = getattr(self, f"{self.ABUNDANCE_KEYARRAY}_unit", "mol")
-            abu = self.convert_keyarray(abu, 'mol', original_unit)
+            abu, abu_unit = self.convert_array(abu, 'mol', original_unit)
 
         self.setattr(self.ABUNDANCE_KEYARRAY, abu, hdf5_compatible=False, overwrite=True)
 
@@ -771,32 +833,34 @@ class ModelTemplate:
             NotImplementedError: Raised if the data to be normalised has not been specified for this model class.
         """
         if self.ABUNDANCE_KEYARRAY is None:
-            raise NotImplementedError('The data to be normalised in has not been specified for this model')
+            raise NotImplementedError(f'{self.name}: The data to be normalised in has not been specified for this model')
 
         # The abundances to be normalised
-        abu = self.get_keyarray(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
+        abu, abu_unit = self.get_array(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
 
         # Isotope masses
         ref_stdmass = self.get_ref(self.refid_isomass)
-        stdmass = ref_stdmass.get_keyarray('data')
+        stdmass, stdmass_unit = ref_stdmass.get_array('data')
 
         # The reference abundances. Typically, the initial values of the model
         ref_stdabu = self.get_ref(self.refid_isoabu)
-        stdabu = ref_stdabu.get_keyarray('data', 'mol' if convert_unit else None)
+        stdabu, stdabu_unit = ref_stdabu.get_array('data', 'mol' if convert_unit else None)
 
 
         result = norm.internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
                                              enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
-                                             method=method, **method_kwargs)
+                                             method=method,
+                                             msg_prefix = f'{self.name}.{utils.parse_attrname(self.ABUNDANCE_KEYARRAY)}',
+                                             **method_kwargs)
 
         self.setattr(attrname, result, hdf5_compatible=False, overwrite=True)
         return result
 
-    def simple_normalisation(self, normiso, *, isotopes = None, enrichment_factor = 1, relative_enrichment=True,
-                             convert_unit=True, attrname='simplenorm', dilution_factor = None):
+    def standard_normalisation(self, normiso, isotopes = None, *, enrichment_factor = 1, relative_enrichment=True,
+                             convert_unit=True, attrname='stdnorm', dilution_factor = None):
         """
         Normalise the appropriate data of the model. See
-        [simple_normalisation][simple.norm.simple_normalisation] for a description of the procedure and a
+        [standard_normalisation][simple.norm.standard_normalisation] for a description of the procedure and a
         description of the arguments.
 
         The result of the normalisation will be saved under the ``normname`` attribute.
@@ -805,16 +869,17 @@ class ModelTemplate:
             NotImplementedError: Raised if the data to be normalised has not been specified for this model class.
         """
         if self.ABUNDANCE_KEYARRAY is None:
-            raise NotImplementedError('The data to be normalised has not been specified for this model')
+            raise NotImplementedError(f'{self.name}: The data to be normalised has not been specified for this model')
 
-        abu = self.get_keyarray(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
+        abu, abu_unit = self.get_array(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
 
         ref_stdabu = self.get_ref(self.refid_isoabu)
-        stdabu = ref_stdabu.get_keyarray('data', 'mol' if convert_unit else None)
+        stdabu, stdabu_unit = ref_stdabu.get_array('data', 'mol' if convert_unit else None)
 
-        result = norm.simple_normalisation(abu, isotopes, normiso, stdabu,
-                                           enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
-                                           dilution_factor=dilution_factor)
+        result = norm.standard_normalisation(abu, isotopes, normiso, stdabu,
+                                             enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
+                                             dilution_factor=dilution_factor,
+                                             msg_prefix = f'{self.name}.{utils.parse_attrname(self.ABUNDANCE_KEYARRAY)}', )
 
         self.setattr(attrname, result, hdf5_compatible=False, overwrite=True)
         return result

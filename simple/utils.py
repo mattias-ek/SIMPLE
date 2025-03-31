@@ -25,7 +25,14 @@ Current unit types are:
 -  ``mole`` that represents data being stored in moles or as mole fractions.
 """
 
+OptionalArg = object()
+
 def set_logging_level(level):
+    """
+    Set the level of messages to be displayed.
+
+    Options are: DEBUG, INFO, WARNING, ERROR.
+    """
     if level.upper() == 'DEBUG':
         level = logging.DEBUG
     elif level.upper() == 'INFO':
@@ -36,6 +43,31 @@ def set_logging_level(level):
         level = logging.ERROR
 
     SimpleLogger.setLevel(level)
+
+def parse_attrname(attrname):
+    if attrname is None:
+        return None
+    else:
+        return '.'.join([aa for a in attrname.split('.') if (aa := a.strip()) != ''])
+
+def get_last_attr(item, attrname, default=OptionalArg):
+    # Return the final attribute in the chain ``attrname`` starting from ``item``
+    attrnames = parse_attrname(attrname).split('.')
+    attr = item
+    for i, name in enumerate(attrnames):
+        try:
+            if isinstance(attr, dict):
+                attr = attr[name]
+            else:
+                attr = getattr(attr, name)
+        except (AttributeError, KeyError):
+            if default is not OptionalArg:
+                # Log message?
+                return default
+            else:
+                raise AttributeError(f'Item {item} has no attribute {".".join(attrnames[:i+1])}')
+    return attr
+
 
 class EndlessList(list):
     """
@@ -83,23 +115,11 @@ class NamedDict(dict):
 
         return self[key]
 
-def shortcut(name, **updated_kwargs):
-    def inner(func):
-        def wrapper(*args, **kwargs):
-            new_kwargs = updated_kwargs.copy()
-            new_kwargs.update(kwargs)
-            return func(*args, **new_kwargs)
-
-        setattr(func, name, wrapper)
-        return func
-    return inner
-
 def update_docs(**kwargs):
     def inner(func):
-        func.__doc__ = func.__doc__.format(**kwargs)
+        func.__doc__ = 'I changed it!'
         return func
     return inner
-
 
 def extract_kwargs(kwargs, *keys, prefix=None, pop=True, remove_prefix=True, **initial_kwargs):
     """
@@ -164,9 +184,35 @@ def set_default_kwargs(**default_kwargs):
             new_kwargs.update(kwargs)
             return func(*args, **new_kwargs)
 
-        wrapper.default_kwargs=default_kwargs
+        def add_shortcut_(name, inherits = True, **shortcut_kwargs):
+            return add_shortcut(name, inherits = inherits, **shortcut_kwargs)(wrapper)
+
+        wrapper.default_kwargs = default_kwargs
+        wrapper.add_shortcut = add_shortcut_
+        wrapper.func_nokwargs = func
         return wrapper
     return decorator
+
+def add_shortcut(name, inherits = True, **shortcut_kwargs):
+    def inner(func):
+        if inherits:
+            shortcut = set_default_kwargs(**shortcut_kwargs)(func)
+        else:
+            shortcut = set_default_kwargs(**shortcut_kwargs)(getattr(func, 'func_nokwargs', func))
+        setattr(func, name, shortcut)
+
+        return func
+    return inner
+
+def deprecation_warning(message):
+    def inner(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            logger.warning(f'DeprecationWarning: {message}')
+            return func(*args, **kwargs)
+        return wrapper
+    return inner
+
 
 def load_defaults(filename: str):
     """
@@ -330,7 +376,7 @@ class Element(str):
         string = string.strip()
         m = re.fullmatch(cls.RE, string)
         if m:
-            element, suffix = m.group(1).capitalize(), m.group(2)
+            element, suffix = m.group(1).capitalize(), m.group(2) or ''
         else:
             raise ValueError(f"String '{string}' is not a valid element")
 
@@ -767,7 +813,6 @@ class EvalArg:
                 elif string == 'None':
                     self.value = None
 
-
     def __call__(self, item, kwargs):
         v = self.value
         if self.is_kwarg:
@@ -778,18 +823,10 @@ class EvalArg:
                 v = w
 
         if self.is_attr:
-            if isinstance(item, dict):
-                w = item.get(v, self.NoAttr)
-                if w is self.NoAttr:
-                    raise self.NoAttributeError(f'No item "{v}" found in {item}')
-                else:
-                    v = w
-            else:
-                w = getattr(item, v, self.NoAttr)
-                if w is self.NoAttr:
-                    raise self.NoAttributeError(f'No attribute called "{v}" found in {item}')
-                else:
-                    v = w
+            try:
+                v = get_last_attr(item, v)
+            except AttributeError:
+                raise self.NoAttributeError(f'No attribute "{v}" found in {item}')
 
         return v
 

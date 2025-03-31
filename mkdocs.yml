@@ -31,20 +31,18 @@ nav:
     - Tutorials:
         - Part 1 - Getting Started: examples/ccsne_tutorial1.ipynb
         - Part 2 - Normalising abundances: examples/ccsne_tutorial2.ipynb
+        - Part 2 - Plotting: examples/ccsne_tutorial3.ipynb
     - Examples:
         - Create CCSNe database: examples/create_simple_db.ipynb
         - CCSNE Exmple: examples/simple_mattias_version.ipynb
         - Rose Diagrams: examples/rose_diagram.ipynb
+    - User Reference: api/simple.md
     - API Reference:
-      - simple: api/simple.md
-      - Main Modules:
-        - simple.plot: api/plot.md
+        - simple.plotting: api/plotting.md
         - simple.norm: api/norm.md
         - simple.models: api/models.md
         - simple.utils: api/utils.md
-      - CCSNe Modules:
-        - simple.ccsne.models: api/ccsne-models.md
-        - simple.ccsne.plot: api/ccsne-plot.md
+        - simple.ccsne: api/ccsne.md
     - About: about.md
     - License: license.md
 

@@ -1,17 +1,25 @@
-from simple import utils, models
+from simple import utils, models, plotting
 import numpy as np
 import h5py
 import re
 from nugridpy import nugridse as mp
 import logging
 
-logger = logging.getLogger('SIMPLE.CCSNe.models')
+logger = logging.getLogger('SIMPLE.ccsne')
 
-__all__ = []
+__all__ = ['plot_ccsne', 'mhist_ccsne', 'mcontour_ccsne']
 
 #############
 ### Utils ###
 #############
+z_names = ['Neut', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al',
+           'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co',
+           'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb',
+           'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs',
+           'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm',
+           'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
+           'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U']
+
 def calc_default_onion_structure(abundance, keys, masscoord):
     """
     Calculated the boundaries of different layers within the CCSNe onion structure.
@@ -42,7 +50,7 @@ def calc_default_onion_structure(abundance, keys, masscoord):
     shells = 'H He/N He/C O/C O/Ne O/Si Si Ni'.split()
     boundaries = []
 
-    # TODO This code works for most but not all of the 18 models in the original release
+    # This code works for most but not all of the 18 models in the original release
     # So use with caution
 
     # definition of borders
@@ -51,6 +59,10 @@ def calc_default_onion_structure(abundance, keys, masscoord):
     boundaries.append(ih)
 
     ihe1 = np.where((n14 > o16) & (n14 > c12) & (n14 > 1.e-3))[0][0]
+    ihe_check = np.searchsorted(mass, mass[ihe1] + 0.005)
+    if ihe_check < len(mass) and not (
+            (n14[ihe_check] > o16[ihe_check]) and (n14[ihe_check] > c12[ihe_check]) and (n14[ihe_check] > 1.e-3)):
+        ihe1 = np.where((n14 > o16) & (n14 > c12) & (n14 > 1.e-3) & (mass >= mass[ihe1] + 0.005))[0][0]
     logging.info("Lower boundary of the He/N shell: " + str(mass[ihe1]))
     boundaries.append(ihe1)
 
@@ -73,13 +85,24 @@ def calc_default_onion_structure(abundance, keys, masscoord):
     boundaries.append(io)
 
     try:
-        isi = np.where((ni56 > si28))[0][-1]
+        indices = np.where(ni56 > si28)[0]
+        if indices.size > 0:
+            isi = indices[-1]
+        else:
+            if ni56[1] < si28[1] and si28[1] > o16[1]:
+                isi = 0
+            else:
+                raise IndexError("No suitable boundary found")
     except IndexError:
         logging.info("No lower boundary of Si layer")
         boundaries.append(-1)
     else:
-        logging.info("Lower boundary of the Si layer: " + str(mass[isi]))
-        boundaries.append(isi)
+        if len(mass[isi:io]) < 2:
+            boundaries.append(-1)
+            logging.info("No lower boundary of Si layer")
+        else:
+            logging.info(f"Lower boundary of the Si layer: {mass[isi]}")
+            boundaries.append(isi)
 
     try:
         ini = np.where((ni56 > si28))[0][0]
@@ -93,9 +116,9 @@ def calc_default_onion_structure(abundance, keys, masscoord):
     return utils.askeyarray(boundaries, shells, dtype=np.int64)
 
 
-###################
-### Load models ###
-###################
+##############
+### Models ###
+##############
 
 class CCSNe(models.ModelTemplate):
     """
@@ -122,6 +145,8 @@ class CCSNe(models.ModelTemplate):
                       'refid_isoabu', 'refid_isomass']
     REPR_ATTRS = ['name', 'type', 'dataset', 'mass']
     ABUNDANCE_KEYARRAY = 'abundance'
+    masscoord_label = 'Mass Coordinate [solar masses]'
+    masscoord_label_latex = 'Mass Coordinate [M${}_{\\odot}$]'
 
     def get_mask(self, mask, shape = None, **mask_attrs):
         """
@@ -193,17 +218,6 @@ class CCSNe(models.ModelTemplate):
             mask_attrs = shell_d
 
         return super().get_mask(mask, shape, shell = shell_a, **mask_attrs)
-
-
-
-z_names = ['Neut', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', 'Mg', 'Al',
-           'Si', 'P', 'S', 'Cl', 'Ar', 'K', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe', 'Co',
-           'Ni', 'Cu', 'Zn', 'Ga', 'Ge', 'As', 'Se', 'Br', 'Kr', 'Rb', 'Sr', 'Y', 'Zr', 'Nb',
-           'Mo', 'Tc', 'Ru', 'Rh', 'Pd', 'Ag', 'Cd', 'In', 'Sn', 'Sb', 'Te', 'I', 'Xe', 'Cs',
-           'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm',
-           'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
-           'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U']
-
 
 def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
     def load(emass, modelname, default_onion_structure=True):
@@ -464,7 +478,7 @@ def load_Ra02(data_dir, ref_isoabu, ref_isomass):
 
     return models
 
-def load_LC18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
+def load_LC18(data_dir, ref_isoabu, ref_isomass):
     def load(emass, model_name, default_onion_structure=True):
         filename = data_dir + model_name
         # print(filename)
@@ -521,3 +535,250 @@ def load_LC18(data_dir, ref_isoabu, ref_isomass, divide_by_isomass = True):
     load('25', '025a000.dif_iso_nod')
 
     return models
+
+################
+### Plotting ###
+################
+def get_onion_layer_mask(model, layer):
+    # Returns a mask that can be used to select only data from a certain layer.
+    # If there is no onion structure then the mask will not select any data.
+    mask = np.full(model.masscoord.size, False, dtype=np.bool)
+
+    lower_bounds = getattr(model, 'onion_lbounds', None)
+    if lower_bounds is None:
+        logger.error('No onion structure defined for this model')
+        return mask
+
+    def check(desired_layer, current_layer, lbound, ubound):
+        if lbound>0:
+            if desired_layer.lower() == current_layer:
+                mask[lbound:ubound] = True
+            return lbound
+        else:
+            return ubound
+
+    layers = layer.split(',')
+    for desired_layer in layers:
+        ubound = len(mask.size)
+        ubound = check(desired_layer, 'h', lower_bounds['H'][0], ubound)
+        ubound = check(desired_layer, 'he/n', lower_bounds['He/N'][0], ubound)
+        ubound = check(desired_layer, 'he/c', lower_bounds['He/C'][0], ubound)
+        ubound = check(desired_layer, 'o/c', lower_bounds['O/C'][0], ubound)
+        ubound = check(desired_layer, 'o/ne', lower_bounds['O/Ne'][0], ubound)
+        ubound = check(desired_layer, 'o/si', lower_bounds['O/Si'][0], ubound)
+        ubound = check(desired_layer, 'si', lower_bounds['Si'][0], ubound)
+        ubound = check(desired_layer, 'ni', lower_bounds['Ni'][0], ubound)
+
+    return mask
+
+# TODO dont plot if smaller than x
+# TODO just create a onionshell attr.
+@utils.set_default_kwargs(
+    # Default settings for line, text and fill
+    ax_kw_title_pad = 20,
+    default_line_color='black', default_line_linestyle='--', default_line_lw=2, default_line_alpha=0.75,
+    default_text_fontsize=10., default_text_color='black',
+    default_text_horizontalalignment='center', default_text_xycoords=('data', 'axes fraction'), default_text_y = 1.01,
+    default_fill_color='lightblue', default_fill_alpha=0.25,
+
+    # For the rest we only need to give the values that differ from the default
+   remnant_line_linestyle=':', remnant_fill_color='gray', remnant_fill_alpha=0.5,
+   HeN_fill_show=False,
+   OC_fill_show=False,
+   OSi_fill_show=False,
+   Ni_fill_show=False, )
+def plot_onion_structure(model, *, ax=None, update_ax=True, update_fig=True, **kwargs):
+    if not isinstance(model, models.ModelTemplate):
+        raise ValueError(f'model must be an Model object not {type(model)}')
+
+    ax = plotting.get_axes(ax)
+    title = ax.get_title()
+    if title:
+        kwargs.setdefault('ax_title', title)
+    delayed_kwargs = plotting.update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
+
+    lower_bounds = getattr(model, 'onion_lbounds', None)
+    if lower_bounds is None:
+        logger.error('No onion structure defined for this model')
+        return
+
+    masscoord = model.masscoord
+    lbound_H = masscoord[lower_bounds['H'][0]]
+    lbound_HeN = masscoord[lower_bounds['He/N'][0]]
+    lbound_HeC = masscoord[lower_bounds['He/C'][0]]
+    lbound_OC = masscoord[lower_bounds['O/C'][0]]
+    lbound_ONe = masscoord[lower_bounds['O/Ne'][0]]
+    lbound_OSi = masscoord[lower_bounds['O/Si'][0]]
+    lbound_Si = masscoord[lower_bounds['Si'][0]]
+    lbound_Ni = masscoord[lower_bounds['Ni'][0]]
+
+    default_line = utils.extract_kwargs(kwargs, prefix='default_line')
+    default_text = utils.extract_kwargs(kwargs, prefix='default_text')
+    default_fill = utils.extract_kwargs(kwargs, prefix='default_fill')
+
+    def add_line(name, x):
+        line_kwargs = utils.extract_kwargs(kwargs, prefix='{name}_line', **default_line)
+        if line_kwargs.pop('show', True):
+            ax.axvline(x, **line_kwargs)
+
+    def add_text(name, text, x):
+        text_kwargs = utils.extract_kwargs(kwargs, prefix=f'{name}_text', **default_text)
+        if text_kwargs.pop('show', True):
+            # Using annotate instead of text as we can then specify x in absolute, and y coordinates relative, in space.
+            ax.annotate(text_kwargs.pop('xytext', text), (x, text_kwargs.pop('y', 1.01)),
+                        **text_kwargs)
+
+    def add_fill(name, x):
+        fill_kwargs = utils.extract_kwargs(kwargs, prefix=f'{name}_fill', **default_fill)
+        if fill_kwargs.pop('show', True):
+            ax.fill_between(x, fill_kwargs.pop('y1', [ylim[0], ylim[0]]),
+                             fill_kwargs.pop('y2', [ylim[1], ylim[1]]),
+                            **fill_kwargs)
+
+    def add(name, text, lbound):
+        if kwargs.get(f'{name}_show', True) is False:
+            return
+
+        if lbound<0 or not (ubound > xlim[0]) or not (lbound < ubound): return ubound
+
+        if not lbound > xlim[0]:
+            lbound = xlim[0]
+        else:
+            add_line(name, lbound)
+
+        add_text(name, text, (lbound + ubound)/2)
+        add_fill(name, [lbound, ubound])
+        return lbound
+
+    ylim = ax.get_ylim()
+    xlim = ax.get_xlim()
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+
+    # Outside-in since the last lower limit is the upper limit of the next one
+
+    ubound = np.min([model.masscoord[-1], xlim[1]])
+
+    # H - Envelope
+    ubound = add('H', 'H', lbound_H)
+
+    # He/N
+    ubound = add('HeN', 'He/N', lbound_HeN)
+
+    # He/C
+    ubound = add('HeC', 'He/C', lbound_HeC)
+
+    # O/C
+    ubound = add('OC', 'O/C',lbound_OC)
+
+    # O/Ne
+    ubound = add('ONe', 'O/Ne',lbound_ONe)
+
+    # O/Si
+    ubound = add('OSi', 'O/Si', lbound_OSi)
+
+    # Si
+    ubound = add('Si', 'Si', lbound_Si)
+
+    # Ni
+    ubound = add('Ni', 'Ni', lbound_Ni)
+
+    # Remnant
+    masscut = model.masscoord[0]
+    if xlim[0] < masscut:
+        lbound_rem = np.max([0,xlim[0]])
+        add_text('remnant', r'M$_{\rm rem}$', ((lbound_rem + masscut) / 2))
+        add_fill('remnant', [lbound_rem, masscut])
+
+    plotting.update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
+
+
+@utils.add_shortcut('abundance', default_attrname='abundance', unit='mass')
+@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
+@utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None)
+@utils.set_default_kwargs(
+    linestyle = True, color=True, marker=False,
+    fig_size= (10,5))
+def plot_ccsne(models, ykey, *,
+         semilog = False, onion=None,
+         **kwargs):
+    # Wrapper that adds the option to plot the onion structure of CCSNe models
+    onion_kwargs = utils.extract_kwargs(kwargs, prefix='onion')
+
+    # Do this here since we need to know the number of models for the onion shell
+    where = kwargs.pop('where', None)
+    where_kwargs = kwargs.pop('where_kwargs', {})
+    where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
+    models = plotting.get_models(models, where=where, where_kwargs=where_kwargs)
+
+    if semilog: kwargs.setdefault('ax_yscale', 'log')
+
+    ax = plotting.plot(models, '.masscoord', ykey, xunit=None, **kwargs)
+
+    if onion or (onion is None and len(models) == 1):
+        if len(models) > 1:
+            raise ValueError(f"Can only plot onion structure for a single model")
+        else:
+            plot_onion_structure(models[0], ax=ax, **onion_kwargs)
+
+    return ax
+
+def _mweights(models, modeldata_w):
+    logger.info('Multiplying all weights by the mass coordinate mass')
+    modeldata_m, axis_labels_m = plotting.get_data(models, {'m': '.masscoord'},
+                                                       default_value=np.nan,
+                                                       latex_labels=False)
+
+    for model_name, model_data_w in modeldata_w.items():
+        masscoord_mass = modeldata_m[model_name][0]['m']
+
+        # Temporary as the mass coord mass doesnt exist yet
+        masscoord_mass = masscoord_mass[1:] - masscoord_mass[:1]
+        masscoord_mass = np.insert(masscoord_mass, 0, masscoord_mass[0])
+        for ki, data_w in enumerate(model_data_w):
+            data_w['w'] *= masscoord_mass
+
+    return modeldata_w
+
+@utils.add_shortcut('abundance', default_attrname='abundance', unit='mass', xunit=None)
+@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None, xunit=None)
+@utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None, xunit=None)
+@utils.set_default_kwargs(
+    weights_default_attrname='abundance', weights_unit='mass',
+)
+def mhist_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
+    kwargs_ = plotting.mhist.default_kwargs.copy()
+    kwargs_.update(kwargs)
+
+    ax, models, r, modeldata_xy, modeldata_w, kwargs = plotting._mprep(models, xkey, ykey, r, weights, **kwargs_)
+    modeldata_w = _mweights(models, modeldata_w)
+    return plotting._mhist(ax, r, modeldata_xy, modeldata_w, **kwargs)
+
+@utils.add_shortcut('abundance', default_attrname='abundance', unit='mass', xunit=None)
+@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None, xunit=None)
+@utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None, xunit=None)
+@utils.set_default_kwargs(
+    weights_default_attrname='abundance', weights_unit='mass',
+)
+def mcontour_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
+    kwargs_ = plotting.mcontour.default_kwargs.copy()
+    kwargs_.update(kwargs)
+
+    ax, models, r, modeldata_xy, modeldata_w, kwargs = plotting._mprep(models, xkey, ykey, r, weights, **kwargs_)
+    modeldata_w = _mweights(models, modeldata_w)
+    return plotting._mcontour(ax, r, modeldata_xy, modeldata_w, **kwargs)
+
+########################
+### Deprecated stuff ###
+########################
+@utils.deprecation_warning('``ccsne.plot_abundance`` has been deprecated: Use ``plot_ccsne.abundance`` instead')
+def plot_abundance(*args, **kwargs):
+    return plot_ccsne.abundance(*args, **kwargs)
+
+@utils.deprecation_warning('``ccsne.plot_intnorm`` has been deprecated: Use ``plot_ccsne.intnorm`` instead')
+def plot_intnorm(*args, **kwargs):
+    return plot_ccsne.intnorm(*args, **kwargs)
+
+@utils.deprecation_warning('``ccsne.plot_simplenorm`` has been deprecated: Use ``plot_ccsne.stdnorm`` instead')
+def plot_simplenorm(*args, **kwargs):
+    return plot_ccsne.stdnorm(*args, **kwargs)
