@@ -702,6 +702,9 @@ def plot_onion_structure(model, *, ax=None, update_ax=True, update_fig=True, **k
 def plot_ccsne(models, ykey, *,
          semilog = False, onion=None,
          **kwargs):
+    """
+    Plot for CCSNe models. Plots the mass coordinates on the x-axis.
+    """
     # Wrapper that adds the option to plot the onion structure of CCSNe models
     onion_kwargs = utils.extract_kwargs(kwargs, prefix='onion')
 
@@ -747,6 +750,9 @@ def _mweights(models, modeldata_w):
     weights_default_attrname='abundance', weights_unit='mass',
 )
 def mhist_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
+    """
+    Histogram plot on a rose diagram for CCNSe models.
+    """
     kwargs_ = plotting.mhist.default_kwargs.copy()
     kwargs_.update(kwargs)
 
@@ -761,6 +767,9 @@ def mhist_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
     weights_default_attrname='abundance', weights_unit='mass',
 )
 def mcontour_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
+    """
+    Contour plot on a rose diagram for CCNSe models.
+    """
     kwargs_ = plotting.mcontour.default_kwargs.copy()
     kwargs_.update(kwargs)
 

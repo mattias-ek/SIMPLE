@@ -1027,14 +1027,14 @@ def get_data(models, axis_names, *, where=None, latex_labels = True,
 
 
     Returns:
-        Two dictionaries containing 1) the first dictionary contains the data points for each model, mapped to the
-        model name and 2) a label for each axis, mapped to the axis name.
+        Tuple[dict, dict]: Two dictionaries containing:
 
-        The data points are contained inside a tuple and each data point is a dictionary with the value mapped to the
-        axis name and a label representing the data point.
+            - A dictionary with the data points for each model, mapped to the model name
 
+            - A dictionary containing labels for each axis, mapped to the axis name.
 
     Examples:
+        Here is an example of how the return data can be used.
         ```
         model_datapoints, axis_labels = simple.get_data(models, 'x, y', xkey=..., ykey=...)
 
@@ -1591,14 +1591,16 @@ def plot(models, xkey, ykey,
         labels.
 
 
-    Iterable ``plot`` arguments:
+    Iterable plot arguments:
         The following arguments for matplotlibs ``plot`` function have enhanced behaviour that allows them to be
         iterated through when plotting different models and/or datasets.
 
         - ``linestyle`` Can be a list of linestyles that will be iterated through. If ``True`` simple's predefined
         list of linestyles is used. If ``False`` no lines will be shown.
+
         - ``color`` Can be a list of colors that will be iterated through. If ``True`` simple's predefined
         list of colors is used. If ``False`` the colour defaults to black.
+
         - ``marker`` Can be a list of markers that will be iterated through. If ``True`` simple's predefined
         list of markers is used. If ``False`` no markers will be shown.
 
@@ -1620,11 +1622,11 @@ def plot(models, xkey, ykey,
         Additionally, one or more shortcuts with additional/different default values are attached to this function.
         The following shortcuts exist for this function:
 
-            - ``plot.intnorm`` Default values to plot internally normalised data. This sets *default_attrname* to
-                ``intnorm`` and the ``default_unit`` to ``None``.
+        - ``plot.intnorm`` Default values to plot internally normalised data. This sets *default_attrname* to
+            ``intnorm`` and the ``default_unit`` to ``None``.
 
-            - ``plot.stdnorm`` Default values to plot the basic ratio normalised data. This sets
-                    *default_attrname* to ``stdnorm`` and the ``default_unit`` to ``None``.
+        - ``plot.stdnorm`` Default values to plot the basic ratio normalised data. This sets
+                *default_attrname* to ``stdnorm`` and the ``default_unit`` to ``None``.
 
     Returns:
         The axes where the data was plotted.
@@ -1838,7 +1840,9 @@ def mhist(models, xkey, ykey, r=None, weights=1, *,
           mask = None, ax = None, where=None, where_kwargs={},
           legend=None, update_ax = True, update_fig = True,
           **kwargs):
-
+    """
+    Histogram plot on a rose diagram.
+    """
     ax, models, r, modeldata_xy, modeldata_w, kwargs = _mprep(models, xkey, ykey, r, weights,
                                                       default_attrname=default_attrname, unit=unit,
                                                       weights_default_attrname=weights_default_attrname,
@@ -1864,6 +1868,9 @@ def mcontour(models, xkey, ykey, r=None, weights=1, *,
              mask = None, ax = None, where=None, where_kwargs={},
              legend=None, update_ax = True, update_fig = True,
              **kwargs):
+    """
+    Contour plot on a rose diagram.
+    """
     ax, models, r, modeldata_xy, modeldata_w, kwargs = _mprep(models, xkey, ykey, r, weights,
                                                             default_attrname=default_attrname, unit=unit,
                                                             weights_default_attrname=weights_default_attrname,
