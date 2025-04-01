@@ -1527,6 +1527,7 @@ def create_legend(ax, outside = False, outside_margin=0.01, **kwargs):
 
     ax.legend(**kwargs)
 
+@utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
 @utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
 @utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
 @utils.set_default_kwargs(
@@ -1703,19 +1704,19 @@ def plot(models, xkey, ykey, *,
     return ax
 
 
-
+@utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
 @utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
 @utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
 @utils.set_default_kwargs(
     linestyle=True, color=True,
-    fixed_model_linestyle = None, fixed_model_color = None, fixed_model_marker = None,
+    fixed_model_linestyle = None, fixed_model_color = None,
     ax_kw_xlabel_fontsize=15,
     ax_kw_ylabel_fontsize=15,
     markersize=4,
     legend_outside=True,
     ax_tick_params=dict(axis='both', left=True, right=True, top=True),
     fig_size=(7,6.5),
-    arrow_linewidth=0, arrow_length_includes_head=True, arrow_head_width=0.03,
+    arrow_linewidth=0, arrow_length_includes_head=True, arrow_head_width=0.05,
     arrow_zorder=3
     )
 def plotm(models, xkey, ykey, xycoord=(0,0), *,
