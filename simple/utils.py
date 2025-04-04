@@ -169,37 +169,96 @@ def extract_kwargs(kwargs, *keys, prefix=None, pop=True, remove_prefix=True, **i
 
     return extracted
 
-def set_default_kwargs(**default_kwargs):
+class DefaultKwargsWrapper:
+    def __init__(self, func, default_kwargs, inherits=False):
+        self._func = func
+        self._default_kwargs = default_kwargs
+        self._inherits = inherits
+
+    def __repr__(self):
+        return f'<DefaultKwargsWrapper for function: {self._func.__name__}>'
+
+    def __call__(self, *args, **kwargs):
+        new_kwargs = self.default_kwargs
+        new_kwargs.update(kwargs)
+        return self._func(*args, **new_kwargs)
+
+    def add_shortcut(self, name, inherits=True, **kwargs):
+        setattr(self, name, DefaultKwargsWrapper(self, kwargs, inherits))
+        return getattr(self, name)
+
+    @property
+    def default_kwargs(self):
+        if self._inherits is True:
+            new_kwargs = getattr(self._func, 'default_kwargs', {})
+        elif self._inherits is not False and self._inherits is not None:
+            new_kwargs = getattr(self._inherits, 'default_kwargs', {})
+        else:
+            new_kwargs = {}
+
+        new_kwargs.update(self._default_kwargs)
+        return new_kwargs
+
+    def update_default_kwargs(self, **kwargs):
+        self._default_kwargs.update(kwargs)
+
+
+def set_default_kwargs(inherits = False, **default_kwargs):
     """
     Decorator sets the default keyword arguments for the function. It wraps the function so that the
     default kwargs are always passed to the function.
 
-    The default_kwargs can be accessed from ``<func>.default_kwargs``. Note that you can update this dictionary,
-    but it is not possible to replace it with another.
+    The default_kwargs can be accessed from ``<func>.default_kwargs``. To update the dictionary use the function
+    ``update_default_kwargs`` attached to the return function.
     """
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            new_kwargs = default_kwargs.copy()
+            new_kwargs = get_default_kwargs()
             new_kwargs.update(kwargs)
             return func(*args, **new_kwargs)
 
         def add_shortcut_(name, inherits = True, **shortcut_kwargs):
             return add_shortcut(name, inherits = inherits, **shortcut_kwargs)(wrapper)
 
-        wrapper.default_kwargs = default_kwargs
+        def get_default_kwargs():
+            if inherits is True:
+                new_kwargs = getattr(func, 'default_kwargs', {})
+            elif inherits is not False and inherits is not None:
+                new_kwargs = getattr(inherits, 'default_kwargs', {})
+            else:
+                new_kwargs = {}
+            print(type(new_kwargs))
+            new_kwargs.update(default_kwargs)
+            return new_kwargs
+
+        def update_default_kwargs(clear_=False, remove_=None, **kwargs):
+            if clear_ is True:
+                default_kwargs.clear()
+            if type(remove_) is str:
+                remove_ = [remove_]
+            if isinstance(remove_, (list, tuple)):
+                for r_ in remove_:
+                    default_kwargs.pop(r_, None)
+
+            default_kwargs.update(kwargs)
+
+        wrapper._default_kwargs = default_kwargs
+        wrapper.wrapped = func
+
+        wrapper.update_default_kwargs = update_default_kwargs
+        wrapper.default_kwargs = property(get_default_kwargs)
         wrapper.add_shortcut = add_shortcut_
-        wrapper.func_nokwargs = func
-        return wrapper
+
+        return DefaultKwargsWrapper(func, default_kwargs, inherits)
     return decorator
 
 def add_shortcut(name, inherits = True, **shortcut_kwargs):
     def inner(func):
-        if inherits:
-            shortcut = set_default_kwargs(**shortcut_kwargs)(func)
+        if not isinstance(func, DefaultKwargsWrapper):
+            setattr(func, name, DefaultKwargsWrapper(func, shortcut_kwargs, False if inherits is True else inherits))
         else:
-            shortcut = set_default_kwargs(**shortcut_kwargs)(getattr(func, 'func_nokwargs', func))
-        setattr(func, name, shortcut)
+            func.add_shortcut(name, inherits = inherits, **shortcut_kwargs)
 
         return func
     return inner

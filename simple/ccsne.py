@@ -696,7 +696,7 @@ def plot_onion_structure(model, *, ax=None, update_ax=True, update_fig=True, **k
 @utils.add_shortcut('abundance', default_attrname='abundance', unit='mass')
 @utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
 @utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None)
-@utils.set_default_kwargs(
+@utils.set_default_kwargs(inherits=plotting.plot,
     linestyle = True, color=True, marker=False,
     fig_size= (10,5))
 def plot_ccsne(models, ykey, *,
@@ -746,34 +746,28 @@ def _mweights(models, modeldata_w):
 @utils.add_shortcut('abundance', default_attrname='abundance', unit='mass', xunit=None)
 @utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None, xunit=None)
 @utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None, xunit=None)
-@utils.set_default_kwargs(
+@utils.set_default_kwargs(inherits=plotting.mhist,
     weights_default_attrname='abundance', weights_unit='mass',
 )
 def mhist_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
     """
     Histogram plot on a rose diagram for CCNSe models.
     """
-    kwargs_ = plotting.mhist.default_kwargs.copy()
-    kwargs_.update(kwargs)
-
-    ax, models, r, modeldata_xy, modeldata_w, kwargs = plotting._mprep(models, xkey, ykey, r, weights, **kwargs_)
+    ax, models, r, modeldata_xy, modeldata_w, kwargs = plotting._mprep(models, xkey, ykey, r, weights, **kwargs)
     modeldata_w = _mweights(models, modeldata_w)
     return plotting._mhist(ax, r, modeldata_xy, modeldata_w, **kwargs)
 
 @utils.add_shortcut('abundance', default_attrname='abundance', unit='mass', xunit=None)
 @utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None, xunit=None)
 @utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None, xunit=None)
-@utils.set_default_kwargs(
+@utils.set_default_kwargs(inherits=plotting.mcontour,
     weights_default_attrname='abundance', weights_unit='mass',
 )
 def mcontour_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
     """
     Contour plot on a rose diagram for CCNSe models.
     """
-    kwargs_ = plotting.mcontour.default_kwargs.copy()
-    kwargs_.update(kwargs)
-
-    ax, models, r, modeldata_xy, modeldata_w, kwargs = plotting._mprep(models, xkey, ykey, r, weights, **kwargs_)
+    ax, models, r, modeldata_xy, modeldata_w, kwargs = plotting._mprep(models, xkey, ykey, r, weights, **kwargs)
     modeldata_w = _mweights(models, modeldata_w)
     return plotting._mcontour(ax, r, modeldata_xy, modeldata_w, **kwargs)
 

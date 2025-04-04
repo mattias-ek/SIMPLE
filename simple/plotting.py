@@ -17,7 +17,7 @@ logger = logging.getLogger('SIMPLE.plot')
 
 __all__ = ['create_rose_plot',
            'get_data', 'plot', 'plotm', 'mhist', 'mcontour',
-            'create_legend',
+            'create_legend', 'update_axes',
            'plot_intnorm', 'plot_simplenorm']
 
 
@@ -206,96 +206,6 @@ def get_cmap(name):
         return mpl.colormaps[name]
     except:
         return mpl.cm.get_cmap(name)
-
-def update_axes(ax, kwargs, *, delay=None, update_ax = True, update_fig = True, delay_all=False):
-    """
-    Updates the axes and figure objects.
-
-    Keywords beginning with ``ax_<name>`` and ``fig_<name>`` will be stripped from kwargs. These will then be used
-    to call the ``set_<name>`` or ``<name>`` method of the axes or figure object.
-
-    If the value mapped to ``ax_<name>`` or ``fig_<name>`` is:
-    - A boolean it is used to determine whether to call the method. The boolean itself will not be passed to
-        the method. To pass a boolean to a method place it in a tuple, e.g. ``(True, )``.
-    - A tuple then the contents of the tuple is unpacked as arguments for the method call.
-    - A dictionary then the contents of the dictionary is unpacked as keyword arguments for the method call.
-    - Any other value will be passed as the first argument to the method call.
-
-    Additional keyword arguments can be passed to methods by mapping ``ax_kw_<name>_<keyword>`` or
-    ``fig_kw_<name>_<keyword>`` kwargs to the value. These additional keyword arguments are only used if the
-    ``ax_<name>`` or ``fig_<name>`` kwargs exist. Note however that they are always stripped from ``kwargs``.
-
-    It is possible to delay calling certain method adding ``ax_<name>`` or ``fig_<name>`` to ``*delay``. Keywords
-    associated with these method will then be included in the returned dictionary. This dictionary can be passed back
-    to the function at a later time. To delay all calls but remove the relevant kwargs from *kwargs* use
-    ``delay_all=True``.
-
-    Returns
-        dict: A dictionary containing the delayed method calls.
-    """
-
-    ax = get_axes(ax)
-    axes_meth = utils.extract_kwargs(kwargs, prefix='ax')
-    axes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
-
-    xaxes_meth = utils.extract_kwargs(kwargs, prefix='xax')
-    xaxes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
-
-    yaxes_meth = utils.extract_kwargs(kwargs, prefix='yax')
-    yaxes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
-
-    figure_meth = utils.extract_kwargs(kwargs, prefix='fig')
-    figure_kw = utils.extract_kwargs(figure_meth, prefix='kw')
-
-    # Special cases
-    if 'size' in figure_meth: figure_meth.setdefault('size_inches', figure_meth.pop('size'))
-
-    if delay is None:
-        delay = []
-    elif type(delay) is str:
-        delay = [delay]
-    delayed_kwargs = {}
-
-    def update(obj, name, meth_kwargs, kw_kwargs):
-        for var, arg in meth_kwargs.items():
-            var_kwargs = utils.extract_kwargs(kw_kwargs, prefix=var)
-            try:
-                method = getattr(obj, f'set_{var}')
-            except:
-                try:
-                    method = getattr(obj, var)
-                except:
-                    raise AttributeError(f'The {name} object has no method called ``set_{var}`` or ``{var}``')
-
-            if f'{name}_{var}' in delay or delay_all:
-                delayed_kwargs[f'{name}_{var}'] = arg
-                delayed_kwargs.update({f'{name}_kw_{var}_{k}': v for k,v in var_kwargs.items()})
-                continue
-
-            elif arg is False:
-                continue
-            elif arg is True:
-                arg = ()
-            elif type(arg) is dict:
-                var_kwargs.update(arg)
-                arg = ()
-            elif type(arg) is not tuple:
-                arg = (arg, )
-
-            method(*arg, **var_kwargs)
-
-    if update_ax:
-        update(ax, 'ax', axes_meth, axes_kw)
-        if xaxes_meth:
-            update(ax.xaxis, 'xax', xaxes_meth, xaxes_kw)
-        if yaxes_meth:
-            update(ax.yaxis, 'yax', yaxes_meth, yaxes_kw)
-
-    if update_fig:
-        update(ax.get_figure(), 'fig', figure_meth, figure_kw)
-
-    return delayed_kwargs
-
 def create_rose_plot(ax=None, *, vmin= None, vmax=None, log = False, cmap='turbo',
                      colorbar_show=True, colorbar_label=None, colorbar_fontsize=None,
                      xscale=1, yscale=1,
@@ -1526,6 +1436,97 @@ def create_legend(ax, outside = False, outside_margin=0.01, **kwargs):
         kwargs['bbox_to_anchor'] = (1+outside_margin, 1)
 
     ax.legend(**kwargs)
+
+def update_axes(ax, kwargs, *, delay=None, update_ax = True, update_fig = True, delay_all=False):
+    """
+    Updates the axes and figure objects.
+
+    Keywords beginning with ``ax_<name>``, ``xax_<name>``, ``yax_<name>`` and ``fig_<name>`` will be stripped
+    from kwargs. These will then be used to call the ``set_<name>`` or ``<name>`` method of the axes, axis or
+    figure object.
+
+    If the value mapped to the above arguments is:
+    - A boolean it is used to determine whether to call the method. The boolean itself will not be passed to
+        the method. To pass a boolean to a method place it in a tuple, e.g. ``(True, )``.
+    - A tuple then the contents of the tuple is unpacked as arguments for the method call.
+    - A dictionary then the contents of the dictionary is unpacked as keyword arguments for the method call.
+    - Any other value will be passed as the first argument to the method call.
+
+    Additional keyword arguments can be passed to methods by mapping e.g. ``<ax|xax|yax|fig>_kw_<name>_<keyword>``
+    kwargs to the value. These additional keyword arguments are only used if the
+    ``<ax|xax|yax|fig>_<name>`` kwargs exists. Note however that they are always stripped from ``kwargs``.
+
+    It is possible to delay calling certain method by adding ``<ax|xax|yax|fig>_<name>`` to ``*delay``. Keywords
+    associated with these method will then be included in the returned dictionary. This dictionary can be passed back
+    to the function at a later time. To delay all calls but remove the relevant kwargs from *kwargs* use
+    ``delay_all=True``.
+
+    Returns
+        dict: A dictionary containing the delayed method calls.
+    """
+
+    ax = get_axes(ax)
+    axes_meth = utils.extract_kwargs(kwargs, prefix='ax')
+    axes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
+
+    xaxes_meth = utils.extract_kwargs(kwargs, prefix='xax')
+    xaxes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
+
+    yaxes_meth = utils.extract_kwargs(kwargs, prefix='yax')
+    yaxes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
+
+    figure_meth = utils.extract_kwargs(kwargs, prefix='fig')
+    figure_kw = utils.extract_kwargs(figure_meth, prefix='kw')
+
+    # Special cases
+    if 'size' in figure_meth: figure_meth.setdefault('size_inches', figure_meth.pop('size'))
+
+    if delay is None:
+        delay = []
+    elif type(delay) is str:
+        delay = [delay]
+    delayed_kwargs = {}
+
+    def update(obj, name, meth_kwargs, kw_kwargs):
+        for var, arg in meth_kwargs.items():
+            var_kwargs = utils.extract_kwargs(kw_kwargs, prefix=var)
+            try:
+                method = getattr(obj, f'set_{var}')
+            except:
+                try:
+                    method = getattr(obj, var)
+                except:
+                    raise AttributeError(f'The {name} object has no method called ``set_{var}`` or ``{var}``')
+
+            if f'{name}_{var}' in delay or delay_all:
+                delayed_kwargs[f'{name}_{var}'] = arg
+                delayed_kwargs.update({f'{name}_kw_{var}_{k}': v for k,v in var_kwargs.items()})
+                continue
+
+            elif arg is False:
+                continue
+            elif arg is True:
+                arg = ()
+            elif type(arg) is dict:
+                var_kwargs.update(arg)
+                arg = ()
+            elif type(arg) is not tuple:
+                arg = (arg, )
+
+            method(*arg, **var_kwargs)
+
+    if update_ax:
+        update(ax, 'ax', axes_meth, axes_kw)
+        if xaxes_meth:
+            update(ax.xaxis, 'xax', xaxes_meth, xaxes_kw)
+        if yaxes_meth:
+            update(ax.yaxis, 'yax', yaxes_meth, yaxes_kw)
+
+    if update_fig:
+        update(ax.get_figure(), 'fig', figure_meth, figure_kw)
+
+    return delayed_kwargs
+
 
 @utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
 @utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
