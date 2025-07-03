@@ -11,14 +11,18 @@ log_cli_level = "INFO"
 
 [project]
 name = "SIMPLE"
-version = "0.3.0"
-
-# Developed using this. Not tested with lower versions.
-#requires-python = ">= 3.9"
+version = "0.4.0"
+requires-python = ">= 3.9"
 dependencies = [
     "numpy",
     "scipy",
     "matplotlib",
     "h5py",
+    "pyyaml"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ipykernel",
     "nugridpy"]
 

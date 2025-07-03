@@ -44,6 +44,7 @@ nav:
         - simple.utils: api/utils.md
         - simple.ccsne: api/ccsne.md
     - About: about.md
+    - Changelog: changelog.md
     - License: license.md
 
 markdown_extensions:

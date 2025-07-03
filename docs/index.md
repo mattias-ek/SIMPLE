@@ -1,3 +1,3 @@
-# Stellar Interpretation for Meteoritic data and PLotting (for Everyone) - SIMPLE (Mattias Version)
+# Stellar Interpretation for Meteoritic data and PLotting (for Everyone) - SIMPLE
 
 This is a work in progress

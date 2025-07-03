@@ -35,9 +35,9 @@ def input_values():
 @pytest.fixture
 def collection(input_values):
     collection = simple.new_collection()
-    collection.new_model('IsoRef', 'mass', type='MASS', citation='',
+    collection.new_ref('IsoRef', 'mass', type='MASS', citation='',
                          data_values=input_values['isomass'], data_keys=input_values['stdkeys'], data_unit='Da')
-    collection.new_model('IsoRef', 'abu', type='ABU', citation='',
+    collection.new_ref('IsoRef', 'abu', type='ABU', citation='',
                          data_values=input_values['std_abu'], data_keys=input_values['stdkeys'], data_unit='mol')
     return collection
 
@@ -46,7 +46,8 @@ def model1(collection, input_values):
     model = collection.new_model('CCSNe', 'model1',
                                  refid_isomass='mass', refid_isoabu='abu',
                                  type='Test', dataset='Testing', citation = '',
-                                 mass='-1', masscoord=[1],
+                                 mass='-1', masscoord=np.array([1], dtype=np.float64),
+                                 masscoord_mass=np.array([10], dtype=np.float64),
                                  abundance_values=input_values['abu'], abundance_keys=input_values['abukeys'],
                                  abundance_unit='mol')
     return model
@@ -56,7 +57,8 @@ def model2(collection, input_values):
     model = collection.new_model('CCSNe', 'model2',
                                  refid_isomass='mass', refid_isoabu='abu',
                                  type='Test', dataset='Testing', citation = '',
-                                 mass='-1', masscoord=[1],
+                                 mass='-1', masscoord=np.array([1], dtype=np.float64),
+                                 masscoord_mass=np.array([10], dtype=np.float64),
                                  abundance_values=input_values['abu']*0.1, abundance_keys=input_values['stdkeys'],
                                  abundance_unit='mol')
     return model
@@ -73,7 +75,8 @@ def model3a(collection, input_values):
     model = collection.new_model('CCSNe', 'model3a',
                                  refid_isomass='mass', refid_isoabu='abu',
                                  type='Test', dataset='Testing', citation='',
-                                 mass='-1', masscoord=[1,2,3,4],
+                                 mass='-1', masscoord=np.array([1,2,3,4], dtype=np.float64),
+                                 masscoord_mass=np.array([10, 20, 30, 40], dtype=np.float64),
                                  abundance_values=abu, abundance_keys=input_values['abukeys'],
                                  abundance_unit='mol')
     return model
@@ -90,7 +93,8 @@ def model3b(collection, input_values):
     model = collection.new_model('CCSNe', 'model3b',
                                  refid_isomass='mass', refid_isoabu='abu',
                                  type='Test', dataset='Testing', citation='',
-                                 mass='-1', masscoord=[1,2,3,4],
+                                 mass='-1', masscoord=np.array([1,2,3,4], dtype=np.float64),
+                                 masscoord_mass=np.array([10, 20, 30, 40], dtype=np.float64),
                                  abundance_values=abu, abundance_keys=input_values['abukeys'],
                                  abundance_unit='mol')
     return model

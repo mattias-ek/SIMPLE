@@ -8,6 +8,10 @@ import simple.utils as utils
 import simple.norm as norm
 from simple.utils import NamedDict
 
+import uuid
+
+import copy
+
 __all__ = ['load_collection', 'load_models', 'new_collection']
 
 logger = logging.getLogger('SIMPLE.models')
@@ -24,15 +28,87 @@ class HDF5Dict(NamedDict):
         >>> nd.a
         array(1)
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__setattr__('_attr_type', {}, item=False)
+        super().__init__(*args, **kwargs)
+
     def __setitem__(self, name, value):
-        value = utils.asarray(value)
+        attr_type = type(value)
+
+        if attr_type == np.ndarray:
+            if value.ndim == 0:
+                self._attr_type[name] = 'ndarray0'
+            else:
+                self._attr_type[name] = 'ndarray'
+        elif attr_type == int:
+            self._attr_type[name] = 'int'
+        elif attr_type == float:
+            self._attr_type[name] = 'float'
+        elif attr_type == str:
+            self._attr_type[name] = 'str'
+        elif attr_type == list:
+            self._attr_type[name] = 'list'
+        elif attr_type == tuple:
+            self._attr_type[name] = 'tuple'
+        else:
+            raise TypeError(f'Unexpected type {type(value)}. Only float, int, str, list, tuple, ndarray are accepted.')
+
+        #value = utils.asarray(value)
         super().__setitem__(name, value)
 
-    def get(self, key, value, default=None):
-        if key in self:
-            return self[key]
-        else:
-            return utils.asarray(default)
+    @classmethod
+    def _load_attrs_from_group(cls, group):
+        attrs = cls()
+
+        for name, dataset in group.items():
+            if not isinstance(dataset, h5py.Dataset): continue
+            value = np.asarray(dataset)
+
+            if value.dtype.type is np.bytes_:
+                value = value.astype(np.str_)
+
+            try:
+                attr_type = dataset.attrs['attr_type']
+            except:
+                # TODO log message
+                pass
+            else:
+                if attr_type == 'int':
+                    value = int(value[0])
+                elif attr_type == 'float':
+                    value = float(value[0])
+                elif attr_type == 'str':
+                    value = str(value[0])
+                elif attr_type == 'list':
+                    value = value.tolist()
+                elif attr_type == 'tuple':
+                    value = tuple(value.tolist())
+                elif attr_type == 'ndarray0':
+                    value = value.reshape(())
+                elif attr_type == 'ndarray':
+                    pass
+                else:
+                    #TODO probably log here
+                    pass # presumably ndarray
+
+                attrs[name] = value
+
+        return attrs
+
+    def _save_attrs_to_group(self, group):
+        for name, value in self.items():
+            if name == '_attr_type': continue
+            attr_type = self._attr_type[name]
+            #group.attrs.create(f'_attr_type_{name}', attr_type)
+
+            value = np.atleast_1d(value)
+            if value.dtype.type is np.str_:
+                value = value.astype(np.bytes_)
+
+            dataset = group.create_dataset(name, data=value, compression='gzip', compression_opts=9, track_order=True)
+            dataset.attrs.create('attr_type', attr_type)
+
 
 ##############
 ### Models ###
@@ -99,13 +175,13 @@ class ModelCollection:
     The main interface for working with a collection of models.
     """
     def __repr__(self):
-        models = ", ".join([f'{k}: <{v.__class__.__name__}>' for k, v in self.models.items()])
-        refs = ", ".join([f'{k}: <{v.__class__.__name__}>' for k, v in self.refs.items()])
-        return f'{self.__class__.__name__}(models={{{models}}}, refs={{{refs}}})'
+        models = ", ".join([m.__repr__() for m in self.models])
+        refs = ", ".join([m.__repr__() for m in self.refs])
+        return f'{self.__class__.__name__}(models=[{models}], refs=[{refs}])'
 
     def _repr_markdown_(self):
-        models = "\n".join([f'- **[{i}]** ``{k}`` ({v.__class__.__name__})' for i, (k, v) in enumerate(self.models.items())])
-        refs = "\n".join([f'- ``{k}`` ({v.__class__.__name__})' for k, v in self.refs.items()])
+        models = "\n".join([f'- **[{i}]** ``{m.name}`` ({m.clsname})' for i, m in enumerate(self.models)])
+        refs = "\n".join([f'- ``{m.name}`` ({m.clsname})' for m in self.refs])
         return f"""
 Models in collection:
 
@@ -118,24 +194,47 @@ References in collection:
 """.strip()
 
     def __init__(self):
-        self.refs = {}
-        self.models = {}
+        self.refs = []
+        self.models = []
 
     def __iter__(self):
-        return self.models.values().__iter__()
+        return self.models.__iter__()
 
     def __len__(self):
         return len(self.models)
 
     def __getitem__(self, key):
         if type(key) is int:
-            return self.models[tuple(self.models.keys())[key]]
-        elif key in self.models:
             return self.models[key]
-        elif key in self.refs:
-            return self.refs[key]
-        else:
+
+        if type(key) is str:
+            for model in self.models:
+                if model.name == key:
+                    return model
+            for ref in self.refs:
+                if ref.name == key:
+                    return ref
+
             raise ValueError(f"No model or reference called '{key}' exists")
+
+        if key in self.models or key in self.refs:
+            return key
+
+        if type(key) is tuple:
+            new_collection = self.__class__()
+            for model in [self.__getitem__(k) for k in key]:
+                new_collection.add_model(model)
+
+            return new_collection
+
+        if type(key) is slice:
+            new_collection = self.__class__()
+            for model in self.models[key]:
+                new_collection.add_model(model)
+
+            return new_collection
+
+        raise TypeError(f'Unexpected type {type(key)}')
 
     ###################
     ### Load / Save ###
@@ -153,12 +252,14 @@ References in collection:
 
         t0 = datetime.datetime.now()
         with h5py.File(filename, 'w') as file:
-            ref_group = file.create_group('ref', track_order=True)
-            for name, ref in self.refs.items():
+            ref_group = file.create_group('refs', track_order=True)
+            for ref in self.refs:
+                print(f'saving ref: {ref.name}')
                 self._save_model(ref_group, ref)
 
             model_group = file.create_group('models', track_order=True)
-            for name, model in self.models.items():
+            for model in self.models:
+                print(f'saving model: {model.name}')
                 self._save_model(model_group, model)
 
         t = datetime.datetime.now() - t0
@@ -167,15 +268,7 @@ References in collection:
 
     def _save_model(self, parent_group, model):
         group = parent_group.create_group(model.name, track_order=True)
-        for name, value in model.hdf5_attrs.items():
-            v = utils.asarray(value, saving=True)
-
-            if v.ndim == 0:
-                group.attrs.create(name, v)
-            else:
-                # Track order has to be set to true or saving will fail as there are too many
-                # columns in CCSNe values
-                group.create_dataset(name, data = v, compression = 'gzip', compression_opts = 9, track_order=True)
+        model.hdf5_attrs._save_attrs_to_group(group)
 
     def load_file(self, filename, isolist=None, convert_unit=True, where=None, **where_kwargs):
         """
@@ -192,54 +285,47 @@ References in collection:
         logger.info(f'Loading file: {filename}')
         t0 = datetime.datetime.now()
         with h5py.File(filename, 'r') as efile:
+            for name, group in efile['refs'].items():
+                ref = self._load_ref(group, name)
+                self.add_ref(ref)
+
             for name, group in efile['models'].items():
-                model = self._load_model(efile, group, name, isolist, convert_unit, where, where_kwargs)
-                #self.models[name] = model
+                model = self._load_model(group, name, isolist, convert_unit, where, where_kwargs)
+                self.add_model(model)
 
         t = datetime.datetime.now() - t0
         logger.info(f'Time to load file: {t}')
 
-    def _load_model(self, file, group, model_name, isolist, convert_unit, where, where_kwargs):
-        attrs = {}
+    def _load_model(self, group, name, isolist, convert_unit, where, where_kwargs):
         if where is not None:
             eval = utils.simple_eval.parse_where(where)
 
         # Load attributes
-        for name, value in group.attrs.items():
-            attrs[name] = utils.asarray(value)
+        attrs = HDF5Dict._load_attrs_from_group(group)
 
         if 'clsname' not in attrs:
-            raise ValueError(f"Model '{attrs[name]}' has no clsname")
+            raise ValueError(f"Model '{name}' has no clsname")
 
         if where is None or eval.eval(attrs, where_kwargs):
-            logger.info(f'Loading model: {model_name} ({attrs["clsname"]})')
-            for name, value in group.items():
-                if not isinstance(value, h5py.Dataset): continue
-                attrs[name] = utils.asarray(value)
+            logger.info(f'Loading model: {name} ({attrs["clsname"]})')
 
-            model = self.new_model(name = model_name, **attrs)
+            model = self.new_model(name = name, **attrs)
             if isolist is not None:
                 model.select_isolist(isolist, convert_unit=convert_unit)
 
-            for attr in attrs:
-                if attr[:6] == 'refid_':
-                    self._load_ref(file, attrs[attr])
-
             return model
         else:
-            logger.info(f'Ignored model: {model_name} ({attrs["clsname"]})')
+            logger.info(f'Ignored model: {name} ({attrs["clsname"]})')
             return None
 
-    def _load_ref(self, file, refname):
-        if refname in self.refs:
-            return
+    def _load_ref(self, group, name):
+        attrs = HDF5Dict._load_attrs_from_group(group)
+        logger.info(f'Loading ref: {name} ({attrs["clsname"]})')
 
-        try:
-            group = file['ref'][refname]
-        except KeyError:
-            raise ValueError(f"Reference '{refname}' does not exist")
-        else:
-            self.refs[refname] = self._load_model(file, group, refname, None, True, None, None)
+        if 'clsname' not in attrs:
+            raise ValueError(f"Model '{attrs['name']}' has no clsname")
+
+        return self.new_ref(name = name, **attrs)
 
 
     ##############
@@ -251,8 +337,9 @@ References in collection:
 
         If ``attr`` is given then the value of that attribute from the named model is returned instead.
         """
-        if name in self.models:
-            model = self.models[name]
+        for model in self.models:
+            if model.name == name:
+                break
         else:
             raise ValueError(f"No model called '{name}' exists")
 
@@ -267,8 +354,9 @@ References in collection:
 
         If ``attr`` is given then the value of that attribute from the named model is returned instead.
         """
-        if name in self.refs:
-            ref = self.refs[name]
+        for ref in self.refs:
+            if ref.name == name:
+                break
         else:
             raise ValueError(f"No reference called '{name}' exists")
 
@@ -281,8 +369,6 @@ References in collection:
         """
         Create a new model and add it to the current collection.
 
-        **Note** if a model already exists called ``name`` it will be overwritten.
-
         Args:
             clsname (): The name of the model class to be created.
             name (): Name of the new model.
@@ -292,9 +378,58 @@ References in collection:
             The newly created model.
         """
         if clsname in AllModelClasses:
-            return AllModelClasses[clsname](self, name, **attrs)
+            model = AllModelClasses[clsname](name, reference_models_ = self.refs, **attrs)
+            return self.add_model(model)
         else:
             raise ValueError(f"No model class called '{clsname}' exists")
+
+    def new_ref(self, clsname, name, **attrs):
+        """
+        Create a new reference model and add it to the current collection.
+
+        Args:
+            clsname (): The name of the model class to be created.
+            name (): Name of the new model.
+            **attrs (): Attributes to be added to the new model.
+
+        Returns:
+            The newly created reference model.
+        """
+        if clsname in AllModelClasses:
+            ref = AllModelClasses[clsname](name, reference_models_=self.refs, **attrs)
+            return self.add_ref(ref)
+        else:
+            raise ValueError(f"No model class called '{clsname}' exists")
+
+    def add_model(self, model):
+        if not isinstance(model, ModelBase):
+            raise TypeError(f"``model`` must be a Model object, not {type(model)}")
+
+        if model in self.models:
+            return model
+
+        if True in [m.name == model.name for m in self.models]:
+            raise ValueError(f"A model with the name '{model.name}' already exists in this collection")
+        else:
+            self.models.append(model)
+
+            for k, v in model.normal_attrs.items():
+                if k[:4] == 'ref_' and isinstance(v, ModelBase):
+                    self.add_ref(v)
+            return model
+
+    def add_ref(self, ref):
+        if not isinstance(ref, ModelBase):
+            raise TypeError(f"``ref`` must be a Model object, not {type(ref)}")
+
+        if ref in self.refs:
+            return ref
+
+        if True in [m.name == ref.name for m in self.refs]:
+            raise ValueError(f"A reference model with the name '{ref.name}' already exists in this collection")
+        else:
+            self.refs.append(ref)
+            return ref
 
     def select_isolist(self, isolist=None):
         """
@@ -309,7 +444,7 @@ References in collection:
         Raises:
             NotImplementedError: Raised if this method has not been implemented for a model class.
         """
-        for model in self.models.values():
+        for model in self.models:
             model.select_isolist(isolist)
 
     def where(self, where, **where_kwargs):
@@ -333,21 +468,11 @@ References in collection:
             bool
 
         """
-        eval = utils.simple_eval.parse_where(where)
-        new_collection = self.__class__()
-        for model in self.models.values():
-            if eval.eval(model, where_kwargs):
-                model.copy_to(new_collection)
+        models = utils.models_where(self.models, where, **where_kwargs)
 
-        return new_collection
-
-    def copy(self):
-        """
-        Returns a new collection containing a shallow copy of all the models in the current collection.
-        """
         new_collection = self.__class__()
-        for model in self.models.values():
-            model.copy_to(new_collection)
+        for model in models:
+            new_collection.add_model(model)
 
         return new_collection
 
@@ -365,7 +490,7 @@ References in collection:
         Raises:
             NotImplementedError: Raised if the data to be normalised has not been specified for this model class.
         """
-        for model in self.models.values():
+        for model in self.models:
             model.internal_normalisation(normrat, isotopes=isotopes,
                                          enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
                                          convert_unit=convert_unit, attrname=attrname,
@@ -383,7 +508,7 @@ References in collection:
         Raises:
             NotImplementedError: Raised if the data to be normalised has not been specified for this model class.
         """
-        for model in self.models.values():
+        for model in self.models:
             model.standard_normalisation(normiso, enrichment_factor=enrichment_factor,
                                          relative_enrichment=relative_enrichment,
                                          convert_unit=convert_unit, attrname=attrname)
@@ -402,10 +527,10 @@ AllModelClasses = {}
 """
 A dictionary containing all the avaliable model classes. 
 
-When a new model class is created subclassing [``ModelTemplate``][simple.models.ModelTemplate] it is automatically
+When a new model class is created subclassing [``ModelBase``][simple.models.ModelBase] it is automatically
 added to this dictionary.
 """
-class ModelTemplate:
+class ModelBase:
     """
     This class can be subclassed to create new model classes.
 
@@ -428,30 +553,34 @@ class ModelTemplate:
     REPR_ATTRS = ['name']
     ABUNDANCE_KEYARRAY = None
     VALUES_KEYS_TO_ARRAY = True
-    ISREF = False
+
+    def __hash__(self):
+        return hash(self.__class__, self.name)
 
     def __init_subclass__(cls, **kwargs):
         # Called each time a new subclass is created
         # Registers the class so that it can be found upon loading
         super().__init_subclass__(**kwargs)
         logger.debug(f'registering class: {cls.__name__}')
-        if cls.__name__ != 'ModelTemplate':
+        if cls.__name__ != 'ModelBase':
             AllModelClasses[cls.__name__] = cls
 
     def __repr__(self):
-        attrs = ", ".join([f"{attr}={getattr(self, attr)}" for attr in self.REPR_ATTRS])
-        return f'{self.__class__.__name__}({attrs})'
+        return f'<{self.name} - {self.clsname}>'
+
+    def __str__(self):
+        return self.name
 
     def _repr_markdown_(self):
         all_attrs = ['*name*'] + [f"*{name}*" for name in self.hdf5_attrs] + [f"*{name}*" for name in self.normal_attrs]
         attrs = '\n'.join([f'**{attr.capitalize()}**: {getattr(self, attr)}\\' for attr in self.REPR_ATTRS])
         return f'{attrs}\n**Attributes**: {", ".join(all_attrs)}'
 
-    def __init__(self, collection, name, **hdf5_attrs):
-        super().__setattr__('collection', collection)
+    def __init__(self, name, reference_models_ = None, **hdf5_attrs):
         super().__setattr__('name', name)
         super().__setattr__('hdf5_attrs', HDF5Dict())
         super().__setattr__('normal_attrs', NamedDict())
+        super().__setattr__('_hash', hash(object()))
 
         for attr in self.REQUIRED_ATTRS:
             if attr not in hdf5_attrs:
@@ -476,11 +605,24 @@ class ModelTemplate:
                         k = self.hdf5_attrs[kattr]
                         self.setattr(aattr, utils.askeyarray(v, k), hdf5_compatible=False)
 
+        for key, value in self.hdf5_attrs.items():
+            if key[:6] == 'refid_':
+                id_name = key[6:]
+                if reference_models_ is None:
+                    raise ValueError(f"No reference models were supplied")
+                for ref in reference_models_:
+                    if ref.name == value:
+                        self.setattr(f'ref_{id_name}', ref, hdf5_compatible=False)
+                        break
+                else:
+                    raise ValueError(f"No model called '{value}' was found in the supplied reference models")
 
-        if self.ISREF:
-            self.collection.refs[self.name] = self
-        else:
-            self.collection.models[self.name] = self
+
+    def __hash__(self):
+        return self._hash
+
+    def __eq__(self, other):
+        return self is other
 
     def __getattr__(self, name):
         if name in self.hdf5_attrs:
@@ -529,44 +671,6 @@ class ModelTemplate:
             self.hdf5_attrs.__setitem__(name, value)
         else:
             self.normal_attrs.__setitem__(name, value)
-
-    def get_ref(self, name, attr=None):
-        """
-        Returns the reference model from the parent collection with the given name.
-
-        If ``attr`` is given then the value of that attribute from the named model is returned instead.
-        """
-        return self.collection.get_ref(name, attr)
-
-    def change_name(self, name):
-        """
-        Change the name of the current model  to ``name``.
-
-        **Note** if another model already exists with this name in the collection it will be replaced with this model.
-        """
-        self.collection.models.pop(self.name)
-        super().__setattr__('name', name)
-        self.collection.models[self.name] = self
-
-    def copy_to(self, collection):
-        """
-        Create a shallow copy of the current model in ``collection``.
-
-        Returns:
-            The new model
-        """
-        new_model = self.__class__(collection, self.name, **self.hdf5_attrs)
-
-        for k, v in self.hdf5_attrs.items():
-            # Make sure ref are in new models object
-            if k[:6] == 'refid_':
-                if type(v) is str and v not in collection.refs:
-                    collection.refs[v] = self.collection.refs[v]
-
-        for k, v in self.normal_attrs.items():
-            new_model.setattr(k, v, hdf5_compatible=False, overwrite=True)
-
-        return new_model
 
     def get_mask(self, mask, shape = None, **mask_attrs):
         """
@@ -618,7 +722,7 @@ class ModelTemplate:
             else:
                 shape = getattr(self, self.ABUNDANCE_KEYARRAY).shape
 
-        return utils.mask_eval.eval(mask_attrs, mask, shape, **mask_attrs)
+        return utils.mask_eval.eval(self, mask, shape, **mask_attrs)
 
     def convert_array(self, array, unit, desired_unit, *, attrname = ''):
         """
@@ -839,13 +943,10 @@ class ModelTemplate:
         abu, abu_unit = self.get_array(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
 
         # Isotope masses
-        ref_stdmass = self.get_ref(self.refid_isomass)
-        stdmass, stdmass_unit = ref_stdmass.get_array('data')
+        stdmass, stdmass_unit = self.ref_isomass.get_array('data')
 
         # The reference abundances. Typically, the initial values of the model
-        ref_stdabu = self.get_ref(self.refid_isoabu)
-        stdabu, stdabu_unit = ref_stdabu.get_array('data', 'mol' if convert_unit else None)
-
+        stdabu, stdabu_unit = self.ref_isoabu.get_array('data', 'mol' if convert_unit else None)
 
         result = norm.internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
                                              enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
@@ -873,8 +974,7 @@ class ModelTemplate:
 
         abu, abu_unit = self.get_array(self.ABUNDANCE_KEYARRAY, 'mol' if convert_unit else None)
 
-        ref_stdabu = self.get_ref(self.refid_isoabu)
-        stdabu, stdabu_unit = ref_stdabu.get_array('data', 'mol' if convert_unit else None)
+        stdabu, stdabu_unit = self.ref_isoabu.get_array('data', 'mol' if convert_unit else None)
 
         result = norm.standard_normalisation(abu, isotopes, normiso, stdabu,
                                              enrichment_factor=enrichment_factor, relative_enrichment=relative_enrichment,
@@ -884,11 +984,10 @@ class ModelTemplate:
         self.setattr(attrname, result, hdf5_compatible=False, overwrite=True)
         return result
 
-
 ##################
 ### Ref Values ###
 ##################
-class IsoRef(ModelTemplate):
+class IsoRef(ModelBase):
     """
     Model specifically for storing reference isotope values.
 

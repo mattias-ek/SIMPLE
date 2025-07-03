@@ -7,7 +7,11 @@ import logging
 
 logger = logging.getLogger('SIMPLE.ccsne')
 
-__all__ = ['plot_ccsne', 'mhist_ccsne', 'mcontour_ccsne']
+__all__ = ['plot_ccsne', 'rose_hist_ccsne',
+           'mhist_ccsne', 'add_weights_ccsne',
+           'ccsne_zones']
+
+ccsne_zones = ('Mrem', 'Ni', 'Si', 'O/Si', 'O/Ne', 'O/C', 'He/C', 'He/N', 'H')
 
 #############
 ### Utils ###
@@ -47,7 +51,7 @@ def calc_default_onion_structure(abundance, keys, masscoord):
     logging.info("m_cut: " + str(masscut))
     logging.info("massmax: " + str(massmax))
 
-    shells = 'H He/N He/C O/C O/Ne O/Si Si Ni'.split()
+    zones = 'H He/N He/C O/C O/Ne O/Si Si Ni'.split()
     boundaries = []
 
     # This code works for most but not all of the 18 models in the original release
@@ -113,14 +117,34 @@ def calc_default_onion_structure(abundance, keys, masscoord):
         logging.info("Lower boundary of the Ni layer: " + str(mass[ini]))
         boundaries.append(ini)
 
-    return utils.askeyarray(boundaries, shells, dtype=np.int64)
+    onion_lbounds =  utils.askeyarray(boundaries, zones, dtype=np.int64)
 
+    zone = np.full(masscoord.shape, 'Undefined')
+    keys = onion_lbounds.dtype.names
+    ubound = None
+    for key in keys:
+        lbound = int(onion_lbounds[key][0])
+        if lbound >= 0:
+            zone[slice(lbound, ubound)] = key
+            ubound = lbound
+
+        # Remnant is everything inside the lowermost shell.
+        zone[slice(None, ubound)] = 'Mrem'
+
+    return onion_lbounds, zone
+
+def fudge_masscord_mass(masscoord):
+    # Assumed the masscoord mass x is equal to the (x+1) - x. And that the first mass is euqal to the second.
+    logging.info('Fudging the masscoord mass from masscoord')
+    masscoord = np.asarray(masscoord)
+    masscoord = masscoord[1:] - masscoord[:1]
+    return np.append(masscoord, masscoord[-1])
 
 ##############
 ### Models ###
 ##############
 
-class CCSNe(models.ModelTemplate):
+class CCSNe(models.ModelBase):
     """
     Model specifically for CCSNe yields and their mass coordinates.
 
@@ -140,87 +164,18 @@ class CCSNe(models.ModelTemplate):
         refid_isomass (str): Name of the reference model containing the reference isotope masses
             used for normalisations. **Required at initialisation**
     """
-    REQUIRED_ATTRS = ['type', 'dataset', 'citation', 'mass', 'masscoord',
+    REQUIRED_ATTRS = ['type', 'dataset', 'citation', 'mass', 'masscoord', 'masscoord_mass',
                       'abundance_values', 'abundance_keys', 'abundance_unit',
                       'refid_isoabu', 'refid_isomass']
     REPR_ATTRS = ['name', 'type', 'dataset', 'mass']
     ABUNDANCE_KEYARRAY = 'abundance'
     masscoord_label = 'Mass Coordinate [solar masses]'
     masscoord_label_latex = 'Mass Coordinate [M${}_{\\odot}$]'
-
-    def get_mask(self, mask, shape = None, **mask_attrs):
-        """
-        Returns a selection mask for an array with ``shape``.
-
-        This function is used by plotting functions to plot only a sub selction of the data. The mask string
-        can an integer representing an index, a slice or a condition that generates a mask. Use ``&`` or ``|``
-        to combine multiple indexes and/or conditions.
-
-        Supplied attributes can be accesed by putting a dot infront of the name, e.g. ``.data > 1``. The available
-        operators for mask conditions are ``==``, ``!=``, ``>``, ``>=``, ``<``, ``<=``.
-
-        The result of the mask evaluation must be broadcastable with ``shape``. If it is not an all ``False`` mask is
-        returned.
-
-        Masks for the different onion layers are included as attributes.
-
-        **Note**
-        - It is not possible to mix ``&`` and ``|`` seperators. Doing so will raise an exception.
-        - Any text not precceded by a dot will be evaluated as text. Text on its own will always be evaluated
-        as ``False``.
-        - An empty string will be evaluated as ``True``
-
-
-        Args:
-            mask (): String or object that will be evaluated to create a mask.
-            shape (): Shape of the returned mask. If omitted the shape of the default abundance array is used.
-            **mask_attrs (): Attributes to be used during the evaluation.
-
-        Examples:
-            >>> a = np.array([0,1,2,3,4])
-            >>> model.get_mask('3', a.shape)
-            array([False, False, False,  True,  False])
-
-            >>> model.get_mask('1:3', a.shape)
-            array([False, True, True,  False,  False])
-
-            >>> model.get_mask('.data >= 1 & .data < 3', a.shape, data=a)
-            array([False, True, True,  False,  False])
-
-            >>> model.get_mask('.data >= 1 | .data > 3', a.shape, data=a)
-            rray([True, True, False,  False,  True])
-
-        Returns:
-            A boolean numpy array with ``shape``.
-        """
-        onion_lbounds = getattr(self, 'onion_lbounds', None)
-        shell_a = np.full(self.abundance.shape, 'undefined')
-        if onion_lbounds is not None:
-            shell_d = {}
-            keys = onion_lbounds.dtype.names
-            ubound = None
-            for key in keys:
-                lbound = int(onion_lbounds[key][0])
-                if lbound >= 0:
-                    i = slice(lbound, ubound)
-                    shell_d[key] = i
-                    shell_a[i] = key
-                    ubound = lbound
-                else:
-                    shell_d[key] = slice(0, 0)
-
-                # Remnant is everything inside the lowermost shell.
-                i = slice(None, ubound)
-                shell_d['Mrem'] = i
-                shell_a[i] = 'Mrem'
-
-            shell_d.update(mask_attrs)
-            mask_attrs = shell_d
-
-        return super().get_mask(mask, shape, shell = shell_a, **mask_attrs)
+    masscoord_mass_label = 'Coordinate Mass [solar masses]'
+    masscoord_mass_label_latex = 'Coordinate Mass [M${}_{\\odot}$]'
 
 def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
-    def load(emass, modelname, default_onion_structure=True):
+    def load(emass, modelname):
         pt_exp = mp.se(fol2mod, modelname, rewrite=True)
         cyc = pt_exp.se.cycles[-1]
         t9_cyc = pt_exp.se.get(cyc, 'temperature')
@@ -233,14 +188,16 @@ def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
         unit = 'mass'
         keys = utils.asisotopes(pt_exp.se.isotopes, allow_invalid=True)
 
+        masscoord_mass = fudge_masscord_mass(masscoord)
+
         data = dict(type='CCSNe', dataset=dataset, citation=citation,
                     refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
-                    mass=int(emass), masscoord=masscoord,
-                    abundance_values=abu, abundance_keys=keys,
+                    mass=int(emass), masscoord=np.asarray(masscoord),
+                    masscoord_mass = np.asarray(masscoord_mass),
+                    abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
-        if default_onion_structure:
-            data['onion_lbounds'] = calc_default_onion_structure(abu, keys, masscoord)
+        data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -261,7 +218,7 @@ def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
     return models
 
 def load_Pi16(fol2mod, ref_isoabu, ref_isomass):
-    def load(emass, modelname, default_onion_structure=True):
+    def load(emass, modelname):
         pt_exp = mp.se(fol2mod, modelname, rewrite=True)
         cyc = pt_exp.se.cycles[-1]
         t9_cyc = pt_exp.se.get(cyc, 'temperature')
@@ -274,15 +231,16 @@ def load_Pi16(fol2mod, ref_isoabu, ref_isomass):
         unit = 'mass'
         keys = utils.asisotopes(pt_exp.se.isotopes, allow_invalid=True)
 
+        masscoord_mass = fudge_masscord_mass(masscoord)
 
         data = dict(type='CCSNe', dataset=dataset, citation=citation,
                     refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
-                    mass=int(emass), masscoord=masscoord,
-                    abundance_values=abu, abundance_keys=keys,
+                    mass=int(emass), masscoord=np.asarray(masscoord),
+                    masscoord_mass=np.asarray(masscoord_mass),
+                    abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
-        if default_onion_structure:
-            data['onion_lbounds'] = calc_default_onion_structure(abu, keys, masscoord)
+        data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -352,14 +310,17 @@ def load_La22(data_dir, ref_isoabu, ref_isomass):
         abu = np.transpose([list(v) for v in y.values()])
         unit = 'mass'
 
+        masscoord_mass = fudge_masscord_mass(masscoord)
+
         data = dict(type='CCSNe', dataset=dataset, citation=citation,
                     refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
-                    mass=int(emass), masscoord=masscoord,
-                    abundance_values=abu, abundance_keys=keys,
+                    mass=int(emass), masscoord=np.asarray(masscoord),
+                    masscoord_mass=np.asarray(masscoord_mass),
+                    abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
         if default_onion_structure:
-            data['onion_lbounds'] = calc_default_onion_structure(abu, keys, masscoord)
+            data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -382,7 +343,7 @@ def load_La22(data_dir, ref_isoabu, ref_isomass):
     return models
 
 def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False):
-    def load(emass, file_sie, default_onion_structure=True):
+    def load(emass, file_sie):
         with h5py.File(data_dir + file_sie) as data_file:
             data = data_file["post-sn"]
 
@@ -402,14 +363,16 @@ def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False):
         abu = np.transpose([list(v) for v in results.values()])
         unit = 'mass'
 
+        masscoord_mass = fudge_masscord_mass(masscoord)
+
         data = dict(type='CCSNe', dataset=dataset, citation=citation,
                     refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
-                    mass=int(emass), masscoord=masscoord,
-                    abundance_values=abu, abundance_keys=keys,
+                    mass=int(emass), masscoord=np.asarray(masscoord),
+                    masscoord_mass=np.asarray(masscoord_mass),
+                    abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
-        if default_onion_structure:
-            data['onion_lbounds'] = calc_default_onion_structure(abu, keys, masscoord)
+        data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -430,7 +393,7 @@ def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False):
     return models
 
 def load_Ra02(data_dir, ref_isoabu, ref_isomass):
-    def load(emass, model_name, default_onion_structure=True):
+    def load(emass, model_name):
         filename = data_dir + model_name
         # print(filename)
         with open(filename, 'r') as f:
@@ -450,15 +413,17 @@ def load_Ra02(data_dir, ref_isoabu, ref_isomass):
             unit = 'mass'
 
             masscoord = np.array([float(ii.split()[1]) / 1.989e+33 for ii in data])
+            masscoord_mass = np.array([float(ii.split()[2]) / 1.989e+33 for ii in data])
+            #masscoord_mass = fudge_masscord_mass(masscoord)
 
             data = dict(type='CCSNe', dataset=dataset, citation=citation,
                         refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
-                        mass=int(emass), masscoord=masscoord,
-                        abundance_values=abu, abundance_keys=keys,
+                        mass=int(emass), masscoord=np.asarray(masscoord),
+                        masscoord_mass=np.asarray(masscoord_mass),
+                        abundance_values=np.asarray(abu), abundance_keys=keys,
                         abundance_unit=unit)
 
-            if default_onion_structure:
-                data['onion_lbounds'] = calc_default_onion_structure(abu, keys, masscoord)
+            data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
 
             models[f"{dataset}_m{emass}"] = data
             return data
@@ -468,18 +433,18 @@ def load_Ra02(data_dir, ref_isoabu, ref_isomass):
     models = {}
 
     # 15
-    load('15', 's15a28c.expl_yield')
+    load('15', 's15a28c.expl_comp')
 
     # 20
-    load('20', 's20a28n.expl_yield')
+    load('20', 's20a28n.expl_comp')
 
     # 25
-    load('25', 's25a28d.expl_yield')
+    load('25', 's25a28d.expl_comp')
 
     return models
 
 def load_LC18(data_dir, ref_isoabu, ref_isomass):
-    def load(emass, model_name, default_onion_structure=True):
+    def load(emass, model_name):
         filename = data_dir + model_name
         # print(filename)
         with open(filename, 'r') as f:
@@ -508,14 +473,16 @@ def load_LC18(data_dir, ref_isoabu, ref_isomass):
             abu = np.asarray([row.split()[4:-skip_heavy_] for row in data], dtype=np.float64)
             unit = 'mass'
 
-            data = dict(type='CCSNe', dataset=dataset, citation=citation,
-                                                 refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
-                                                 mass=int(emass), masscoord=masscoord,
-                                                 abundance_values=abu, abundance_keys=keys,
-                                                 abundance_unit=unit)
+            masscoord_mass = fudge_masscord_mass(masscoord)
 
-            if default_onion_structure:
-                data['onion_lbounds'] = calc_default_onion_structure(abu, keys, masscoord)
+            data = dict(type='CCSNe', dataset=dataset, citation=citation,
+                        refid_isoabu=ref_isoabu, refid_isomass=ref_isomass,
+                        mass=int(emass), masscoord=np.asarray(masscoord),
+                        masscoord_mass=np.asarray(masscoord_mass),
+                        abundance_values=np.asarray(abu), abundance_keys=keys,
+                        abundance_unit=unit)
+
+            data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
 
             models[f"{dataset}_m{emass}"] = data
             return data
@@ -539,40 +506,7 @@ def load_LC18(data_dir, ref_isoabu, ref_isomass):
 ################
 ### Plotting ###
 ################
-def get_onion_layer_mask(model, layer):
-    # Returns a mask that can be used to select only data from a certain layer.
-    # If there is no onion structure then the mask will not select any data.
-    mask = np.full(model.masscoord.size, False, dtype=np.bool)
-
-    lower_bounds = getattr(model, 'onion_lbounds', None)
-    if lower_bounds is None:
-        logger.error('No onion structure defined for this model')
-        return mask
-
-    def check(desired_layer, current_layer, lbound, ubound):
-        if lbound>0:
-            if desired_layer.lower() == current_layer:
-                mask[lbound:ubound] = True
-            return lbound
-        else:
-            return ubound
-
-    layers = layer.split(',')
-    for desired_layer in layers:
-        ubound = len(mask.size)
-        ubound = check(desired_layer, 'h', lower_bounds['H'][0], ubound)
-        ubound = check(desired_layer, 'he/n', lower_bounds['He/N'][0], ubound)
-        ubound = check(desired_layer, 'he/c', lower_bounds['He/C'][0], ubound)
-        ubound = check(desired_layer, 'o/c', lower_bounds['O/C'][0], ubound)
-        ubound = check(desired_layer, 'o/ne', lower_bounds['O/Ne'][0], ubound)
-        ubound = check(desired_layer, 'o/si', lower_bounds['O/Si'][0], ubound)
-        ubound = check(desired_layer, 'si', lower_bounds['Si'][0], ubound)
-        ubound = check(desired_layer, 'ni', lower_bounds['Ni'][0], ubound)
-
-    return mask
-
 # TODO dont plot if smaller than x
-# TODO just create a onionshell attr.
 @utils.set_default_kwargs(
     # Default settings for line, text and fill
     ax_kw_title_pad = 20,
@@ -587,8 +521,8 @@ def get_onion_layer_mask(model, layer):
    OC_fill_show=False,
    OSi_fill_show=False,
    Ni_fill_show=False, )
-def plot_onion_structure(model, *, ax=None, update_ax=True, update_fig=True, **kwargs):
-    if not isinstance(model, models.ModelTemplate):
+def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwargs=None):
+    if not isinstance(model, models.ModelBase):
         raise ValueError(f'model must be an Model object not {type(model)}')
 
     ax = plotting.get_axes(ax)
@@ -599,7 +533,7 @@ def plot_onion_structure(model, *, ax=None, update_ax=True, update_fig=True, **k
 
     lower_bounds = getattr(model, 'onion_lbounds', None)
     if lower_bounds is None:
-        logger.error('No onion structure defined for this model')
+        logger.error('No zonal structure defined for this model')
         return
 
     masscoord = model.masscoord
@@ -612,24 +546,24 @@ def plot_onion_structure(model, *, ax=None, update_ax=True, update_fig=True, **k
     lbound_Si = masscoord[lower_bounds['Si'][0]]
     lbound_Ni = masscoord[lower_bounds['Ni'][0]]
 
-    default_line = utils.extract_kwargs(kwargs, prefix='default_line')
-    default_text = utils.extract_kwargs(kwargs, prefix='default_text')
-    default_fill = utils.extract_kwargs(kwargs, prefix='default_fill')
+    default_line = kwargs.extract(prefix='default_line')
+    default_text = kwargs.extract(prefix='default_text')
+    default_fill = kwargs.extract( prefix='default_fill')
 
     def add_line(name, x):
-        line_kwargs = utils.extract_kwargs(kwargs, prefix='{name}_line', **default_line)
+        line_kwargs = kwargs.extract(prefix='{name}_line', **default_line)
         if line_kwargs.pop('show', True):
             ax.axvline(x, **line_kwargs)
 
     def add_text(name, text, x):
-        text_kwargs = utils.extract_kwargs(kwargs, prefix=f'{name}_text', **default_text)
+        text_kwargs = kwargs.extract(prefix=f'{name}_text', **default_text)
         if text_kwargs.pop('show', True):
             # Using annotate instead of text as we can then specify x in absolute, and y coordinates relative, in space.
             ax.annotate(text_kwargs.pop('xytext', text), (x, text_kwargs.pop('y', 1.01)),
                         **text_kwargs)
 
     def add_fill(name, x):
-        fill_kwargs = utils.extract_kwargs(kwargs, prefix=f'{name}_fill', **default_fill)
+        fill_kwargs = kwargs.extract(prefix=f'{name}_fill', **default_fill)
         if fill_kwargs.pop('show', True):
             ax.fill_between(x, fill_kwargs.pop('y1', [ylim[0], ylim[0]]),
                              fill_kwargs.pop('y2', [ylim[1], ylim[1]]),
@@ -697,79 +631,113 @@ def plot_onion_structure(model, *, ax=None, update_ax=True, update_fig=True, **k
 @utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
 @utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None)
 @utils.set_default_kwargs(inherits=plotting.plot,
-    linestyle = True, color=True, marker=False,
-    fig_size= (10,5))
+                                  linestyle=True, marker=False, fig_size=(10,5),
+                                  xhist=False)
 def plot_ccsne(models, ykey, *,
          semilog = False, onion=None,
-         **kwargs):
+         kwargs=None):
     """
     Plot for CCSNe models. Plots the mass coordinates on the x-axis.
     """
-    # Wrapper that adds the option to plot the onion structure of CCSNe models
-    onion_kwargs = utils.extract_kwargs(kwargs, prefix='onion')
-
-    # Do this here since we need to know the number of models for the onion shell
-    where = kwargs.pop('where', None)
-    where_kwargs = kwargs.pop('where_kwargs', {})
-    where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
-    models = plotting.get_models(models, where=where, where_kwargs=where_kwargs)
-
+    onion_kwargs = kwargs.extract(prefix=['onion', 'zone'])
     if semilog: kwargs.setdefault('ax_yscale', 'log')
+    kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
 
-    ax = plotting.plot(models, '.masscoord', ykey, xunit=None, **kwargs)
+    modeldata, axis_labels = plotting.plot_get_data(models, '.masscoord', ykey,
+                                           xunit=None, kwargs=kwargs)
+    ax = plotting.plot_draw(modeldata, axis_labels, kwargs=kwargs)
 
-    if onion or (onion is None and len(models) == 1):
-        if len(models) > 1:
+    if onion or (onion is None and len(modeldata) == 1):
+        if len(modeldata) > 1:
             raise ValueError(f"Can only plot onion structure for a single model")
         else:
-            plot_onion_structure(models[0], ax=ax, **onion_kwargs)
+            plot_zonal_structure(models[0], ax=ax, **onion_kwargs)
 
     return ax
 
-def _mweights(models, modeldata_w):
+@utils.set_default_kwargs(inherits=plotting.add_weights)
+def add_weights_ccsne(modeldata, axis, weights = 1, kwargs=None):
+    """
+    Add weights to the specified axis of each CCSNe datapoint in the modeldata dictionary.
+
+    Before normalisation, if applied, the weight of each datapoint will be multiplied by the
+    mass of each mass coordinate.
+
+    This function appends a new array of weights (under `axisname`) to each datapoint
+    in `modeldata`. The weights can be a constant or a string referring to data to be indvidually
+    retrieved from each model. Optionally, the weights can be summed,
+    normalized, and masked for missing data.
+
+    The 'mask' and 'mask_na' arguments should be the same as those used to generate 'modeldata' to ensure
+    conistent results.
+
+    Add weights to CCSNe datapoints by combining standard weighting with mass coordinate scaling.
+
+    This function extends `add_weights` by additionally multiplying the resulting weights
+    by the mass associated with each mass coordinate in CCSNe models.
+
+    The initial weighting follows the same logic as `add_weights`, accepting either a scalar
+    or a string referring to model attributes. The 'mask' and 'mask_na' arguments should
+    match those used when creating `modeldata` to ensure consistency.
+
+    Args:
+        modeldata (dict): The data dictionary as returned by `get_data`, structured as
+            {model_name: list of datapoints}. Each datapoint is a dictionary.
+        axis (str): The axis key to which the weights apply (e.g., 'x', 'y').
+        weights (int, float, or str): The weight specification. Can be:
+            - A scalar to apply uniformly across all datapoints,
+            - A string key to retrieve values from each model individually.
+        **kwargs: Any valid keyword arguments for the `add_weights` function.
+
+    Returns:
+        dict: The modified `modeldata`, with weight arrays added to each datapoint.
+    """
+
+    mask = kwargs.get('mask', None)
+    mask_na = kwargs.get('mask_na', True)
+    axisname = kwargs.get('axisname', 'w')
+
+    norm_weights = kwargs.pop('norm_weights', True) # Defaults to the value of add_weights
+    kwargs['norm_weights'] = False
+    modeldata = plotting.add_weights(modeldata, axis, weights=weights, **kwargs)
+
     logger.info('Multiplying all weights by the mass coordinate mass')
-    modeldata_m, axis_labels_m = plotting.get_data(models, {'m': '.masscoord'},
-                                                       default_value=np.nan,
-                                                       latex_labels=False)
 
-    for model_name, model_data_w in modeldata_w.items():
-        masscoord_mass = modeldata_m[model_name][0]['m']
+    for model, datapoints in modeldata.items():
+        masscoord_mass = model.masscoord_mass
+        if mask:
+            imask = model.get_mask(mask)
 
-        # Temporary as the mass coord mass doesnt exist yet
-        masscoord_mass = masscoord_mass[1:] - masscoord_mass[:1]
-        masscoord_mass = np.insert(masscoord_mass, 0, masscoord_mass[0])
-        for ki, data_w in enumerate(model_data_w):
-            data_w['w'] *= masscoord_mass
+        for ki, datapoint in enumerate(datapoints):
+            if mask and not mask_na:
+                datapoint[axisname] = datapoint[axisname] * masscoord_mass[imask]
+            else:
+                datapoint[axisname] = datapoint[axisname] * masscoord_mass
 
-    return modeldata_w
+    if norm_weights:
+        plotting._norm_weights(modeldata, axisname)
 
-@utils.add_shortcut('abundance', default_attrname='abundance', unit='mass', xunit=None)
-@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None, xunit=None)
-@utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None, xunit=None)
-@utils.set_default_kwargs(inherits=plotting.mhist,
-    weights_default_attrname='abundance', weights_unit='mass',
-)
-def mhist_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
+    return modeldata
+
+
+@utils.set_default_kwargs(inherits=plotting.hist,
+                                  weights_default_attrname='abundance', weights_unit='mass',
+                                  )
+def hist_ccsne(models, key, weights=1, **kwargs):
+    kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
+    return plotting.hist(models, key, weights=weights, kwargs=None)
+
+
+@utils.set_default_kwargs(inherits=plotting.rose_hist,
+                                  weights_default_attrname='abundance', weights_unit='mass',
+                                  )
+def rose_hist_ccsne(models, xkey, ykey, r=None, weights=1, kwargs=None):
     """
     Histogram plot on a rose diagram for CCNSe models.
     """
-    ax, models, r, modeldata_xy, modeldata_w, kwargs = plotting._mprep(models, xkey, ykey, r, weights, **kwargs)
-    modeldata_w = _mweights(models, modeldata_w)
-    return plotting._mhist(ax, r, modeldata_xy, modeldata_w, **kwargs)
+    kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
+    return plotting.rose_hist(models, xkey, ykey, r=r, weights=weights, **kwargs)
 
-@utils.add_shortcut('abundance', default_attrname='abundance', unit='mass', xunit=None)
-@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None, xunit=None)
-@utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None, xunit=None)
-@utils.set_default_kwargs(inherits=plotting.mcontour,
-    weights_default_attrname='abundance', weights_unit='mass',
-)
-def mcontour_ccsne(models, xkey, ykey, r=None, weights=1, **kwargs):
-    """
-    Contour plot on a rose diagram for CCNSe models.
-    """
-    ax, models, r, modeldata_xy, modeldata_w, kwargs = plotting._mprep(models, xkey, ykey, r, weights, **kwargs)
-    modeldata_w = _mweights(models, modeldata_w)
-    return plotting._mcontour(ax, r, modeldata_xy, modeldata_w, **kwargs)
 
 ########################
 ### Deprecated stuff ###
@@ -785,3 +753,9 @@ def plot_intnorm(*args, **kwargs):
 @utils.deprecation_warning('``ccsne.plot_simplenorm`` has been deprecated: Use ``plot_ccsne.stdnorm`` instead')
 def plot_simplenorm(*args, **kwargs):
     return plot_ccsne.stdnorm(*args, **kwargs)
+
+@utils.deprecation_warning('``ccsne.mhist_ccsne`` has been deprecated: Use ``rose_hist_ccsne`` instead')
+def mhist_ccsne(*args, **kwargs):
+    kwargs.setdefault('rose_colorbar_show', True)
+    kwargs.setdefault('cmap', True)
+    return rose_hist_ccsne(*args, **kwargs)

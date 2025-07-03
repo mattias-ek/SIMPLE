@@ -3,7 +3,7 @@ import re
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.axes import Axes
-import functools
+import functools, itertools
 from collections.abc import Sequence
 
 import numpy as np
@@ -16,9 +16,11 @@ import logging
 logger = logging.getLogger('SIMPLE.plot')
 
 __all__ = ['create_rose_plot',
-           'get_data', 'plot', 'plotm', 'mhist', 'mcontour',
+           'get_data', 'add_weights',
+           'plot', 'slope', 'hist',
+           'rose_hist',
             'create_legend', 'update_axes',
-           'plot_intnorm', 'plot_simplenorm']
+           'plot_intnorm', 'plot_simplenorm', 'mhist',]
 
 
 # colours appropriate for colour blindness
@@ -68,20 +70,24 @@ def get_models(models, where=None, **where_kwargs):
     """
     Return a selection of models.
 
+    If *models* is a ModelCollection a new ModelCollection will be returned. Otherwise a list of Models will
+    be returned.
+
     Args:
-        models (ModelCollection): A collection of models.
+        models (): A collection of models or a list/tuple of models.
         where (str): Only models fitting this criteria will be selected. If not given all models are selected.
         **where_kwargs (): Keyword arguments to go with the ``where`` string.
-
-    Returns:
-        ModelCollection: The selected models
     """
-    if not isinstance(models, simple.models.ModelCollection):
-        raise TypeError(f'models must be a ModelCollection object not {type(models)}.')
+    if isinstance(models, simple.models.ModelCollection):
+        pass
+    elif isinstance(models, (list, tuple)) and False not in [isinstance(m, simple.models.ModelBase) for m in models]:
+        pass
+    else:
+        raise TypeError(f'models must be a ModelCollection object or a list/tuple of Models objects - not {type(models)}.')
 
     # select models
     if where is not None:
-        models = models.where(where, **where_kwargs)
+        models = utils.models_where(models, where, **where_kwargs)
 
     return models
 
@@ -207,7 +213,7 @@ def get_cmap(name):
     except:
         return mpl.cm.get_cmap(name)
 def create_rose_plot(ax=None, *, vmin= None, vmax=None, log = False, cmap='turbo',
-                     colorbar_show=True, colorbar_label=None, colorbar_fontsize=None,
+                     colorbar_show=False, colorbar_label=None, colorbar_fontsize=None,
                      xscale=1, yscale=1,
                      segment = None, rres=None,
                      **fig_kw):
@@ -318,12 +324,14 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         super().clear()
 
         self._last_hist_r = 0
+        self._bar_color_cycle = itertools.cycle(plt.rcParams['axes.prop_cycle'].by_key()['color'])
 
         # Grid stuff
         self.grid(True, axis='y', which='minor')
         self.grid(True, axis='y', which='major', color='black')
-        self.grid(True, axis='x', which='major')
         self.grid(False, axis='x', which='minor')
+        self.grid(True, axis='x', which='major')
+
 
         self.set_rlim(rmin=0)
         self.set_rticks([], minor=True)
@@ -473,6 +481,16 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
 
         self.fill(theta, r, **kwargs)
 
+    def _rline(self, theta1, theta2, r):
+        theta1, theta2, r = as0darray(theta1, theta2, r)
+
+        if theta2 < theta1: theta1 -= np.pi * 2
+        diff = (theta2 - theta1) / (np.pi * 2)
+
+        nr = int(np.max([1, diff * self._rres * r])) + 1
+        return np.linspace(theta1, theta2, nr), np.full(nr, r)
+
+
     #####################
     ### Point methods ###
     #####################
@@ -607,7 +625,8 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             kwargs['color'] = line.get_color()
             self._mline(m=(x * -1, y * -1), r=(rmin, rmax), merr=merr,
                         ecolor=ecolor, elinestyle=elinestyle, elinewidth=elinewidth,
-                        ezorder=ezorder, ealpha=ealpha, axline=axline, antipodal=False, **kwargs)
+                        ezorder=ezorder, ealpha=ealpha, efill=efill, eline=eline, axline=axline,
+                        antipodal=False, **kwargs)
 
     def mline(self, m, r=1, merr=None, antipodal=None, *, eline=True, efill=False,
               ecolor=None, elinestyle=":", elinewidth=None, ezorder=None, ealpha=0.1,
@@ -695,7 +714,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         """
         return self.axhline(r, tmin, tmax, **kwargs)
 
-    def rlabel(self, text, r, deg=0, rotation = None, **kwargs):
+    def rtext(self, text, r, deg=0, rotation = None, **kwargs):
         deg = deg % 360
 
         if rotation is None:
@@ -755,36 +774,11 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
 
         return bin_weights, bin_edges, bin_heights
 
-    def mcontour(self, m, r=None, weights=1, rwidth=0.9, rscale=True,
-                 rescale=True, antipodal=None, update_rticks=True, minor_rticks=2,
-                 bins=72, label=None, bar_outline=True,
-                 **kwargs):
-        if r is None:
-            r = self._last_hist_r
-            if r == 0: r = 1
-        self._last_hist_r = r
 
-        bin_weights, bin_edges, bin_heights = self._mbins(m, r, weights, rwidth, rscale, rescale, antipodal, bins,
-                                                          update_rticks, minor_rticks)
-
-        if bar_outline:
-            theta_, r_ = [], []
-            for i in range(bin_weights.size):
-                theta_ += [bin_edges[i], bin_edges[i + 1]]
-                r_ += [r + bin_heights[i], r + bin_heights[i]]
-            theta_.append(theta_[0])
-            r_.append(r_[0])
-        else:
-            theta_ = [(bin_edges[i] + bin_edges[i + 1]) / 2 for i in range(bin_weights.size)]
-            r_ = [r + bin_heights[i] for i in range(bin_weights.size)]
-            theta_.append(theta_[0])
-            r_.append(r_[0])
-
-        self.axes.plot(theta_, r_, label=label, **kwargs)
 
     def mhist(self, m, r=None, weights=1, rwidth=0.9, rscale=True,
               rescale=True, antipodal=None, update_rticks=True, minor_rticks=2,
-              bins=72, label=None, **kwargs):
+              bins=72, rtext = None, fill = True, outline=None, cmap = False, **kwargs):
         """
         Create a histogram of the given slopes.
 
@@ -802,31 +796,81 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             antipodal (): Whether the antipodal data points will be included in the histogram. By default,
             ``antipodal=True`` when ``m`` is a slope and ``antipodal=False`` when ``m`` is *x,y* coordinates.
             bins (): The number of even sized bin in the histogram.
-            label (): A label for the histogram.
-            label_pos (): The position of the label in the histogram. In degrees.
-            label_roffset (): The offset from ``r`` where the label will be shown. By default, ``rwidth/2``.
-            label_kwargs (): A dictionary with additional keyword arguments passed to matplotlibs
-                [annotate](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Annotate.html) method which is
-                used to draw the label.
+            rtext (): A text label for the histogram in the plot. Created using the ``rtext`` method. Addtional keywords
+                arguments can be passed using the prefix ``rtext_``.
+
         """
+        kwargs = utils.KwargDict(kwargs)
         if r is None:
             r = self._last_hist_r + 1
         self._last_hist_r = r
 
-        rlabel_kwargs = utils.extract_kwargs(kwargs, prefix='rlabel')
+        if outline is None:
+            if fill and not cmap:
+                outline=False
+            else:
+                outline=True
+
+        color = kwargs.pop('color', None)
+        if color is None:
+            color = next(self._bar_color_cycle)
+
+        rtext_kwargs = kwargs.extract(prefix='rtext')
+
+        zorder= kwargs.pop('zorder', 1)
+        fill_kwargs = kwargs.extract(prefix='fill', linestyle='', zorder=zorder)
+        outline_kwargs = ukwargs.extract(prefix='outline',
+                                         color=color,
+                                         linestyle=kwargs.pop('linestyle', '-'),
+                                         linewidth=kwargs.pop('linewidth', 1),
+                                         zorder=zorder+0.001)
+        baseline_kwargs = kwargs.extract(prefix='baseline', **outline_kwargs)
 
         bin_weights, bin_edges, bin_heights = self._mbins(m, r, weights, rwidth, rscale, rescale, antipodal, bins,
                                                           update_rticks, minor_rticks)
+        label = kwargs.pop('label', None)
+        if (fill and not cmap) or outline:
+            label_fill_kwargs = fill_kwargs.copy()
+            if outline:
+                label_fill_kwargs['linestyle'] = outline_kwargs['linestyle']
+                label_fill_kwargs['linewidth'] = outline_kwargs['linewidth']
+                label_fill_kwargs['edgecolor'] = outline_kwargs['color']
+            if (fill and not cmap):
+                label_fill_kwargs['fill'] = True
+            else:
+                label_fill_kwargs['fill'] = False
 
-        bin_colors = np.array([self._cmap(self._norm(bw)) for bw in bin_weights])
+            self.fill([np.nan, np.nan], facecolor=color, label = label, **label_fill_kwargs)
+        elif (fill and cmap) and rtext is None:
+            rtext = label
 
-        for i in range(bin_weights.size):
-            self._rfill(bin_edges[i], bin_edges[i + 1], r, r + bin_heights[i],
-                        alpha=1, facecolor=bin_colors[i])
+        if fill:
+            for i in range(bin_weights.size):
+                if cmap:
+                    bin_color = self._cmap(self._norm(bin_weights[i]))
+                else:
+                    bin_color = color
 
-        if label:
-            self.rlabel(label, r+rwidth/2, **rlabel_kwargs)
+                self._rfill(bin_edges[i], bin_edges[i + 1], r, r + bin_heights[i],
+                            color=bin_color, **fill_kwargs)
 
+
+        if outline:
+            theta_, r_ = np.array([]), np.array([])
+            for i in range(bin_weights.size):
+                tr = self._rline(bin_edges[i], bin_edges[i + 1], r + bin_heights[i])
+                theta_, r_ = np.append(theta_, tr[0]), np.append(r_, tr[1])
+            theta_, r_ = np.append(theta_, [theta_[0]]), np.append(r_, [r_[0]])
+            self.axes.plot(theta_, r_, **outline_kwargs)
+
+            theta_, r_ = self._rline(bin_edges[0], bin_edges[-1], r)
+            self.axes.plot(theta_, r_, **baseline_kwargs)
+
+        #self.axrline(r, 0, np.pi*2, color='black', linewidth = 0.2)
+
+        if rtext is not None:
+            rtext_kwargs.setdefault('r', r + rwidth / 2)
+            self.rtext(rtext, **rtext_kwargs)
 
 mpl.projections.register_projection(RoseAxes)
 
@@ -840,7 +884,7 @@ def get_data(models, axis_names, *, where=None, latex_labels = True,
              model_in_label=None, unit_in_label=None, attrname_in_label=None, axis_name_in_label=None,
              label = True, prefix_label = None, suffix_label = None,
              mask = None, mask_na = True,
-             _kwargs = None, **kwargs):
+             kwargs = None):
     """
     Get one or more datasets from a group of models together with suitable labels.
 
@@ -959,12 +1003,7 @@ def get_data(models, axis_names, *, where=None, latex_labels = True,
 
     """
 
-    if _kwargs and kwargs:
-        raise ValueError('Only one of `kwargs` or `kwargs_` can be specified.')
-    else:
-        kwargs = _kwargs or kwargs
-
-    where_kwargs = utils.extract_kwargs(kwargs, prefix='where')
+    where_kwargs = kwargs.extract(prefix='where')
     models = get_models(models, where=where, where_kwargs=where_kwargs)
 
     if type(axis_names) is dict:
@@ -1343,6 +1382,7 @@ def get_data(models, axis_names, *, where=None, latex_labels = True,
         else:
             result_axis_label[axis_name_args[ai]] = axis_label_arg or None
 
+    has_labels = False
     for mi in range(lenmodels):
         results = []
         for ki in range(lenkeys):
@@ -1403,13 +1443,122 @@ def get_data(models, axis_names, *, where=None, latex_labels = True,
                 results[-1]['label'] = label.strip() or None
             else:
                 results[-1]['label'] = label_arg or None
+            if results[-1]['label']:
+                has_labels = True
 
-        result_data[models[mi].name] = tuple(results)
+        result_data[models[mi]] = tuple(results)
+
+    if has_labels and kwargs.get('legend', False) is None:
+        kwargs['legend'] = True
 
     return result_data, result_axis_label
 
 @utils.set_default_kwargs()
-def _make_table(models, axis_names, **kwargs):
+def add_weights(modeldata, axis, weights=1, *,
+                sum_weights=True, norm_weights=True,
+                default_attrname=None, unit=None, default_value=0,
+                mask=None, mask_na=True, axisname='w'):
+    """
+    Add weights to the specified axis of each datapoint in the modeldata dictionary.
+
+    This function appends a new array of weights (under `axisname`) to each datapoint
+    in `modeldata`. The weights can be a constant or a string referring to data to be indvidually
+    retrieved from each model. Optionally, the weights can be summed,
+    normalized, and masked for missing data.
+
+    The 'mask' and 'mask_na' arguments should be the same as those used to generate 'modeldata' to ensure
+    conistent results.
+
+    Args:
+        modeldata (dict): The data dictionary returned from `get_data`. It should be a
+            dict of models, each containing a list of datapoint dictionaries.
+        axis (str): The axis in the datapoints that the weights correspond to (e.g., 'x', 'y').
+        weights (int, float, str): The weights to add. Can be:
+            - A scalar to apply uniformly,
+            - A string key that will be used to retrieve data from each model individually.
+        sum_weights (bool): If True and `weights` is a string consisting of multiple keys, the values for the different
+            keys are summed together and used for each datapoint for a given model. Default is True.
+        norm_weights (bool): If True, normalise weights along the specified axis. Default is True.
+        default_attrname (str or None): Attribute name to use when fetching weights if not included
+            in labels. Optional.
+        unit (str or None): Unit to assign to the fetched weight values. Optional.
+        default_value (float): Default value to assign if weights are missing. Default is 0.
+        mask (str or None): Optional mask to apply to the data when computing or assigning weights.
+        mask_na (bool): If True, mask values will be replaced with NaNs. If False, masked values are omitted.
+        axisname (str): The name under which the weight data will be stored in each datapoint. Default is 'w'.
+
+    Returns:
+        dict: The modified `modeldata`, with weight arrays added to each datapoint.
+
+    Raises:
+        ValueError: If the number of weight arrays does not match the number of datapoints
+            and they cannot be broadcast.
+    """
+
+    # Remove any previous weights
+    for model in modeldata:
+        for dp in modeldata[model]:
+            dp.pop(axisname, None)
+
+    models = list(modeldata.keys())
+    if type(weights) is str:
+        modeldata_w, axis_labels_w = get_data(models, {'w': weights},
+                                              mask=mask, mask_na=mask_na,
+                                              default_attrname=default_attrname, unit=unit,
+                                              default_value=default_value,
+                                              attrname_in_label=True, model_in_label=False, axis_name_in_label=False,
+                                              latex_labels=False)
+
+        if sum_weights:
+            for model, datapoints_w in modeldata_w.items():
+                if len(datapoints_w) > 1:
+                    labels = [dw.get('label', 'Missing label') for dw in datapoints_w]
+                    logger.info(
+                        f'{model}: Calculating weights by adding together: {axis_labels_w["w"]} <w: {", ".join(labels)}>')
+                    modeldata_w[model] = [{axisname: functools.reduce(np.add, [dw['w'] for dw in datapoints_w])}]
+
+    else:
+        modeldata_w = {}
+        for model in models:
+            datapoints_xy = modeldata[model]
+            if mask:
+                m = model.get_mask(mask)
+                if mask_na:
+                    modeldata_w[model] = [{axisname: np.full(m.shape, weights, dtype=np.float64)}]
+                    modeldata_w[model][0][axisname][np.logical_not(m)] = np.nan
+                else:
+                    modeldata_w[model] = [{axisname: np.full(np.count_nonzero(m), weights, dtype=np.float64)}]
+            else:
+                modeldata_w[model] = [{axisname: np.full_like(dp[axis], weights, dtype=np.float64)} for dp in datapoints_xy]
+
+    for model, datapoints in modeldata.items():
+        datapoints_w = modeldata_w[model]
+
+        if len(datapoints_w) == 1 and len(datapoints) > 1:
+            for datapoint in datapoints:
+                datapoint[axisname] = datapoints_w[0][axisname].copy()
+        elif len(datapoints_w) == len(datapoints):
+            for i, datapoint in enumerate(datapoints):
+                datapoint[axisname] = datapoints_w[i][axisname]
+        else:
+            raise ValueError(f'Size of weights data incompatible with size of {axis} data')
+
+    if norm_weights:
+        _norm_weights(modeldata, axisname)
+
+    return modeldata
+
+def _norm_weights(modeldata, axisname):
+    logger.info(
+        f'Normalising weights so that the sum of all weights is equal to 1.')
+    for model, datapoints in modeldata.items():
+        for datapoint in datapoints:
+            weights = datapoint[axisname]
+            sum = np.nansum(weights)
+            if sum > 0: datapoint[axisname] = weights / sum
+
+@utils.set_default_kwargs()
+def _make_table(models, axis_names, kwargs=None):
     model_datapoints, axis_labels = simple.get_data(models, axis_names, **kwargs)
     pass
 
@@ -1417,7 +1566,7 @@ def _make_table(models, axis_names, **kwargs):
 ### xy plots ###
 ################
 @utils.set_default_kwargs()
-def create_legend(ax, outside = False, outside_margin=0.01, **kwargs):
+def create_legend(ax, outside = False, outside_margin=0.01, kwargs=None):
     """
     Add a legend to a plot.
 
@@ -1466,17 +1615,17 @@ def update_axes(ax, kwargs, *, delay=None, update_ax = True, update_fig = True, 
     """
 
     ax = get_axes(ax)
-    axes_meth = utils.extract_kwargs(kwargs, prefix='ax')
-    axes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
+    axes_meth = kwargs.extract(prefix='ax')
+    axes_kw = axes_meth.extract(prefix='kw')
 
-    xaxes_meth = utils.extract_kwargs(kwargs, prefix='xax')
-    xaxes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
+    xaxes_meth = kwargs.extract(prefix='xax')
+    xaxes_kw = axes_meth.extract(prefix='kw')
 
-    yaxes_meth = utils.extract_kwargs(kwargs, prefix='yax')
-    yaxes_kw = utils.extract_kwargs(axes_meth, prefix='kw')
+    yaxes_meth = kwargs.extract(prefix='yax')
+    yaxes_kw = axes_meth.extract(prefix='kw')
 
-    figure_meth = utils.extract_kwargs(kwargs, prefix='fig')
-    figure_kw = utils.extract_kwargs(figure_meth, prefix='kw')
+    figure_meth = kwargs.extract(prefix='fig')
+    figure_kw = figure_meth.extract(prefix='kw')
 
     # Special cases
     if 'size' in figure_meth: figure_meth.setdefault('size_inches', figure_meth.pop('size'))
@@ -1489,7 +1638,7 @@ def update_axes(ax, kwargs, *, delay=None, update_ax = True, update_fig = True, 
 
     def update(obj, name, meth_kwargs, kw_kwargs):
         for var, arg in meth_kwargs.items():
-            var_kwargs = utils.extract_kwargs(kw_kwargs, prefix=var)
+            var_kwargs = kwargs.extract(prefix=var)
             try:
                 method = getattr(obj, f'set_{var}')
             except:
@@ -1528,6 +1677,38 @@ def update_axes(ax, kwargs, *, delay=None, update_ax = True, update_fig = True, 
     return delayed_kwargs
 
 
+def _axline(direction, ax, v, verr, lim, lim_coord, kwargs):
+    fill_kwargs = kwargs.extract(prefix='fill')
+    ax = get_axes(ax)
+
+    if lim_coord == 'data' and lim is not None:
+        if direction == 'h':
+            if lim is None: lim = ax.get_xlim()
+            ax.hline(v, *lim, **kwargs)
+        elif direction == 'v':
+            if lim is None: lim = ax.get_ylim()
+            ax.vline(v, *lim, **kwargs)
+
+    if lim_coord == 'axis':
+        if lim is None: lim == (0, 1)
+
+        if verr is not None:
+            pass
+
+
+        if direction == 'h':
+            ax.axhline(v, *lim, **kwargs)
+        elif direction == 'v':
+            ax.axvline(v, *lim, **kwargs)
+
+
+
+def axhline(ax, y, yerr = None, lim = None, lim_coord='axes', **kwargs):
+
+
+    pass
+
+
 @utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
 @utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
 @utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
@@ -1545,165 +1726,428 @@ def plot(models, xkey, ykey, *,
          default_attrname=None, unit=None,
          where=None, mask = None, mask_na = True, ax = None,
          legend = None, update_ax = True, update_fig = True,
-         **kwargs):
+         hist=False, hist_size=0.3, hist_pad=0.05, kwargs=None):
     """
-    Plot *xkey* against *ykey* for each model in `*models*.
+    Plot *xkey* against *ykey* for each model in *models*.
 
-    It is possible to plot multiple datasets if *xkey* and/or *ykey* is a list of multiple keys for a isotope key
-    array. If only one of the arguments is a list then the second argument will be reused for each dataset. If a key
-    is not present in an array then a default value is used. See [``get_data``](simple.get_data) for more details.
+    This function retrieves data using [`get_data`](simple.get_data) and plots it using matplotlib. It supports
+    optional filtering, masking, and per-model or per-dataset styling. Additional arguments can be passed using
+    keyword prefixes to control axes, figure appearance, legends, and more.
 
-    The data to be plotted is retrieved using the [``get_data``](simple.get_data) function. All arguments available
-    for that function not included in the argument list here can be given as one of the *kwargs* to this function.
-
-    The data will be plotted using matplotlib's ``plot`` function. Additional arguments to this function can be
-    passed as one of the *kwargs* to this function. Some  ``plot`` arguments have enhanced behaviour detailed in a
-    section below.
+    This function is split into two stages: [`plot_get_data`](simple.plotting.plot_get_data) and
+    [`plot_draw`](simple.plotting.plot_draw), which can be used independently.
 
     Args:
-        models (): A collection of models to plot. A subselection of these models can be made using the *where*
-            argument.
-        xkey, ykey (str, int, slice): This can either be a valid index to the *default_attrname* array or the path, with
-            or without a valid index, of a different attribute. See [``get_data``](simple.get_data) for more details.
-        default_attrname (str): The name of the default attribute to use if *xkey* and *ykey* are indexes.
-        unit (str): The desired unit for the *xkey* and *ykey*. Different units for *xkey* and *ykey* can be specified
-            by supplying a ``(<xkey_unit>, <ykey_unit>)`` sequence.
-        where (str): If given will be used to create a subselection of *models*. Any *kwargs* prefixed
-            with ``where_`` will be supplied as keyword arguments. See
-             [``ModelCollection.where``](simple.models.ModelCollection.where) for more details.
-        mask (str, int, slice): Can be used to apply a mask to the data which is plotted. See the ``get_mask`` function of the Model
-            object.
-        mask_na (bool): If ``True`` masked values will be replaced by ``np.nan`` values. Only works if both *xkey* and
-            *ykey* have a float based datatype.
-        ax (): The axes where the data is plotted. Accepted values are any matplotlib Axes object or plt instance.
-            Defaults to ``plt.gca()``.
-        legend (bool): Whether to create a legend. By default, a legend will be created if one or more datapoints have
-            a valid label.
-        update_ax, update_fig (bool): Whether to update the axes and figure objects using kwargs that have the prefix
-            ``ax_`` and ``fig_``. See [``simple.plotting.update_axes``](simple.plotting.update_axes) for more details.
-        **kwargs ():
-            Valid keyword arguments are those using one of the prefixes define by other arguments, any argument
-            for the [``simple.get_data``](simple.get_data) function, or any valid keyword argument for
-            matplotlib's ``plot`` function.
+        models (ModelCollection): A collection of models to plot. A subset can be selected using the *where* argument.
+        xkey, ykey (str, int, or slice): Keys or indices used to retrieve the x and y data arrays. These may refer to
+            array indices (relative to *default_attrname*) or full attribute paths.
+            See [`get_data`](simple.get_data) for more.
+        default_attrname (str): Name of the default attribute used when *xkey* or *ykey* is an index.
+        unit (str or tuple): Desired unit(s) for the x and y axes. Use a tuple `(xunit, yunit)` for different units.
+        where (str): Filter expression to select a subset of *models*. Any *kwargs* prefixed with `where_`
+            are passed to the model filtering function.
+            See [`ModelCollection.where`](simple.models.ModelCollection.where).
+        mask (str, int, or slice): Optional mask to apply to the data. See the `get_mask` method on model instances.
+        mask_na (bool): If True, masked values are replaced with `np.nan`. Only applies if *xkey* and *ykey* are
+            float-based.
+        ax (matplotlib.axes.Axes or None): The axes to plot on. If None, defaults to `plt.gca()`.
+        legend (bool): Whether to add a legend. If None, a legend is shown if at least one datapoint has a label.
+        update_ax, update_fig (bool): Whether to apply `ax_` and `fig_` keyword argument updates using
+            [`update_axes`](simple.plotting.update_axes).
+        hist (bool): Whether to show marginal histograms along the axes.
+        hist_size (float): Relative size of the histogram axes.
+        hist_pad (float): Padding between the main plot and histogram axes.
+        kwargs (dict, optional): A dictionary of keyword arguments. This provides an explicit way to pass additional
+            options and overrides any conflicting values passed via `**kwargs_`.
+        **kwargs_ (): Additional keyword arguments passed directly to the function. These are merged into *kwargs* unless
+            a key already exists in *kwargs*, in which case the value in *kwargs* takes precedence.
+            kwargs (dict): Additional keyword arguments. These may include:
+        kwargs (dict or KwargDict, optional): A dictionary of keyword arguments that may be modified internally.
+            Any keys in *kwargs* that match parameters in the function's signature are automatically passed to those
+            parameters. If a key exists in both *kwargs* and ***kwargs*, the value in *kwargs* takes precedence.
+        **kwargs (): Additional keyword arguments passed directly to the function. These are merged into *kwargs*.
+            Possible keyword arguments are:
 
-    Data and axis labels:
-        Labels for each axis and individual datapoints will be automatically generated. By default, the axis labels
-        will contain the information common to all datasets while the label for the individual datapoints will contain
-        only the unique information. You can override the axis labels by passing ``ax_xlabel`` and ``ax_ylabel`` as
-        one of the *kwargs*. You can also override the datapoint labels by passing a list of labels, one each
-        for each datapoint in the legend. See [``get_data``](simple.get_data) for more details on customising the
-        labels.
-
+            - Parameters passed to [`simple.get_data`](simple.get_data)
+            - Matplotlib `plot()` parameters (e.g., `color`, `linestyle`, `marker`)
+            - Prefix-based controls (e.g., `ax_xlabel`, `legend_outside`, `fig_size`)
 
     Iterable plot arguments:
-        The following arguments for matplotlibs ``plot`` function have enhanced behaviour that allows them to be
-        iterated through when plotting different models and/or datasets.
+        The following matplotlib arguments support iterable or preset behaviour:
 
-        - ``linestyle`` Can be a list of linestyles that will be iterated through. If ``True`` simple's predefined
-        list of linestyles is used. If ``False`` no lines will be shown.
+        - `color`: Can be a list of colours, `True` for defaults, or `False` to use black.
+        - `linestyle`: Can be a list of styles, `True` for defaults, or `False` to disable lines.
+        - `marker`: Can be a list of markers, `True` for defaults, or `False` to disable markers.
 
-        - ``color`` Can be a list of colors that will be iterated through. If ``True`` simple's predefined
-        list of colors is used. If ``False`` the colour defaults to black.
+        These are assigned per-model or per-dataset depending on the context:
 
-        - ``marker`` Can be a list of markers that will be iterated through. If ``True`` simple's predefined
-        list of markers is used. If ``False`` no markers will be shown.
+        - If multiple models are plotted, all datasets for a model share the same *color*.
+        - If one model has multiple datasets, each gets a different *color*.
+        - *linestyle* and *marker* behave similarly, controlled by:
+            - `fixed_model_color`
+            - `fixed_model_linestyle`
+            - `fixed_model_marker`
 
-        There are two ways these values can be iterated through. Either all the datapoints of a given model gets the
-        same value or each set of datapoints across the different models gets the same value. By default, if there are
-        multiple models then all the datasets for each model will have the same *color*. If there is only one model
-        then the color will be different for the different datasets. If there are multiple datasets then each dataset
-        across the different models will have the same *linestyle* and *marker*. If there is only one dataset then
-        *linestyle* and *marker* will be different for each model.
+    Axis and data labels:
+        Axis labels are automatically inferred based on shared and unique elements in the data. You can override them
+        using `ax_xlabel` and `ax_ylabel` in *kwargs*. Datapoint labels can be overridden with a list of labels
+        (one per line in the legend).
 
-        This behaviour can be changed by passing ``fixed_model_linestyle``, ``fixed_model_color``
-        and ``fixed_model_marker`` keyword arguments set to either ``True`` or ``False`` If ``True`` each model will
-        have the same value. If ``False`` each dataset across the different models will have the same value.
+    Shortcuts and default values:
+        This function includes shortcut variants with predefined default values:
 
-    Default kwargs and shortcuts:
-        The default values for arguments can be updated by changing the  ``plot.default_kwargs`` dictionary. Any
-        argument not defined in the function description will be included in *kwargs*. Default values given in the
-        function definition will be used only if a default value does not exist in ``plot.default_kwargs``.
-        Additionally, one or more shortcuts with additional/different default values are attached to this function.
-        The following shortcuts exist for this function:
+        - `plot.intnorm`: sets `default_attrname="intnorm.eRi"` and `unit=None`
+        - `plot.stdnorm`: sets `default_attrname="stdnorm.Ri"` and `unit=None`
+        - `plot.abundance`: sets `default_attrname="abundance"` and `unit=None`
 
-        - ``plot.intnorm`` Default values to plot internally normalised data. This sets *default_attrname* to
-            ``intnorm`` and the ``default_unit`` to ``None``.
-
-        - ``plot.stdnorm`` Default values to plot the basic ratio normalised data. This sets
-                *default_attrname* to ``stdnorm`` and the ``default_unit`` to ``None``.
+        Default argument values can also be updated through `plot.update_kwargs()`. Values defined in the function
+        signature are used only if not overridden there. You can retrieve the default arguments using `plot.kwargs`
 
     Returns:
-        The axes where the data was plotted.
+        matplotlib.axes.Axes: The axes object used for plotting.
+    """
+    modeldata, axis_labels = plot_get_data.raw(models, xkey, ykey,
+                                           default_attrname=default_attrname, unit=unit,
+                                           where=where, mask=mask, mask_na=mask_na,
+                                           kwargs=kwargs)
+    return plot_draw.raw(modeldata, axis_labels, ax=ax, legend=legend,
+                     update_ax=update_ax, update_fig=update_fig,
+                     hist=hist, hist_size=hist_size, hist_pad=hist_pad,
+                     kwargs=kwargs)
+
+@utils.set_default_kwargs(inherits=plot, match_signature=True)
+def plot_get_data(models, xkey, ykey, *, default_attrname=None, unit=None,
+                  where=None, mask = None, mask_na = True,
+                  kwargs=None):
+    """
+    Retrieve model data and axis labels for plotting.
+
+    This function performs the data preparation step of [`plot`](simple.plotting.plot).
+
+    Args:
+        See [`plot`](simple.plotting.plot) for a complete description of arguments.
+
+    Returns:
+        tuple:
+            - modeldata (dict): Structured data for plotting.
+            - axis_labels (dict): Suggested axis labels.
+    """
+    modeldata, axis_labels = get_data(models, {'x': xkey, 'y': ykey},
+                                      where=where,
+                                      default_attrname=default_attrname, unit=unit,
+                                      mask=mask, mask_na=mask_na,
+                                      kwargs=kwargs)
+
+    func_weights = kwargs.pop('_SIMPLE_add_weights', add_weights)
+    weights_kwargs = kwargs.extract('weights', 'sum_weights', 'norm_weights', prefix='weights')
+    if hist or kwargs.get('xhist', False) or kwargs.get('yhist', False):
+        func_weights(modeldata, axis, mask=mask, mask_na=mask_na, **weights_kwargs)
+
+    return modeldata, axis_labels
+
+
+@utils.set_default_kwargs(inherits=plot, match_signature=True)
+def plot_draw(modeldata, axis_labels, *, ax=None, legend=None,
+              update_ax=True, update_fig=True,
+              hist=False, hist_size=0.3, hist_pad=0.05, kwargs=None):
+    """
+    Render the data using matplotlib.
+
+    This function handles the styling, axes setup, and drawing logic of [`plot`](simple.plotting.plot)..
+
+    Args:
+        See [`plot`](simple.plotting.plot) for a complete description of arguments.
+
+    Returns:
+        matplotlib Axes: The axes on which the data was plotted.
     """
     ax = get_axes(ax)  # We are working on the axes object proper
 
-    where_kwargs = utils.extract_kwargs(kwargs, prefix='where')
-    models = get_models(models, where=where, where_kwargs=where_kwargs)
-
     # Get the linestyle, color and marker for each thing to be plotted.
-    linestyles, colors, markers = parse_lscm(kwargs.pop('linestyle', True),
-                                             kwargs.pop('color', True),
-                                             kwargs.pop('marker', False))
+    linestyles, colors, markers = parse_lscm(kwargs.extract(('linestyle', True), ('color', True), ('marker', False)))
     fixed_model_linestyle = kwargs.pop('fixed_model_linestyle', None)
     fixed_model_color = kwargs.pop('fixed_model_color', None)
     fixed_model_marker = kwargs.pop('fixed_model_marker', None)
 
-    legend_kwargs = utils.extract_kwargs(kwargs, prefix='legend')
+    # Extract the legend arguments
+    legend_kwargs = kwargs.extract(prefix='legend')
 
-    label_kwargs = utils.extract_kwargs(kwargs, 'label', 'prefix_label', 'suffix_label',
-                                        'key_in_label', 'numer_in_label', 'denom_in_label',
-                                        'model_in_label', 'unit_in_label', 'attrname_in_label')
+    # Extract the hist arguments
+    xhist = kwargs.pop('xhist', hist)
+    yhist = kwargs.pop('yhist', hist)
+    hist_kwargs = kwargs.extract(prefix='hist',
+                                 legend=False, fig_size=False,
+                                 default_attrname=default_attrname, unit=unit, mask=mask,
+                                 linestyle=linestyles, color=colors,
+                                 fixed_model_linestyle=fixed_model_linestyle, fixed_model_color=fixed_model_color,)
+    xhist_kwargs = kwargs.extract(prefix='xhist', size=hist_size, pad = hist_pad,
+                                  ax_xlabel=None, **hist_kwargs)
+    yhist_kwargs = kwargs.extract(prefix='yhist', size=hist_size, pad = hist_pad,
+                                  ax_ylabel=None, flip=True, **hist_kwargs)
 
-    # If there is only one model it is set as the title to make the legend shorter
-    model_in_label = label_kwargs.pop('model_in_label', None)
-    if len(models) == 1 and model_in_label is None:
-        label_kwargs['model_in_label'] = False
-        legend_kwargs.setdefault('title', models[0].name)
-    else:
-        label_kwargs['model_in_label'] = model_in_label
-
-
-    modeldata, axis_labels = get_data(models, {'x': xkey, 'y': ykey},
-                                      default_attrname=default_attrname, unit=unit,
-                                      mask=mask, mask_na=mask_na, _kwargs=kwargs, **label_kwargs)
-
+    # Update the axes/figure
     kwargs.setdefault('ax_xlabel', axis_labels['x'])
     kwargs.setdefault('ax_ylabel', axis_labels['y'])
     delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
 
+    # Extract in case any are left behind.
+    simple_kwargs = kwargs.extract(prefix='_SIMPLE')
+
     mfc = kwargs.pop('markerfacecolor', None)
 
-    has_labels = False
-    for mi, (model_name, model_dataset) in enumerate(modeldata.items()):
-        for ki, key_data in enumerate(model_dataset):
-            if fixed_model_linestyle or (fixed_model_linestyle is None and len(model_dataset) == 1):
+    for mi, (model, datapoints) in enumerate(modeldata.items()):
+        for di, datapoint in enumerate(datapoints):
+            if fixed_model_linestyle or (fixed_model_linestyle is None and len(datapoints) == 1):
                 ls = linestyles[mi]
             else:
-                ls = linestyles[ki]
+                ls = linestyles[di]
             if fixed_model_color is True or (fixed_model_color is None and len(modeldata) > 1):
                 c = colors[mi]
             else:
-                c = colors[ki]
-            if fixed_model_marker is True or (fixed_model_marker is None and len(model_dataset) == 1):
+                c = colors[di]
+            if fixed_model_marker is True or (fixed_model_marker is None and len(datapoints) == 1):
                 m = markers[mi]
             else:
-                m = markers[ki]
+                m = markers[di]
 
-            if not has_labels and key_data.get('label', None):
-                has_labels = True
-
-            ax.plot(key_data['x'], key_data['y'],
-                    label = key_data.get('label', None),
+            ax.plot(datapoint['x'], datapoint['y'],
+                    label = datapoint.get('label', None),
                     color=c, ls=ls, marker=m,
                     markerfacecolor=mfc or c,
                     **kwargs)
+
+    # Create the hist plots
+    if xhist:
+        if xhist_kwargs.get('ax', None) is None:
+            ax_histx = getattr(ax, '_SIMPLE_ax_histx', None)
+            if ax_histx is None:
+                ax_histx = ax.inset_axes([0, 1 + xhist_kwargs.pop('pad'), 1, xhist_kwargs.pop('size')], sharex=ax)
+                setattr(ax, '_SIMPLE_ax_histx', ax_histx)
+            xhist_kwargs['ax'] = ax_histx
+
+        xhist_kwargs.setdefault('range', ax.get_xlim())
+        xhist_kwargs.setdefault('xax_visible', (False,))
+        hist_draw(modeldata, axis_labels, 'x', **xhist_kwargs)
+
+    if yhist:
+        if xhist_kwargs.get('ax', None) is None:
+            legend_kwargs['outside_margin'] = (legend_kwargs.get('outside_margin', 0.01)
+                                               + yhist_kwargs['pad'] + yhist_kwargs['size'])
+            ax_histy = getattr(ax, '_SIMPLE_ax_histy', None)
+            if ax_histy is None:
+                ax_histy = ax.inset_axes([1 + yhist_kwargs.pop('pad'), 0, yhist_kwargs.pop('size'), 1], sharey=ax)
+                setattr(ax, '_SIMPLE_ax_histy', ax_histy)
+            yhist_kwargs['ax'] = ax_histy
+
+        yhist_kwargs.setdefault('yax_visible', (False,))
+        yhist_kwargs.setdefault('range', ax.get_ylim())
+        hist_draw(modeldata, axis_labels, 'y', **yhist_kwargs)
+
+    # Create legend and process any delayed axes/figure arguments
+    update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
+    if legend:
+        create_legend(ax, **legend_kwargs)
+
+    return ax
+
+@utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
+@utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
+@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
+@utils.set_default_kwargs(
+    linestyle=True, color=True,
+    fixed_model_linestyle = None, fixed_model_color = None,
+    ax_kw_xlabel_fontsize=15,
+    ax_kw_ylabel_fontsize=15,
+    legend_outside=True,
+    ax_tick_params=dict(axis='both', left=True, right=True, top=True),
+    fig_size=(7,6.5),
+    )
+def hist(models, key, weights=1, axis='x', *,
+         sum_weights=True, norm_weights=True,
+         bins = 20, filled=None,
+         default_attrname=None, unit=None,
+         weights_default_attrname = None, weights_unit=None, weights_default_value=0,
+         where=None, mask=None, ax=None,
+         legend=None, update_ax=True, update_fig=True,
+         kwargs=None):
+    """
+    Make a histogram of *key*, on *axis*, for each model in *models*.
+
+    This function retrieves data using [`get_data`](simple.get_data) and plots it using matplotlib. It supports
+    optional filtering, masking, and per-model or per-dataset styling. Additional arguments can be passed using
+    keyword prefixes to control axes, figure appearance, legends, and more.
+
+    This function is split into two stages: [`hist_get_data`](simple.plotting.hist_get_data) and
+    [`hist_draw`](simple.plotting.hist_draw), which can be used independently.
+
+    Args:
+        models (ModelCollection): A collection of models to plot. A subset can be selected using the *where* argument.
+        key (str, int, or slice): Keys or indices used to retrieve the data array. These may refer to
+            array indices (relative to *default_attrname*) or full attribute paths.
+            See [`get_data`](simple.get_data) for more.
+        default_attrname (str): Name of the default attribute used when *xkey* or *ykey* is an index.
+        unit (str or tuple): Desired unit(s) for the x and y axes. Use a tuple `(xunit, yunit)` for different units.
+        where (str): Filter expression to select a subset of *models*. Any *kwargs* prefixed with `where_`
+            are passed to the model filtering function.
+            See [`ModelCollection.where`](simple.models.ModelCollection.where).
+        mask (str, int, or slice): Optional mask to apply to the data. See the `get_mask` method on model instances.
+        mask_na (bool): If True, masked values are replaced with `np.nan`. Only applies if *xkey* and *ykey* are
+            float-based.
+        ax (matplotlib.axes.Axes or None): The axes to plot on. If None, defaults to `plt.gca()`.
+        legend (bool): Whether to add a legend. If None, a legend is shown if at least one datapoint has a label.
+        update_ax, update_fig (bool): Whether to apply `ax_` and `fig_` keyword argument updates using
+            [`update_axes`](simple.plotting.update_axes).
+        hist (bool): Whether to show marginal histograms along the axes.
+        hist_size (float): Relative size of the histogram axes.
+        hist_pad (float): Padding between the main plot and histogram axes.
+        kwargs (dict, optional): A dictionary of keyword arguments. This provides an explicit way to pass additional
+            options and overrides any conflicting values passed via `**kwargs_`.
+        **kwargs_ (): Additional keyword arguments passed directly to the function. These are merged into *kwargs* unless
+            a key already exists in *kwargs*, in which case the value in *kwargs* takes precedence.
+            kwargs (dict): Additional keyword arguments. These may include:
+        kwargs (dict or KwargDict, optional): A dictionary of keyword arguments that may be modified internally.
+            Any keys in *kwargs* that match parameters in the function's signature are automatically passed to those
+            parameters. If a key exists in both *kwargs* and ***kwargs*, the value in *kwargs* takes precedence.
+        **kwargs (): Additional keyword arguments passed directly to the function. These are merged into *kwargs*.
+            Possible keyword arguments are:
+
+            - Parameters passed to [`simple.get_data`](simple.get_data)
+            - Matplotlib `plot()` parameters (e.g., `color`, `linestyle`, `marker`)
+            - Prefix-based controls (e.g., `ax_xlabel`, `legend_outside`, `fig_size`)
+
+    Iterable plot arguments:
+        The following matplotlib arguments support iterable or preset behaviour:
+
+        - `color`: Can be a list of colours, `True` for defaults, or `False` to use black.
+        - `linestyle`: Can be a list of styles, `True` for defaults, or `False` to disable lines.
+        - `marker`: Can be a list of markers, `True` for defaults, or `False` to disable markers.
+
+        These are assigned per-model or per-dataset depending on the context:
+
+        - If multiple models are plotted, all datasets for a model share the same *color*.
+        - If one model has multiple datasets, each gets a different *color*.
+        - *linestyle* and *marker* behave similarly, controlled by:
+            - `fixed_model_color`
+            - `fixed_model_linestyle`
+            - `fixed_model_marker`
+
+    Axis and data labels:
+        Axis labels are automatically inferred based on shared and unique elements in the data. You can override them
+        using `ax_xlabel` and `ax_ylabel` in *kwargs*. Datapoint labels can be overridden with a list of labels
+        (one per line in the legend).
+
+    Shortcuts and default values:
+        This function includes shortcut variants with predefined default values:
+
+        - `plot.intnorm`: sets `default_attrname="intnorm.eRi"` and `unit=None`
+        - `plot.stdnorm`: sets `default_attrname="stdnorm.Ri"` and `unit=None`
+        - `plot.abundance`: sets `default_attrname="abundance"` and `unit=None`
+
+        Default argument values can also be updated through `plot.update_kwargs()`. Values defined in the function
+        signature are used only if not overridden there. You can retrieve the default arguments using `plot.kwargs`
+
+    Returns:
+        matplotlib.axes.Axes: The axes object used for plotting.
+    """
+
+    modeldata, axis_labels, axis = hist_get_data.raw(models, key, weights, axis,
+                                                 sum_weights=sum_weights, norm_weights=norm_weights,
+                                                 default_attrname=default_attrname, unit=unit,
+                                                 weights_default_attrname=weights_default_attrname,
+                                                 weights_unit=weights_unit, weights_default_value=weights_default_value,
+                                                 where=where, mask=mask, kwargs=kwargs)
+
+
+    return hist_draw.raw(modeldata, axis_labels, axis, bins=bins, filled=filled,
+                     legend=legend, update_ax=update_ax, update_fig=update_fig,
+                     ax=ax, kwargs=kwargs)
+
+@utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
+@utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
+@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
+@utils.set_default_kwargs(inherits=hist, match_signature=True)
+def hist_get_data(models, key, weights=1, axis='x', *,
+                  sum_weights=True, norm_weights=True,
+                  default_attrname=None, unit=None,
+                  weights_default_attrname=None, weights_unit=None, weights_default_value=0,
+                  where=None, mask=None,
+                  kwargs=None):
+    if axis not in ['x', 'y']:
+        raise ValueError('Axis must be either x or y')
+
+    modeldata, axis_labels = get_data(models, {axis: key},
+                                      where=where,
+                                      default_attrname=default_attrname, unit=unit,
+                                      mask=mask, mask_na=False, kwargs=kwargs)
+
+    func_weights = kwargs.pop('_SIMPLE_add_weights', add_weights)
+    func_weights(modeldata, axis,
+                 weights=weights, sum_weights=sum_weights, norm_weights=norm_weights,
+                 default_attrname=weights_default_attrname, unit=weights_unit,
+                 default_value=weights_default_value, mask=mask, mask_na=False)
+
+
+@utils.set_default_kwargs(inherits=hist, match_signature=True)
+def hist_draw(modeldata, axis_labels, axis, *, flip=False, bins=20, filled=None,
+              ax=None, legend=None, update_ax=True, update_fig=True,
+              kwargs=None):
+    ax = get_axes(ax)  # We are working on the axes object proper
+
+    # Get the linestyle, color and marker for each thing to be plotted.
+    linestyles, colors, markers = parse_lscm(kwargs.extract(('linestyle', True), ('color', True), ('marker', False)))
+    fixed_model_linestyle = kwargs.pop('fixed_model_linestyle', None)
+    fixed_model_color = kwargs.pop('fixed_model_color', None)
+    fixed_model_marker = kwargs.pop('fixed_model_marker', None)
+
+    legend_kwargs = kwargs.extract(prefix='legend')
+
+    if filled is None:
+        if len(models) > 1 or (len(models) > 0 and len(next(iter(modeldata.values()))) > 1):
+            filled = False
+        else:
+            filled = True
+
+    if filled is True:
+        kwargs.setdefault('histtype', 'stepfilled')
+    else:
+        kwargs.setdefault('histtype', 'step')
+
+    if flip:
+        kwargs.setdefault('orientation', 'horizontal')
+        kwargs.setdefault('ax_ylabel', axis_labels['y'])
+    else:
+        kwargs.setdefault('orientation', 'vertical')
+        kwargs.setdefault('ax_xlabel', axis_labels['x'])
+
+    delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
+    simple_kwargs = kwargs.extract(prefix='_SIMPLE')
+
+    has_labels = False
+    if bins is not None:
+        for mi, (model, datapoints) in enumerate(modeldata.items()):
+            for di, datapoint in enumerate(datapoints):
+                if fixed_model_linestyle or (fixed_model_linestyle is None and len(datapoints) == 1):
+                    ls = linestyles[mi]
+                else:
+                    ls = linestyles[di]
+                if fixed_model_color is True or (fixed_model_color is None and len(modeldata) > 1):
+                    c = colors[mi]
+                else:
+                    c = colors[di]
+
+                if not has_labels and datapoint.get('label', None):
+                    has_labels = True
+
+                ax.hist(datapoint[axis], bins=bins, weights=datapoint['w'],
+                        label=datapoint.get('label', None),
+                        color=c, ls=ls,
+                        **kwargs)
 
     update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
     if legend or (legend is None and has_labels):
         create_legend(ax, **legend_kwargs)
 
     return ax
-
 
 @utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
 @utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
@@ -1720,12 +2164,12 @@ def plot(models, xkey, ykey, *,
     arrow_linewidth=0, arrow_length_includes_head=True, arrow_head_width=0.05,
     arrow_zorder=3
     )
-def plotm(models, xkey, ykey, xycoord=(0,0), *,
-         arrow=True, arrow_position=0.9,
-         default_attrname=None, unit=None,
-         where=None, mask = None, mask_na = True, ax = None,
-         legend = None, update_ax = True, update_fig = True,
-         **kwargs):
+def slope(models, xkey, ykey, xycoord=(0, 0), *,
+          arrow=True, arrow_position=0.9,
+          default_attrname=None, unit=None,
+          where=None, mask = None, mask_na = True, ax = None,
+          legend = None, update_ax = True, update_fig = True,
+          kwargs=None):
     """
     Plot the slope of *ykey* / *xkey* for each model in `*models*.
 
@@ -1797,9 +2241,9 @@ def plotm(models, xkey, ykey, xycoord=(0,0), *,
         have the same value. If ``False`` each dataset across the different models will have the same value.
 
     Default kwargs and shortcuts:
-        The default values for arguments can be updated by changing the  ``plot.default_kwargs`` dictionary. Any
+        The default values for arguments can be updated by changing the  ``plot.kwargs`` dictionary. Any
         argument not defined in the function description will be included in *kwargs*. Default values given in the
-        function definition will be used only if a default value does not exist in ``plot.default_kwargs``.
+        function definition will be used only if a default value does not exist in ``plot.kwargs``.
         Additionally, one or more shortcuts with additional/different default values are attached to this function.
         The following shortcuts exist for this function:
 
@@ -1812,60 +2256,71 @@ def plotm(models, xkey, ykey, xycoord=(0,0), *,
     Returns:
         The axes where the data was plotted.
     """
+
+    modeldata, axis_labels = slope_get_data.raw(models, xkey, ykey,
+                                                default_attrname=default_attrname, unit=unit,
+                                                where=where, mask=mask, mask_na=mask_na,
+                                                kwargs=kwargs)
+    return slope_draw.raw(modeldata, axis_labels, xycoord=xycoord,
+                   arrow=arrow, arrow_position=arrow_position,
+                   ax=ax,
+                   legend=legend, update_ax=update_ax, update_fig=update_fig,
+                   kwargs=kwargs)
+
+@utils.set_default_kwargs(inherits=slope, match_signature=True)
+def slope_get_data(models, xkey, ykey, *,
+                   default_attrname=None, unit=None,
+                   where=None, mask=None, mask_na=True,
+                   kwargs=None):
+    modeldata, axis_labels = get_data(models, {'x': xkey, 'y': ykey},
+                                      where=where,
+                                      default_attrname=default_attrname, unit=unit,
+                                      mask=mask, mask_na=mask_na,
+                                      kwargs=kwargs)
+    return modeldata, axis_labels
+
+
+
+
+@utils.set_default_kwargs(inherits=slope, match_signature=True)
+def slope_draw(modeldata, axis_labels, xycoord=(0,0), *,
+             arrow=True, arrow_position=0.9,
+             legend=None, update_ax=True, update_fig=True,
+             kwargs=None):
     ax = get_axes(ax)  # We are working on the axes object proper
 
-    where_kwargs = utils.extract_kwargs(kwargs, prefix='where')
-    models = get_models(models, where=where, where_kwargs=where_kwargs)
-
     # Get the linestyle, color and marker for each thing to be plotted.
-    linestyles, colors, markers = parse_lscm(kwargs.pop('linestyle', True),
-                                             kwargs.pop('color', True),
-                                             kwargs.pop('marker', False))
+    linestyles, colors, markers = parse_lscm(kwargs.extract(('linestyle', True), ('color', True), ('marker', False)))
     fixed_model_linestyle = kwargs.pop('fixed_model_linestyle', None)
     fixed_model_color = kwargs.pop('fixed_model_color', None)
+    fixed_model_marker = kwargs.pop('fixed_model_marker', None)
 
-    legend_kwargs = utils.extract_kwargs(kwargs, prefix='legend')
-
-    label_kwargs = utils.extract_kwargs(kwargs, 'label', 'prefix_label', 'suffix_label',
-                                        'key_in_label', 'numer_in_label', 'denom_in_label',
-                                        'model_in_label', 'unit_in_label', 'attrname_in_label')
-    arrow_kwargs = utils.extract_kwargs(kwargs, prefix='arrow')
-
-    # If there is only one model it is set as the title to make the legend shorter
-    model_in_label = label_kwargs.pop('model_in_label', None)
-    if len(models) == 1 and model_in_label is None:
-        label_kwargs['model_in_label'] = False
-        legend_kwargs.setdefault('title', models[0].name)
-    else:
-        label_kwargs['model_in_label'] = model_in_label
-
-
-    modeldata, axis_labels = get_data(models, {'x': xkey, 'y': ykey},
-                                      default_attrname=default_attrname, unit=unit,
-                                      mask=mask, mask_na=mask_na, _kwargs=kwargs, **label_kwargs)
+    legend_kwargs = kwargs.extract(prefix='legend')
+    arrow_kwargs = kwargs.extract(prefix='arrow')
 
     kwargs.setdefault('ax_xlabel', axis_labels['x'])
     kwargs.setdefault('ax_ylabel', axis_labels['y'])
     delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
+    simple_kwargs = kwargs.extract(prefix='_SIMPLE')
 
     has_labels = False
-    for mi, (model_name, model_dataset) in enumerate(modeldata.items()):
-        for ki, key_data in enumerate(model_dataset):
-            if fixed_model_linestyle or (fixed_model_linestyle is None and len(model_dataset) == 1):
+    for mi, (model, datapoints) in enumerate(modeldata.items()):
+        for di, datapoint in enumerate(datapoints):
+            if fixed_model_linestyle or (fixed_model_linestyle is None and len(datapoints) == 1):
                 ls = linestyles[mi]
             else:
-                ls = linestyles[ki]
+                ls = linestyles[di]
             if fixed_model_color is True or (fixed_model_color is None and len(modeldata) > 1):
                 c = colors[mi]
             else:
-                c = colors[ki]
+                c = colors[di]
 
-            if not has_labels and key_data.get('label', None):
+            if not has_labels and datapoint.get('label', None):
                 has_labels = True
 
-            label = key_data.get('label', None)
-            for i in range(len(key_data['x'])):
-                x, y = key_data['x'][i], key_data['y'][i]
+            label = datapoint.get('label', None)
+            for i in range(len(datapoint['x'])):
+                x, y = datapoint['x'][i], datapoint['y'][i]
                 slope = y / x
                 ax.axline(xycoord, slope=slope, label=label,
                           color = c, ls=ls, **kwargs)
@@ -1890,183 +2345,95 @@ def plotm(models, xkey, ykey, xycoord=(0,0), *,
 
 ##################
 ### rose plots ###
-##################
+################
 
-def _mprep(models, xkey, ykey, r, weights, *,
-           default_attrname=None, unit=None,
-           weights_default_attrname=None, weights_unit=None, weights_default_value=0,
-           mask=None, ax=None, where=None, where_kwargs={},
-           **kwargs):
+@utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
+@utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
+@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
+@utils.set_default_kwargs(
+    ax_kw_ylabel_labelpad=20,
+    legend_outside=True,)
+def rose_hist(models, xkey, ykey, r=None, weights=1, *,
+              default_attrname = None, unit=None,
+              weights_default_attrname = None, weights_unit=None, weights_default_value=0,
+              sum_weights=True, norm_weights=True,
+              mask = None, ax = None, where=None,
+              legend=None, update_ax = True, update_fig = True,
+              kwargs=None):
+    """
+    Histogram plot on a rose diagram.
+    """
+    modeldata, axis_labels = rose_hist_get_data.raw(models, xkey, ykey, weights,
+                                                    default_attrname=default_attrname, unit=unit,
+                                                    weights_default_attrname=weights_default_attrname,
+                                                    weights_unit=weights_unit,
+                                                    weights_default_value=weights_default_value,
+                                                    sum_weights=sum_weights, norm_weights=norm_weights,
+                                                    mask=mask, where=where, kwargs=kwargs)
+    return rose_hist_draw.raw(modeldata, axis_labels, r=r,
+                              ax=ax, legend=legend, update_ax=update_ax, update_fig=update_fig,
+                              kwargs=kwargs)
+
+@utils.set_default_kwargs(inherits=rose_hist, match_signature=True)
+def rose_hist_get_data(models, xkey, ykey, weights=1, *,
+                        default_attrname =None, unit = None,
+                        weights_default_attrname = None, weights_unit = None, weights_default_value = 0,
+                        sum_weights = True, norm_weights = True,
+                        mask = None, where = None,
+                        kwargs=None):
+    modeldata, axis_labels = get_data(models, {'x': xkey, 'y': ykey},
+                                      where=where,
+                                      default_attrname=default_attrname, unit=unit,
+                                      mask=mask, mask_na=False,
+                                      kwargs=None)
+
+    func_weights = kwargs.pop('_SIMPLE_add_weights', add_weights)
+    func_weights(modeldata, 'x',
+                 weights=weights, sum_weights=sum_weights, norm_weights=norm_weights,
+                 default_attrname=weights_default_attrname, unit=weights_unit,
+                 default_value=weights_default_value, mask=mask, mask_na=False)
+
+    return modeldata, axis_labels
+
+
+
+@utils.set_default_kwargs(inherits=rose_hist, match_signature=True)
+def rose_hist_draw(modeldata, axis_labels, r=None, *,
+                   ax = None, legend=None, update_ax = True, update_fig = True,
+                   kwargs=None):
     ax = get_axes(ax)
-    rose_kwargs = utils.extract_kwargs(kwargs, prefix='rose')
+    rose_kwargs = kwargs.extract(prefix='rose')
     if ax.name != 'rose':
         ax = create_rose_plot(ax, **rose_kwargs)
 
-    where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
-    models = get_models(models, where=where, where_kwargs=where_kwargs)
+    if not isinstance(r, Sequence):
+        r = [r for i in range(len(modeldata))]
+    elif len(r) != len(modeldata):
+        raise ValueError(f'Size of r must match size of models ({len(r)}!={len(modeldata)})')
 
-    label_kwargs = utils.extract_kwargs(kwargs, 'label', 'prefix_label', 'suffix_label',
-                                        'key_in_label', 'numer_in_label', 'denom_in_label',
-                                        'model_in_label', 'unit_in_label', 'attrname_in_label')
 
-    modeldata_xy, axis_labels = get_data(models, {'x': xkey, 'y': ykey},
-                                         default_attrname=default_attrname, unit=unit,
-                                         mask=mask, mask_na=False, _kwargs=kwargs, **label_kwargs)
+    legend_kwargs = kwargs.extract(prefix='legend')
+    delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
+    simple_kwargs = kwargs.extract(prefix='_SIMPLE')
 
     kwargs.setdefault('ax_xlabel', axis_labels['x'])
     kwargs.setdefault('ax_ylabel', axis_labels['y'])
 
-    # Sort out the weights
-    # It should match the size and structure of modeldata_xy
-    if type(weights) is str:
-        modeldata_w, axis_labels_w = get_data(models, {'w': weights},
-                                  default_attrname=weights_default_attrname, unit=weights_unit, default_value=weights_default_value,
-                                  attrname_in_label=True, model_in_label=False, axis_name_in_label=False, latex_labels=False)
-    else:
-        modeldata_w = {model_name: [{'w': weights} for _ in model_dataset_xy]
-                       for model_name, model_dataset_xy in modeldata_xy.items()}
-
-    for model_name, model_dataset_xy in modeldata_xy.items():
-        if model_name not in modeldata_w:
-            raise ValueError(f'{model_name} not in weights dictionary')
-        else:
-            model_dataset_w = modeldata_w[model_name]
-
-        if len(model_dataset_xy) == len(model_dataset_w):
-            pass
-        elif len(model_dataset_xy) == 1:
-            labels = [dw.get('label', 'Missing label') for dw in model_dataset_w]
-            logger.info(f'{model_name}: Calculating weights by adding together: {axis_labels_w["w"]} <w: {", ".join(labels)}>')
-            modeldata_w[model_name] = [{'w': functools.reduce(np.add, [dw['w'] for dw in model_dataset_w])}]
-        elif len(model_dataset_w) == 1:
-            modeldata_w[model_name] = [model_dataset_w[0] for _ in model_dataset_xy]
-        else:
-            raise ValueError('Size of weights results incompatible with size of x & y results')
-
-    if not isinstance(r, Sequence):
-        r = [r for i in range(len(modeldata_xy))]
-    elif len(r) != len(modeldata_xy):
-        raise ValueError(f'Size of r must match size of models ({len(r)}!={len(modeldata_xy)})')
-
-    return ax, models, r, modeldata_xy, modeldata_w, kwargs
-
-def _mhist(ax, r, modeldata_xy, modeldata_w, *, legend=None, update_ax=True, update_fig=True, **kwargs):
-    legend_kwargs = utils.extract_kwargs(kwargs, prefix='legend')
-    delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
-
-    for mi, (model_name, model_dataset_xy) in enumerate(modeldata_xy.items()):
-        for ki, key_data_xy in enumerate(model_dataset_xy):
-            key_data_w = modeldata_w[model_name][ki]
-
-            ax.mhist((key_data_xy['x'], key_data_xy['y']), r=r[mi], weights=key_data_w['w'],
-                     label=key_data_xy.get('label', None), **kwargs)
-
-    update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
-    if legend:
-        if ax._colorbar is not None:
-            legend_kwargs.setdefault('outside_margin', 0.35)
-        create_legend(ax, **legend_kwargs)
-
-    return ax
-
-
-def _mcontour(ax, r, modeldata_xy, modeldata_w, *, legend=None, update_ax=True, update_fig=True, **kwargs):
-    # Get the linestyle, color and marker for each thing to be plotted.
-    linestyles, colors, markers = parse_lscm(kwargs.pop('linestyle', True),
-                                             kwargs.pop('color', True),
-                                             kwargs.pop('marker', False))
-    fixed_model_linestyle = kwargs.pop('fixed_model_linestyle', None)
-    fixed_model_color = kwargs.pop('fixed_model_color', None)
-    fixed_model_marker = kwargs.pop('fixed_model_marker', None)
-    legend_kwargs = utils.extract_kwargs(kwargs, prefix='legend')
-
-    delayed_kwargs = update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
-
     has_labels = False
-    for mi, (model_name, model_dataset_xy) in enumerate(modeldata_xy.items()):
-        for ki, key_data_xy in enumerate(model_dataset_xy):
-            if fixed_model_linestyle or (fixed_model_linestyle is None and len(model_dataset_xy) == 1):
-                ls = linestyles[mi]
-            else:
-                ls = linestyles[ki]
-            if fixed_model_color is True or (fixed_model_color is None and len(modeldata_xy) > 1):
-                c = colors[mi]
-            else:
-                c = colors[ki]
-            if fixed_model_marker is True or (fixed_model_marker is None and len(model_dataset_xy) == 1):
-                m = markers[mi]
-            else:
-                m = markers[ki]
-
-            if not has_labels and key_data_xy.get('label', None):
+    for mi, (model, datapoints) in enumerate(modeldata.items()):
+        for di, datapoint in enumerate(datapoints):
+            if not has_labels and datapoint.get('label', None):
                 has_labels = True
-
-            key_data_w = modeldata_w[model_name][ki]
-
-            ax.mcontour((key_data_xy['x'], key_data_xy['y']), r=r[mi], weights=key_data_w['w'],
-                        label=key_data_xy.get('label', None),
-                        linestyle=ls, color=c, marker=m,
-                        **kwargs)
+            ax.mhist((datapoint['x'], datapoint['y']), r=r[mi], weights=datapoint['w'],
+                     label=datapoint.get('label', None), **kwargs)
 
     update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
-    if legend or (has_labels and legend is None):
+    if legend or (legend is None and has_labels):
         if ax._colorbar is not None:
             legend_kwargs.setdefault('outside_margin', 0.35)
         create_legend(ax, **legend_kwargs)
 
     return ax
-
-@utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
-@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
-@utils.set_default_kwargs(
-    ax_kw_ylabel_labelpad=20,
-    rose_colorbar_show=True,
-    legend_outside=True,)
-def mhist(models, xkey, ykey, r=None, weights=1, *,
-          default_attrname = None, unit=None,
-          weights_default_attrname = None, weights_unit=None, weights_default_value=0,
-          mask = None, ax = None, where=None, where_kwargs={},
-          legend=None, update_ax = True, update_fig = True,
-          **kwargs):
-    """
-    Histogram plot on a rose diagram.
-    """
-    ax, models, r, modeldata_xy, modeldata_w, kwargs = _mprep(models, xkey, ykey, r, weights,
-                                                      default_attrname=default_attrname, unit=unit,
-                                                      weights_default_attrname=weights_default_attrname,
-                                                      weights_unit=weights_unit, weights_default_value=weights_default_value,
-                                                      mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
-                                                      **kwargs)
-
-    return _mhist(ax, r, modeldata_xy, modeldata_w, legend=legend, update_ax=update_ax, update_fig=update_fig, **kwargs)
-
-
-@utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)
-@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
-@utils.set_default_kwargs(
-    ax_kw_ylabel_labelpad=20,
-    legend_outside=True,
-    rose_colorbar_show=False, bar_outline=True,
-    linestyle=True, color=True, marker=False,
-    fixed_model_linestyle = None, fixed_model_color = None, fixed_model_marker = None
-)
-def mcontour(models, xkey, ykey, r=None, weights=1, *,
-             default_attrname = None, unit=None,
-             weights_default_attrname = None, weights_unit=None, weights_default_value=0,
-             mask = None, ax = None, where=None, where_kwargs={},
-             legend=None, update_ax = True, update_fig = True,
-             **kwargs):
-    """
-    Contour plot on a rose diagram.
-    """
-    ax, models, r, modeldata_xy, modeldata_w, kwargs = _mprep(models, xkey, ykey, r, weights,
-                                                            default_attrname=default_attrname, unit=unit,
-                                                            weights_default_attrname=weights_default_attrname,
-                                                            weights_unit=weights_unit, weights_default_value=weights_default_value,
-                                                            mask=mask, ax=ax, where=where, where_kwargs=where_kwargs,
-                                                            **kwargs)
-
-    return _mcontour(ax, r, modeldata_xy, modeldata_w, legend=legend, update_ax=update_ax, update_fig=update_fig, **kwargs)
 
 ########################
 ### Depricated stuff ###
@@ -2080,3 +2447,109 @@ def plot_intnorm(*args, **kwargs):
 def plot_simplenorm(*args, **kwargs):
     return plot.stdnorm(*args, **kwargs)
 
+@utils.deprecation_warning('``mhist`` has been deprecated: Use ``plot.rose_hist`` instead')
+def mhist(*args, **kwargs):
+    kwargs.setdefault('rose_colorbar_show', True)
+    kwargs.setdefault('cmap', True)
+    return rose_hist(*args, **kwargs)
+
+# TODO No longer used. Delete when new code has been tests.
+def __prep_hist(models, key, weights,
+               sum_weights, norm_weights, flip, filled,
+               default_attrname, unit, weights_default_attrname, weights_unit, weights_default_value,
+               mask, label_kwargs, kwargs):
+    if flip:
+        axis = 'y'
+    else:
+        axis = 'x'
+
+    modeldata, axis_labels = get_data(models, {axis: key},
+                                      default_attrname=default_attrname, unit=unit,
+                                      mask=mask, mask_na=False, _kwargs=kwargs, **label_kwargs)
+
+    func_weights = kwargs.pop('_SIMPLE_add_weights', add_weights)
+    func_weights(modeldata, axis,
+                 weights=weights, sum_weights=sum_weights, norm_weights=norm_weights,
+                 default_attrname=weights_default_attrname, unit=weights_unit,
+                 default_value=weights_default_value, mask=mask, mask_na=False)
+
+    if filled is None:
+        if len(models) > 1 or (len(models) > 0 and len(next(iter(modeldata.values()))) > 1):
+            filled = False
+        else:
+            filled = True
+
+    if filled is True:
+        kwargs.setdefault('histtype', 'stepfilled')
+    else:
+        kwargs.setdefault('histtype', 'step')
+
+    if flip:
+        kwargs.setdefault('orientation', 'horizontal')
+        kwargs.setdefault('ax_ylabel', axis_labels['y'])
+    else:
+        kwargs.setdefault('orientation', 'vertical')
+        kwargs.setdefault('ax_xlabel', axis_labels['x'])
+
+    return modeldata, axis, filled
+
+def __rose_prep(models, xkey, ykey, r, weights, *,
+               default_attrname=None, unit=None, sum_weights=True, norm_weights=True,
+               weights_default_attrname=None, weights_unit=None, weights_default_value=0,
+               mask=None, ax=None, where=None, where_kwargs={},
+               **kwargs):
+    ax = get_axes(ax)
+    rose_kwargs = utils.extract_kwargs(kwargs, prefix='rose')
+    if ax.name != 'rose':
+        ax = create_rose_plot(ax, **rose_kwargs)
+
+    where_kwargs.update(utils.extract_kwargs(kwargs, prefix='where'))
+    models = get_models(models, where=where, where_kwargs=where_kwargs)
+
+    label_kwargs = utils.extract_kwargs(kwargs, 'label', 'prefix_label', 'suffix_label',
+                                        'key_in_label', 'numer_in_label', 'denom_in_label',
+                                        'model_in_label', 'unit_in_label', 'attrname_in_label')
+
+    modeldata, axis_labels = get_data(models, {'x': xkey, 'y': ykey},
+                                         default_attrname=default_attrname, unit=unit,
+                                         mask=mask, mask_na=False, _kwargs=kwargs, **label_kwargs)
+
+    kwargs.setdefault('ax_xlabel', axis_labels['x'])
+    kwargs.setdefault('ax_ylabel', axis_labels['y'])
+
+    func_weights = kwargs.pop('_SIMPLE_add_weights', add_weights)
+    func_weights(modeldata, 'x',
+                 weights=weights, sum_weights=sum_weights, norm_weights=norm_weights,
+                 default_attrname=weights_default_attrname, unit=weights_unit,
+                 default_value=weights_default_value, mask=mask, mask_na=False)
+
+    if not isinstance(r, Sequence):
+        r = [r for i in range(len(modeldata))]
+    elif len(r) != len(modeldata):
+        raise ValueError(f'Size of r must match size of models ({len(r)}!={len(modeldata)})')
+
+    return ax, models, r, modeldata, kwargs
+
+def __plot_prep(models, ax, where, kwargs):
+    ax = get_axes(ax)  # We are working on the axes object proper
+
+    # Get the linestyle, color and marker for each thing to be plotted.
+    linestyles, colors, markers = parse_lscm(kwargs.extract(('linestyle', True), ('color', True), ('marker', False)))
+    fixed_model_linestyle = kwargs.pop('fixed_model_linestyle', None)
+    fixed_model_color = kwargs.pop('fixed_model_color', None)
+    fixed_model_marker = kwargs.pop('fixed_model_marker', None)
+
+    legend_kwargs = utils.extract_kwargs(kwargs, prefix='legend')
+
+    # If there is only one model it is set as the title to make the legend shorter
+    model_in_label = label_kwargs.pop('model_in_label', None)
+    if len(models) == 1 and model_in_label is None:
+        label_kwargs['model_in_label'] = False
+        legend_kwargs.setdefault('title', models[0].name)
+    else:
+        label_kwargs['model_in_label'] = model_in_label
+
+    return (ax, models,
+            linestyles, colors, markers,
+            fixed_model_linestyle, fixed_model_color, fixed_model_marker,
+            legend_kwargs, label_kwargs)

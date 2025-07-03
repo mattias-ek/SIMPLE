@@ -10,6 +10,7 @@ IntNormMethods = {}
 
 @utils.add_shortcut('better', mass_coef ='better')
 @utils.add_shortcut('simplified', mass_coef ='simplified')
+@utils.set_default_kwargs()
 def intnorm_linear(abu_i, abu_j, abu_k,
                    mass_i, mass_j, mass_k,
                    std_i, std_j, std_k,
