@@ -1,4 +1,4 @@
-name: Verify staging
+name: Check version
 
 on:
   pull_request:
