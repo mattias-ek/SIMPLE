@@ -79,7 +79,7 @@ jobs:
         with:
           python-version: '3.9'
 
-      - run: pip install setuptools_scm[toml]
+      #- run: pip install setuptools_scm[toml]
       - run: pip install ".[test]"
       - run: pytest --cov --cov-branch --cov-report=xml
 
