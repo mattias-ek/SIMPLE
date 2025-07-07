@@ -28,7 +28,7 @@ jobs:
           VERSION="v$VERSION"
 
           # Create tag if it doesn’t exist
-          if [[ ${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/master" ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/master" ]]; then
             if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
               git config user.name "github-actions"
               git config user.email "github-actions@github.com"
