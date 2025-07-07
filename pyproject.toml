@@ -12,7 +12,7 @@ log_cli_level = "INFO"
 [tool.setuptools_scm]
 version_scheme = "guess-dev"
 local_scheme = "node-and-date"
-write_to = "your_package/__version__.py"
+write_to = "simple/__version__.py"
 fallback_version = "0.0.0"
 
 
