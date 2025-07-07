@@ -1,16 +1,7 @@
-# simple.ccsne
+# The `simple.ccsne` Namespace
+
+The *ccsne* submodule contains everything related to working with CCSNe models. 
+
+---
 
 ::: simple.ccsne
-    options:
-        members_order: source
-        group_by_category: true
-        separate_signature: true
-        
-        show_root_heading: true
-        show_root_members_full_path: false
-        show_root_toc_entry: true
-        
-        show_category_heading: true
-        show_symbol_type_toc: false
-        
-        show_bases: true

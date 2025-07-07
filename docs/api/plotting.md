@@ -1,9 +1,10 @@
-# simple.plot
+# The `simple.plotting` Namespace
 
-a
+The *plotting* submodule contains everything related to data visualisation.
+
+Matplotlib is used as the foundation for all plotting and this library can be used to further customise the plots here,
+for example via the `plt` object.
+
+---
 
 ::: simple.plotting
-    options:
-        show_root_heading: False
-        show_root_members_full_path: true
-        show_root_toc_entry: false

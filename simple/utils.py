@@ -150,9 +150,7 @@ class DefaultKwargs:
             return f'<DefaultKwargs.Shortcut "{self.name}" for function: {self._inherits_from.raw.__name__}>'
 
         def __call__(self, *args, kwargs=None, **kwargs_):
-            new_kwargs = self.kwargs
-            new_kwargs.update(kwargs_)
-            return self._inherits_from(*args, kwargs=kwargs, **new_kwargs)
+            return self._inherits_from._call(self.kwargs, args, kwargs, kwargs_)
 
         @property
         def kwargs(self):
@@ -358,7 +356,16 @@ class DefaultKwargs:
         Calls the wrapped function with arguments, resolving default kwargs and matching against the function signature.
         Values in `kwargs` take precedence over `**kwargs_`.
         """
-        all_kwargs = self.Dict(self.kwargs, kwargs_, kwargs or {})
+        return self._call(self.kwargs, args, kwargs, kwargs_)
+
+        # old
+        new_kwargs = self.kwargs
+        new_kwargs.update(kwargs)
+        all_kwargs = KwargDict(self.kwargs, kwargs_, kwargs or {})
+        return self.raw(*args, **new_kwargs)
+
+    def _call(self, fkwargs, args, kwargs, kwargs_):
+        all_kwargs = self.Dict(fkwargs, kwargs or {}, kwargs_)
 
         for name in self._func_pos_names[:len(args[self._func_nposonly:])]:
             all_kwargs.pop(name, None)
@@ -369,11 +376,6 @@ class DefaultKwargs:
         else:
             return self.raw(*args, **kw_kwargs, **all_kwargs)
 
-        # old
-        new_kwargs = self.kwargs
-        new_kwargs.update(kwargs)
-        all_kwargs = KwargDict(self.kwargs, kwargs_, kwargs or {})
-        return self.raw(*args, **new_kwargs)
 
     def add_shortcut(self, name,  **kwargs):
         """

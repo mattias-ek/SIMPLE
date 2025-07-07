@@ -1,0 +1,141 @@
+name: Staging Pre-Release
+
+on:
+  push:
+    branches:
+      - staging
+      - master
+
+jobs:
+  get-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: set-version
+        run: |
+          VERSION=$(cat VERSION.txt)
+          TAG="v$VERSION"
+
+          # Create tag if it doesn’t exist
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+          
+          # If staging add devN to version
+          if [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
+            TAG="v$VERSION"
+            DEVN=$(git rev-list "$TAG"..HEAD --count || echo 0)
+            HASH=$(git rev-parse --short HEAD)
+            DATE=$(date +%Y%m%d)
+            VERSION="${VERSION}.dev${DEVN}+g${HASH}.d${DATE}"
+          fi
+          
+          echo "Pre-release Version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+
+  staging-docs:
+    name: Generate pre-release documentation
+    if: github.ref == 'refs/heads/staging'
+    needs: get-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update docs with version and data
+        run: |
+          sed -i "s/__VERSION__/${{ needs.get-version.outputs.version }}/" CHANGELOG.md
+          sed -i "s/__VERSION__/${{ needs.get-version.outputs.version }}/" CHANGELOG.md
+          sed -i "s/__DATE__/$(date +%Y-%m-%d)/" CHANGELOG.md
+
+      - name: Copy examples
+        run: cp ./notebooks/*ipynb ./docs/examples/
+
+      - run: cp CHANGELOG.md ./docs/changelog.md
+      - run: cp README.md ./docs/index.md
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - run: pip install uv
+
+      - run: uv pip install .[docs]
+      - run: mkdocs build --strict --site-dir site-pre
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          publish_dir: ./site-pre
+          destination_dir: pre
+
+  docs:
+    name: Generate docs
+    needs: get-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get current branch name
+        run: echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+      # Copy files
+      - run: cp ./notebooks/*ipynb ./docs/examples/
+      - run: cp CHANGELOG.md ./docs/changelog.md
+
+      # Replace placeholders
+      - name: Update docs with version and data
+        run: |
+          sed -i "s/__VERSION__/${{ needs.get-version.outputs.version }}/" CHANGELOG.md
+          sed -i "s/__DATE__/$(date +%Y-%m-%d)/" CHANGELOG.md
+          sed -i "s/__VERSION__/${{ needs.get-version.outputs.version }}/" index.md
+          sed -i "s/__BRANCH__/${BRANCH}/" index.md
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - run: pip install uv
+      - run: uv pip install .[docs]
+
+      # For the master branch.
+      - run: mkdocs gh-deploy --force --clean --verbose
+        if: github.ref == 'refs/heads/master'
+
+      # For the staging branch.
+      - run: mkdocs build --strict --site-dir site-pre
+        if: github.ref == 'refs/heads/staging'
+      - uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/staging'
+        with:
+          publish_dir: ./site-pre
+          destination_dir: pre
+
+  release:
+    name: Publish to PyPi
+    needs: get-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate dev version
+        run: |
+          echo "__version__ = \"${{ needs.get-version.outputs.version }}\"" > simple/__version__.py
+          sed -i "s/__VERSION__/${{ needs.get-version.outputs.version }}/" pyproject.toml
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - run: rm -rf build dist *.egg-info
+      - run: python -m build
+      - run: twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+
+

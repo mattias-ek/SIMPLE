@@ -1,7 +1,7 @@
-# simple.utils
+# The `simple.utils` Namespace
+
+The *utils* submodule contains various utilities and helpers that are used throughout the package.
+
+---
 
 ::: simple.utils
-    options:
-        show_root_heading: False
-        show_root_members_full_path: true
-        show_root_toc_entry: false

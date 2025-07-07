@@ -8,10 +8,10 @@ import logging
 logger = logging.getLogger('SIMPLE.ccsne')
 
 __all__ = ['plot_ccsne', 'rose_hist_ccsne',
-           'mhist_ccsne', 'add_weights_ccsne',
-           'ccsne_zones']
+           'hist_ccsne', 'add_weights_ccsne']
 
 ccsne_zones = ('Mrem', 'Ni', 'Si', 'O/Si', 'O/Ne', 'O/C', 'He/C', 'He/N', 'H')
+"""The different shells of the onion structure going outwards."""
 
 #############
 ### Utils ###
@@ -23,6 +23,7 @@ z_names = ['Neut', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', '
            'Ba', 'La', 'Ce', 'Pr', 'Nd', 'Pm', 'Sm', 'Eu', 'Gd', 'Tb', 'Dy', 'Ho', 'Er', 'Tm',
            'Yb', 'Lu', 'Hf', 'Ta', 'W', 'Re', 'Os', 'Ir', 'Pt', 'Au', 'Hg', 'Tl', 'Pb', 'Bi',
            'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U']
+"""The element symbol for each atomic number (z) up to U"""
 
 def calc_default_onion_structure(abundance, keys, masscoord):
     """
@@ -134,7 +135,13 @@ def calc_default_onion_structure(abundance, keys, masscoord):
     return onion_lbounds, zone
 
 def fudge_masscord_mass(masscoord):
-    # Assumed the masscoord mass x is equal to the (x+1) - x. And that the first mass is euqal to the second.
+    """
+    Estimate the mass at each mass coordinate.
+
+    The mass associated with a coordinate is approximated by the difference
+    between successive coordinates. The last value is duplicated so the output
+    has the same length as the input array.
+    """
     logging.info('Fudging the masscoord mass from masscoord')
     masscoord = np.asarray(masscoord)
     masscoord = masscoord[1:] - masscoord[:1]
@@ -146,23 +153,7 @@ def fudge_masscord_mass(masscoord):
 
 class CCSNe(models.ModelBase):
     """
-    Model specifically for CCSNe yields and their mass coordinates.
-
-    Attributes:
-        type (str): The type of data stored in the model. **Required at initialisation**
-        citation (str): A citation for the data. **Required at initialisation**
-        mass (): The initial mass of the CCSNe modelled. **Required at initialisation**
-        masscoord (): The mass coordinates of the yields. **Required at initialisation**
-        abundance (): A key array containing the isotope yields. Is created upon model initiation from the
-        ``abundance_values`` and ``abundance_keys`` attributes.
-        abundance_values (): A 2dim array containing the isotope yields. **Required at initialisation**
-        abundance_keys (): The isotope key for each column in ``abundance_values``. **Required at initialisation**
-        abundance_unit (): Unit for the yields. Should typically be either ``mol`` or ``mass`` for molar and mass
-            fractions respectively. **Required at initialisation**
-        refid_isoabu (str): Name of the reference model containing the reference isotope abundances
-            used for normalisations. **Required at initialisation**
-        refid_isomass (str): Name of the reference model containing the reference isotope masses
-            used for normalisations. **Required at initialisation**
+    Model for CCSNe yields and their mass coordinates.
     """
     REQUIRED_ATTRS = ['type', 'dataset', 'citation', 'mass', 'masscoord', 'masscoord_mass',
                       'abundance_values', 'abundance_keys', 'abundance_unit',
@@ -175,6 +166,7 @@ class CCSNe(models.ModelBase):
     masscoord_mass_label_latex = 'Coordinate Mass [M${}_{\\odot}$]'
 
 def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
+    """Load the CCSNe models from Ritter et al. (2018)."""
     def load(emass, modelname):
         pt_exp = mp.se(fol2mod, modelname, rewrite=True)
         cyc = pt_exp.se.cycles[-1]
@@ -218,6 +210,7 @@ def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
     return models
 
 def load_Pi16(fol2mod, ref_isoabu, ref_isomass):
+    """Load the CCSNe models from Pignatari et al. (2016)."""
     def load(emass, modelname):
         pt_exp = mp.se(fol2mod, modelname, rewrite=True)
         cyc = pt_exp.se.cycles[-1]
@@ -261,6 +254,7 @@ def load_Pi16(fol2mod, ref_isoabu, ref_isomass):
     return models
 
 def load_La22(data_dir, ref_isoabu, ref_isomass):
+    """Load the CCSNe models from Lawson et al. (2022)."""
     def load(emass, model_name, default_onion_structure=True):
         mass_lines = []
         with open(data_dir + model_name, "rt") as f:
@@ -343,6 +337,7 @@ def load_La22(data_dir, ref_isoabu, ref_isomass):
     return models
 
 def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False):
+    """Load the CCSNe models from Sieverding et al. (2018)."""
     def load(emass, file_sie):
         with h5py.File(data_dir + file_sie) as data_file:
             data = data_file["post-sn"]
@@ -393,6 +388,7 @@ def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False):
     return models
 
 def load_Ra02(data_dir, ref_isoabu, ref_isomass):
+    """Load the CCSNe models from Rauscher et al. (2002)."""
     def load(emass, model_name):
         filename = data_dir + model_name
         # print(filename)
@@ -444,6 +440,7 @@ def load_Ra02(data_dir, ref_isoabu, ref_isomass):
     return models
 
 def load_LC18(data_dir, ref_isoabu, ref_isomass):
+    """Load the CCSNe models from Limongi & Chieffi (2018)."""
     def load(emass, model_name):
         filename = data_dir + model_name
         # print(filename)
@@ -522,6 +519,7 @@ def load_LC18(data_dir, ref_isoabu, ref_isomass):
    OSi_fill_show=False,
    Ni_fill_show=False, )
 def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwargs=None):
+    """Visualise the onion-shell structure for a single CCSNe model."""
     if not isinstance(model, models.ModelBase):
         raise ValueError(f'model must be an Model object not {type(model)}')
 
@@ -551,7 +549,7 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
     default_fill = kwargs.extract( prefix='default_fill')
 
     def add_line(name, x):
-        line_kwargs = kwargs.extract(prefix='{name}_line', **default_line)
+        line_kwargs = kwargs.extract(prefix=f'{name}_line', **default_line)
         if line_kwargs.pop('show', True):
             ax.axvline(x, **line_kwargs)
 
@@ -627,34 +625,6 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
     plotting.update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
 
 
-@utils.add_shortcut('abundance', default_attrname='abundance', unit='mass')
-@utils.add_shortcut('intnorm', default_attrname='intnorm.eRi', unit=None)
-@utils.add_shortcut('stdnorm', default_attrname='stdnorm.Ri', unit=None)
-@utils.set_default_kwargs(inherits=plotting.plot,
-                                  linestyle=True, marker=False, fig_size=(10,5),
-                                  xhist=False)
-def plot_ccsne(models, ykey, *,
-         semilog = False, onion=None,
-         kwargs=None):
-    """
-    Plot for CCSNe models. Plots the mass coordinates on the x-axis.
-    """
-    onion_kwargs = kwargs.extract(prefix=['onion', 'zone'])
-    if semilog: kwargs.setdefault('ax_yscale', 'log')
-    kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
-
-    modeldata, axis_labels = plotting.plot_get_data(models, '.masscoord', ykey,
-                                           xunit=None, kwargs=kwargs)
-    ax = plotting.plot_draw(modeldata, axis_labels, kwargs=kwargs)
-
-    if onion or (onion is None and len(modeldata) == 1):
-        if len(modeldata) > 1:
-            raise ValueError(f"Can only plot onion structure for a single model")
-        else:
-            plot_zonal_structure(models[0], ax=ax, **onion_kwargs)
-
-    return ax
-
 @utils.set_default_kwargs(inherits=plotting.add_weights)
 def add_weights_ccsne(modeldata, axis, weights = 1, kwargs=None):
     """
@@ -668,7 +638,7 @@ def add_weights_ccsne(modeldata, axis, weights = 1, kwargs=None):
     retrieved from each model. Optionally, the weights can be summed,
     normalized, and masked for missing data.
 
-    The 'mask' and 'mask_na' arguments should be the same as those used to generate 'modeldata' to ensure
+    The `mask` and `mask_na` arguments should be the same as those used to generate 'modeldata' to ensure
     conistent results.
 
     Add weights to CCSNe datapoints by combining standard weighting with mass coordinate scaling.
@@ -719,11 +689,41 @@ def add_weights_ccsne(modeldata, axis, weights = 1, kwargs=None):
 
     return modeldata
 
+@utils.set_default_kwargs(inherits=plotting.plot,
+                                  linestyle=True, marker=False, fig_size=(10,5),
+                                  xhist=False)
+def plot_ccsne(models, ykey, *,
+         semilog = False, onion=None,
+         kwargs=None):
+    """
+    CCSNe implementation of the [`plot`][simple.plot] function where you specify the data on the y-axis which is
+    automatically plotted against the mass coordinated on the x-axis. If a single model is shown then by default
+    the onion shell structure is also drawn.
+    """
+    onion_kwargs = kwargs.extract(prefix=['onion', 'zone'])
+    if semilog: kwargs.setdefault('ax_yscale', 'log')
+    kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
+
+    modeldata, axis_labels = plotting.plot_get_data(models, '.masscoord', ykey,
+                                           xunit=None, kwargs=kwargs)
+    ax = plotting.plot_draw(modeldata, axis_labels, kwargs=kwargs)
+
+    if onion or (onion is None and len(modeldata) == 1):
+        if len(modeldata) > 1:
+            raise ValueError(f"Can only plot onion structure for a single model")
+        else:
+            plot_zonal_structure(models[0], ax=ax, **onion_kwargs)
+
+    return ax
 
 @utils.set_default_kwargs(inherits=plotting.hist,
                                   weights_default_attrname='abundance', weights_unit='mass',
                                   )
-def hist_ccsne(models, key, weights=1, **kwargs):
+def hist_ccsne(models, key, weights=1, kwargs=None):
+    """
+    CCSNe implementation of [`hist`][simple.hist] where all weights are multiplied by the mass coordinate mass
+    (see [`add_ccsne_weights`][simple.add_ccsne_weights]).
+    """
     kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
     return plotting.hist(models, key, weights=weights, kwargs=None)
 
@@ -733,7 +733,8 @@ def hist_ccsne(models, key, weights=1, **kwargs):
                                   )
 def rose_hist_ccsne(models, xkey, ykey, r=None, weights=1, kwargs=None):
     """
-    Histogram plot on a rose diagram for CCNSe models.
+    CCSNe implementation of [`rose_hist`][simple.rose_hist] where all weights are multiplied by the mass coordinate mass
+    (see [`add_ccsne_weights`][simple.add_ccsne_weights]).
     """
     kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
     return plotting.rose_hist(models, xkey, ykey, r=r, weights=weights, **kwargs)

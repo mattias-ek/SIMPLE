@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools >= 61.0"]
-build-backend = "setuptools.build_meta"
+build-backend = ["setuptools.build_meta"]
 
 [tool.setuptools.packages.find]
 include = ["simple", "simple.*"]
@@ -9,9 +9,19 @@ include = ["simple", "simple.*"]
 log_cli = true
 log_cli_level = "INFO"
 
+[tool.setuptools_scm]
+version_scheme = "no-guess-dev"
+local_scheme = "node-and-date"
+write_to = "simple/__version__.py"
+
+
 [project]
-name = "SIMPLE"
-version = "0.4.0"
+name = "simple-chetec"
+version = "__VERSION__"
+description = "Stellar Interpretation for Meteoritic data and PLotting (for Everyone)"
+authors = [{ name = "Mattias Ek", email = "mattias.ek@pm.me" }]
+license = { text = "LGPL-3.0-or-later" }
+readme = "README.md"
 requires-python = ">= 3.9"
 dependencies = [
     "numpy",
@@ -24,5 +34,19 @@ dependencies = [
 dev = [
     "pytest",
     "ipykernel",
-    "nugridpy"]
+    "nugridpy"
+]
 
+test = [
+    "pytest",
+    "pytest-cov"
+]
+
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "mkdocs-gen-files",
+    "mkdocs-jupyter",
+    "pymdown-extensions"
+]

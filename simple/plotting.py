@@ -19,7 +19,7 @@ __all__ = ['create_rose_plot',
            'get_data', 'add_weights',
            'plot', 'slope', 'hist',
            'rose_hist',
-            'create_legend', 'update_axes',
+           'create_legend', 'update_axes',
            'plot_intnorm', 'plot_simplenorm', 'mhist',]
 
 
@@ -27,7 +27,7 @@ __all__ = ['create_rose_plot',
 # Taken from https://davidmathlogic.com/colorblind/#%23000000-%23E69F00-%2356B4E9-%23009E73-%23F0E442-%230072B2-%23D55E00-%23CC79A7
 default_colors=utils.EndlessList(["#D55E00", "#56B4E9", "#009E73", "#E69F00", "#CC79A7", "#0072B2", "#F0E442"])
 """
-[``Endlesslist``][simple.plot.EndlessList] containing the default colors used by simple plotting functions.
+An [``Endlesslist``][simple.plot.EndlessList] containing the default colors used by simple plotting functions.
 """
 
 default_linestyles = utils.EndlessList(['-', (0, (4, 4)), (0, (2, 1)),
@@ -1462,12 +1462,12 @@ def add_weights(modeldata, axis, weights=1, *,
     Add weights to the specified axis of each datapoint in the modeldata dictionary.
 
     This function appends a new array of weights (under `axisname`) to each datapoint
-    in `modeldata`. The weights can be a constant or a string referring to data to be indvidually
+    in `modeldata`. The weights can be a constant or a string referring to data to be individually
     retrieved from each model. Optionally, the weights can be summed,
     normalized, and masked for missing data.
 
-    The 'mask' and 'mask_na' arguments should be the same as those used to generate 'modeldata' to ensure
-    conistent results.
+    The 'mask' and 'mask_na' arguments should be the same as those used to generate `modeldata` to ensure
+    consistent results.
 
     Args:
         modeldata (dict): The data dictionary returned from `get_data`. It should be a

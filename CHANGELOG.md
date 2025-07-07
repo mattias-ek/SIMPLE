@@ -1,6 +1,6 @@
 # Release Notes
 
-## [0.4.0] - 2025-05-19
+## [__version__] - __date__
 
 Added the LGPL-3.0 licence
 
@@ -29,9 +29,9 @@ Renamed ``ModelTemplate`` to ``ModelBase``.
 ### CCSNe Models
 Added the *masscoord_mass* attribute to the mandatory attributes of the CCSNe models. 
 
-Added a ``shell`` attribute to CCSNe model with an onion shell. This is a ndarray with the name
+Added a ``zone`` attribute to CCSNe models with an onion shell structure. This is a ndarray with the name
 of the shell for each mass coordinate. Removed the ability to specify individual shells 
-in ``get_mask``. Instead use ``.shell == <name>`` instead. 
+in ``get_mask``. Instead use ``.zone == <name>`` instead. 
 
 ### Plotting
 Added a new plot type - A traditional histogram. The new plot type can be accessed using 
@@ -49,3 +49,5 @@ of plots.
 ### Utils
 Updated how the default kwargs works. You can now pass the whole kwargs dictionary to another function so that 
 removed/added items are synced between the functions. 
+
+Shortcuts can now be "inherited".

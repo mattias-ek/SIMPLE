@@ -8,10 +8,6 @@ import simple.utils as utils
 import simple.norm as norm
 from simple.utils import NamedDict
 
-import uuid
-
-import copy
-
 __all__ = ['load_collection', 'load_models', 'new_collection']
 
 logger = logging.getLogger('SIMPLE.models')
@@ -30,10 +26,12 @@ class HDF5Dict(NamedDict):
     """
 
     def __init__(self, *args, **kwargs):
+        """Initialise the dictionary and track attribute types."""
         super().__setattr__('_attr_type', {}, item=False)
         super().__init__(*args, **kwargs)
 
     def __setitem__(self, name, value):
+        """Store ``value`` while recording its type for HDF5 output."""
         attr_type = type(value)
 
         if attr_type == np.ndarray:
@@ -59,6 +57,7 @@ class HDF5Dict(NamedDict):
 
     @classmethod
     def _load_attrs_from_group(cls, group):
+        """Load attributes from an HDF5 ``group`` and return a new instance."""
         attrs = cls()
 
         for name, dataset in group.items():
@@ -97,6 +96,7 @@ class HDF5Dict(NamedDict):
         return attrs
 
     def _save_attrs_to_group(self, group):
+        """Write the dictionary contents to ``group``."""
         for name, value in self.items():
             if name == '_attr_type': continue
             attr_type = self._attr_type[name]
@@ -194,6 +194,7 @@ References in collection:
 """.strip()
 
     def __init__(self):
+        """Create an empty model collection."""
         self.refs = []
         self.models = []
 
@@ -204,6 +205,11 @@ References in collection:
         return len(self.models)
 
     def __getitem__(self, key):
+        """
+        Return a model or subcollection selected by ``key`` which can either be the name of a model, or reference model,
+        or the index of a model (Reference models cannot be accessed using the index).
+        """
+
         if type(key) is int:
             return self.models[key]
 
@@ -267,6 +273,7 @@ References in collection:
         logger.info(f'Time to save file: {t}')
 
     def _save_model(self, parent_group, model):
+        """Save a single ``model`` into ``parent_group``."""
         group = parent_group.create_group(model.name, track_order=True)
         model.hdf5_attrs._save_attrs_to_group(group)
 
@@ -279,6 +286,7 @@ References in collection:
         Args:
             filename (): Name of the file to load.
             isolist (): Isolist applied to loaded models. If ``None`` no subselection is made.
+            convert_unit (): Whether to convert units to the mole unit, as recommended, when creating the isolist.
             where (): String evaluation used to select which models to load.
             **where_kwargs (): Additional keyword arguments used together with ``where``.
         """
@@ -297,6 +305,7 @@ References in collection:
         logger.info(f'Time to load file: {t}')
 
     def _load_model(self, group, name, isolist, convert_unit, where, where_kwargs):
+        """Load and return a model from ``group`` if it matches ``where``."""
         if where is not None:
             eval = utils.simple_eval.parse_where(where)
 
@@ -319,6 +328,7 @@ References in collection:
             return None
 
     def _load_ref(self, group, name):
+        """Load a reference model from ``group``."""
         attrs = HDF5Dict._load_attrs_from_group(group)
         logger.info(f'Loading ref: {name} ({attrs["clsname"]})')
 
@@ -335,7 +345,7 @@ References in collection:
         """
         Returns the model with the given name.
 
-        If ``attr`` is given then the value of that attribute from the named model is returned instead.
+        If ``attr`` is given then the value of that attribute from the model is returned instead.
         """
         for model in self.models:
             if model.name == name:
@@ -352,7 +362,7 @@ References in collection:
         """
         Returns the reference model with the given name.
 
-        If ``attr`` is given then the value of that attribute from the named model is returned instead.
+        If ``attr`` is given then the value of that attribute from the model is returned instead.
         """
         for ref in self.refs:
             if ref.name == name:
@@ -402,6 +412,7 @@ References in collection:
             raise ValueError(f"No model class called '{clsname}' exists")
 
     def add_model(self, model):
+        """Add ``model`` to the collection if it is not already present."""
         if not isinstance(model, ModelBase):
             raise TypeError(f"``model`` must be a Model object, not {type(model)}")
 
@@ -419,6 +430,7 @@ References in collection:
             return model
 
     def add_ref(self, ref):
+        """Add reference ``ref`` to the collection if it is not already present."""
         if not isinstance(ref, ModelBase):
             raise TypeError(f"``ref`` must be a Model object, not {type(ref)}")
 
@@ -463,10 +475,6 @@ References in collection:
         Args:
             where (): A string with the evaluation to perform for each model.
             **where_kwargs (): Arguments used for the evaluation.
-
-        Returns:
-            bool
-
         """
         models = utils.models_where(self.models, where, **where_kwargs)
 
@@ -546,8 +554,6 @@ class ModelBase:
     - ``VALUES_KEYS_TO_ARRAY`` - If ``True`` a key array named ``<name>`` is automatically created upon model
         initialisation if attributes called.
         ``<name>_values`` and ``<name>_keys`` exits.
-    - ``ISREF`` - Should be ``True`` for models specifically for storing reference values. These will be stored
-        in the ``ModelCollection.refs`` dictionary rather than ``ModelCollection.models`` dictionary.
     """
     REQUIRED_ATTRS = []
     REPR_ATTRS = ['name']
@@ -558,25 +564,23 @@ class ModelBase:
         return hash(self.__class__, self.name)
 
     def __init_subclass__(cls, **kwargs):
-        # Called each time a new subclass is created
-        # Registers the class so that it can be found upon loading
+        """Register subclasses for loading from files."""
         super().__init_subclass__(**kwargs)
         logger.debug(f'registering class: {cls.__name__}')
         if cls.__name__ != 'ModelBase':
             AllModelClasses[cls.__name__] = cls
 
-    def __repr__(self):
-        return f'<{self.name} - {self.clsname}>'
-
     def __str__(self):
         return self.name
 
     def _repr_markdown_(self):
+        """Markdown representation used by Jupyter notebooks."""
         all_attrs = ['*name*'] + [f"*{name}*" for name in self.hdf5_attrs] + [f"*{name}*" for name in self.normal_attrs]
         attrs = '\n'.join([f'**{attr.capitalize()}**: {getattr(self, attr)}\\' for attr in self.REPR_ATTRS])
         return f'{attrs}\n**Attributes**: {", ".join(all_attrs)}'
 
     def __init__(self, name, reference_models_ = None, **hdf5_attrs):
+        """Create a model instance and populate ``hdf5_attrs``."""
         super().__setattr__('name', name)
         super().__setattr__('hdf5_attrs', HDF5Dict())
         super().__setattr__('normal_attrs', NamedDict())
@@ -636,6 +640,7 @@ class ModelBase:
         return self.__getattr__(name)
 
     def __setattr__(self, name, value):
+        """Prevent direct attribute assignment."""
         raise AttributeError('Use the `setattr` method to add attributes to this object')
 
     def __contains__(self, name):
@@ -698,6 +703,7 @@ class ModelBase:
             shape (): Shape of the returned mask. If omitted the shape of the default abundance array is used.
             **mask_attrs (): Attributes to be used during the evaluation.
 
+
         Examples:
             >>> a = np.array([0,1,2,3,4])
             >>> model.get_mask('3', a.shape)
@@ -736,15 +742,13 @@ class ModelBase:
         Args:
             array (): A key array.
             unit (): The current unit of the data in ``array``. If ``None`` the unit is assumed to be that of the
-            ``desired_unit_args``.
+                ``desired_unit_args``.
             desired_unit (): The unit the array should be converted to. If ``None`` no conversion is made
-            and the original array`is returned.
+                and the original array`is returned.
+            attrname (): The name of the attribute storing the array. Used for logging purposes.
 
         Raises:
             ValueError: If the array cannot be converted from ``unit`` to ``desired_unit_args``.
-
-        Returns:
-            A copy of ``array`` with the desired unit.
         """
         array = array.copy()
 
@@ -837,6 +841,7 @@ class ModelBase:
                 return self.convert_array(a, unit, desired_unit)
 
     def get_array_labels(self, name=None, latex=True):
+        """Return default labels for a key array."""
         if name is None:
             if self.ABUNDANCE_KEYARRAY is None:
                 raise ValueError(f"{self.name}: No default array associated with this model")
@@ -888,7 +893,7 @@ class ModelBase:
 
         Args:
             isolist (): Either a list of isotopes to be selected or a dictionary consisting of the
-             final isotope mapped to a list of isotopes to be added together for this isotope.
+                final isotope mapped to a list of isotopes to be added together for this isotope.
             convert_unit: If ``True``  and data is stored in a mass unit all values will be divided by the mass number of
                 the isotope before summing values together. The final value is then multiplied by the mass number of the
                 output isotope.

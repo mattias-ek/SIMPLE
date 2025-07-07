@@ -1,0 +1,34 @@
+name: Verify staging
+
+on:
+  pull_request:
+    branches: [staging]
+
+  check-version-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed to switch branches
+
+      - name: staging version
+        id: staging
+        run: |
+          echo "version=$(cat VERSION.txt)" >> $GITHUB_OUTPUT
+
+      - name: master version
+        id: master
+        run: |
+          git fetch origin master
+          echo "version=$(git show origin/master:VERSION.txt)" >> $GITHUB_OUTPUT
+
+      - name: Compare versions
+        run: |
+          echo "Staging version: ${{ steps.staging.outputs.version }}"
+          echo "Master version: ${{ steps.master.outputs.version }}"
+          if [ "${{ steps.staging.outputs.version }}" = "${{ steps.master.outputs.version }}" ]; then
+            echo "❌ Version.txt in staging is the same as in master. Please bump the version."
+            exit 1
+          else
+            echo "✅ Version is different — good to go."
+          fi

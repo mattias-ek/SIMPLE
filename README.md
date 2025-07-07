@@ -1,4 +1,5 @@
-# SIMPLE (Mattias Version)
+# Stellar Interpretation for Meteoritic data and PLotting (for Everyone) - SIMPLE
+
 This is a development version of the SIMPLE package.
 
 Documentation for this version can be found [here](https://mattias-ek.github.io/SIMPLE/)

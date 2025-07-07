@@ -5,33 +5,42 @@ from numpy.testing import assert_equal
 
 from simple.utils import DefaultKwargs
 
-# TODO test
-"""
-test that it works with positional only
-test that pos args overwrites kw args both in defaults and calls
-Check that everything 
 
-"""
-def test_default_kwargs_edge():
-    from simple.utils import DefaultKwargs, set_default_kwargs
+class TestDefaultKwargs:
 
-    @set_default_kwargs(one=11)
-    def myfunc(one, two=2, *, three=3, four=4, kwargs=None):
-        return kwargs, one, two, three, four, kwargs.pop('five', 5)
+    def test_default_kwargs_Dict(self):
+        from simple.utils import DefaultKwargs
 
-    result = myfunc()
-    assert len(result[0]) == 0
-    assert result[1:] == (11, 2, 3, 4, 5)
+        a = {'one': 1, 'two': 2}
+        b = {'two': 22, 'three': 33}
 
-    @set_default_kwargs(four=44, five=55)
-    def myfunc(one, two=2, *, three=3, four=4, kwargs=None):
-        return kwargs, one, two, three, four, kwargs.pop('five', 5)
+        aa = a.copy()
+        tt = DefaultKwargs.Dict(aa)
+        assert tt == aa
+        assert tt.get('two') == 2
+        assert 'two' in aa
+        assert tt.pop('two') == 2
+        assert 'two' not in aa
 
-    result = myfunc(one=111, four =444)
-    assert len(result[0]) == 0
-    assert result[1:] == (111, 2, 3, 444, 55)
+        tt['two'] = 222
+        assert aa.get('two') == 222
 
-@pytest.mark.parametrize("args, kwargs", [
+        aa, bb = a.copy(), b.copy()
+        ab = a.copy(); ab.update(b)
+        tt = DefaultKwargs.Dict(aa, bb)
+        assert tt == ab
+        assert tt.get('two') == 22
+        assert 'two' in aa
+        assert 'two' in bb
+        assert tt.pop('two') == 22
+        assert 'two' not in aa
+        assert 'two' not in bb
+
+        tt['two'] = 222
+        assert aa.get('two') == 222
+        assert bb.get('two') == 222
+
+    @pytest.mark.parametrize("args, kwargs", [
     ((), {'one':111, 'three': 333, 'four': 444, 'five': 555, 'six': 666}),
     ((), {'one': 111, 'two': 222, 'four': 444, }),
     ((1111,), {}),
@@ -39,359 +48,387 @@ def test_default_kwargs_edge():
     ((1111, 2222, 3333), {'three': 333, 'four': 444, 'five': 555, 'six': 666}),
     ((1111, 2222, 3333), {'two': 222, 'six': 666})
     ])
-@pytest.mark.parametrize('default_kwargs', [
+    @pytest.mark.parametrize('default_kwargs', [
     {},
     {'two': 22, 'three': 33, 'four': 44, 'five': 55, 'six': 66},
     {'two': 22, 'four': 44, 'six': 66, 'seven': 77},
     {'five': 55, 'six': 66, 'seven': 77}
     ])
-@pytest.mark.parametrize('shortcut_kwargs', [
+    @pytest.mark.parametrize('shortcut_kwargs', [
     {},
     {'two': 0.2, 'three': 0.3, 'four': 0.4, 'five': 0.5, 'six': 0.6},
     {'two': 0.2, 'four': 0.4, 'six': 0.6, 'seven': 0.7},
     {'five': 0.5, 'six': 0.6, 'seven': 0.7}
-])
-@pytest.mark.parametrize('inherited_kwargs', [
+    ])
+    @pytest.mark.parametrize('inherited_kwargs', [
     {},
     {'two': 0.22, 'five': 0.55, 'six': 0.66},
     {'three': 0.33, 'four': 0.44, 'seven': 0.77},
     {'six': 0.66, 'seven': 0.77}
-])
-def test_default_kwargs(args, kwargs, default_kwargs, shortcut_kwargs, inherited_kwargs):
-    # This tests checks the following
-    # [x] Standard usage of set_default_kwargs
-    # [x] Standard usage of Shortcuts
-    # [x] Standard usage of inherits with the same basic signature
-    # [x] Inheritance of Shortcuts
-    # [x] Overriding inherited shortcuts
-    # NOTE match signatures is ignored because it should not have an effect on this test case
+    ])
+    def test_default_kwargs(self, args, kwargs, default_kwargs, shortcut_kwargs, inherited_kwargs):
+        # This tests checks the following
+        # [x] Standard usage of set_default_kwargs
+        # [x] Standard usage of Shortcuts
+        # [x] Standard usage of inherits with the same basic signature
+        # [x] Inheritance of Shortcuts
+        # [x] Overriding inherited shortcuts
+        # NOTE match signatures is ignored because it should not have an effect on this test case
 
-    from simple.utils import DefaultKwargs, set_default_kwargs, add_shortcut
+        from simple.utils import DefaultKwargs, set_default_kwargs, add_shortcut
 
-    @add_shortcut('genvag', **shortcut_kwargs)
-    @set_default_kwargs(**default_kwargs)
-    def myfunc(one, two=2, three=3, *, four=4, six=6, kwargs=None):
-        return one, two, three, four, six, kwargs
+        @add_shortcut('genvag', **shortcut_kwargs)
+        @set_default_kwargs(**default_kwargs)
+        def myfunc(one, two=2, three=3, *, four=4, six=6, kwargs=None):
+            return one, two, three, four, six, kwargs
 
-    myfunc_pos_args = ['one', 'two', 'three']
-    myfunc_kwargs = {'two': 2, 'three': 3, 'four': 4, 'six': 6}
+        myfunc_pos_args = ['one', 'two', 'three']
+        myfunc_kwargs = {'two': 2, 'three': 3, 'four': 4, 'six': 6}
 
-    @set_default_kwargs(**inherited_kwargs, inherits=myfunc)
-    def otherfunc(one, two=2.2, three=3.3, *, five=5.5, seven=7.7, kwargs=None):
-        return one, two, three, five, seven, kwargs
+        @set_default_kwargs(**inherited_kwargs, inherits=myfunc)
+        def otherfunc(one, two=2.2, three=3.3, *, five=5.5, seven=7.7, kwargs=None):
+            return one, two, three, five, seven, kwargs
 
-    otherfunc_pos_args = ['one', 'two', 'three']
-    otherfunc_kwargs = {'two': 2.2, 'three': 3.3, 'five': 5.5, 'seven': 7.7}
+        otherfunc_pos_args = ['one', 'two', 'three']
+        otherfunc_kwargs = {'two': 2.2, 'three': 3.3, 'five': 5.5, 'seven': 7.7}
 
-    ##############
-    ### myfunc ###
-    ##############
-    # Test main function
-    if True:
-        myfunc_default_kwargs = myfunc_kwargs.copy()
-        myfunc_default_kwargs.update(default_kwargs)
+        ##############
+        ### myfunc ###
+        ##############
+        # Test main function
+        if True:
+            myfunc_default_kwargs = myfunc_kwargs.copy()
+            myfunc_default_kwargs.update(default_kwargs)
 
-        assert type(myfunc) is DefaultKwargs
+            assert type(myfunc) is DefaultKwargs
 
-        fkwargs = myfunc.kwargs
-        assert type(fkwargs) is DefaultKwargs.Dict
-        assert fkwargs is not myfunc.kwargs  # Creates a new one each time
+            fkwargs = myfunc.kwargs
+            assert type(fkwargs) is DefaultKwargs.Dict
+            assert fkwargs is not myfunc.kwargs  # Creates a new one each time
 
-        # Should contain all args with defaults either in the signature or set by the decorator
-        assert len(fkwargs) == len(myfunc_default_kwargs)
-        for k in myfunc_default_kwargs:
-            assert fkwargs[k] == myfunc_default_kwargs[k]
+            # Should contain all args with defaults either in the signature or set by the decorator
+            assert len(fkwargs) == len(myfunc_default_kwargs)
+            for k in myfunc_default_kwargs:
+                assert fkwargs[k] == myfunc_default_kwargs[k]
 
-        # Create expected result
-        result_expected_kwargs = myfunc_default_kwargs.copy()
-        result_expected_kwargs.update(kwargs)
-        for i, arg in enumerate(myfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
-        result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
-                           result_expected_kwargs.pop('three'), result_expected_kwargs.pop('four'),
-                           result_expected_kwargs.pop('six'), result_expected_kwargs)
+            # Create expected result
+            result_expected_kwargs = myfunc_default_kwargs.copy()
+            result_expected_kwargs.update(kwargs)
+            for i, arg in enumerate(myfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
+            result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
+                               result_expected_kwargs.pop('three'), result_expected_kwargs.pop('four'),
+                               result_expected_kwargs.pop('six'), result_expected_kwargs)
 
-        # Standard case
-        result = myfunc(*args, **kwargs)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # Standard case
+            result = myfunc(*args, **kwargs)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # passing kwargs item
-        kwargs_instance = kwargs.copy()
-        result = myfunc(*args, kwargs=kwargs_instance)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # passing kwargs item
+            kwargs_instance = kwargs.copy()
+            result = myfunc(*args, kwargs=kwargs_instance)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # These should be removed from the original dict
-        for k in myfunc_kwargs:
-            assert k not in kwargs_instance
+            # These should be removed from the original dict
+            for k in myfunc_kwargs:
+                assert k not in kwargs_instance
 
-    # Test shortcut
-    if True:
-        shortcut_default_kwargs = myfunc_default_kwargs.copy()
-        shortcut_default_kwargs.update(shortcut_kwargs)
+        # Test shortcut
+        if True:
+            shortcut_default_kwargs = myfunc_default_kwargs.copy()
+            shortcut_default_kwargs.update(shortcut_kwargs)
 
-        assert type(myfunc.genvag) is DefaultKwargs.Shortcut
+            assert type(myfunc.genvag) is DefaultKwargs.Shortcut
 
-        fkwargs = myfunc.genvag.kwargs
-        assert type(fkwargs) is DefaultKwargs.Dict
-        assert fkwargs is not myfunc.genvag.kwargs  # Creates a new one each time
+            fkwargs = myfunc.genvag.kwargs
+            assert type(fkwargs) is DefaultKwargs.Dict
+            assert fkwargs is not myfunc.genvag.kwargs  # Creates a new one each time
 
-        # Should contain all args with defaults either in the signature or set by the decorator
-        assert len(fkwargs) == len(shortcut_default_kwargs)
-        for k in shortcut_default_kwargs:
-            assert fkwargs[k] == shortcut_default_kwargs[k]
+            # Should contain all args with defaults either in the signature or set by the decorator
+            assert len(fkwargs) == len(shortcut_default_kwargs)
+            for k in shortcut_default_kwargs:
+                assert fkwargs[k] == shortcut_default_kwargs[k]
 
-        # Create expected result
-        result_expected_kwargs = shortcut_default_kwargs.copy()
-        result_expected_kwargs.update(kwargs)
-        for i, arg in enumerate(myfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
-        result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
-                           result_expected_kwargs.pop('three'), result_expected_kwargs.pop('four'),
-                           result_expected_kwargs.pop('six'), result_expected_kwargs)
+            # Create expected result
+            result_expected_kwargs = shortcut_default_kwargs.copy()
+            result_expected_kwargs.update(kwargs)
+            for i, arg in enumerate(myfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
+            result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
+                               result_expected_kwargs.pop('three'), result_expected_kwargs.pop('four'),
+                               result_expected_kwargs.pop('six'), result_expected_kwargs)
 
-        # Standard case
-        result = myfunc.genvag(*args, **kwargs)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # Standard case
+            result = myfunc.genvag(*args, **kwargs)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # passing kwargs item
-        kwargs_instance = kwargs.copy()
-        result = myfunc.genvag(*args, kwargs=kwargs_instance)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # passing kwargs item
+            kwargs_instance = kwargs.copy()
+            result = myfunc.genvag(*args, kwargs=kwargs_instance)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # These should be removed from the original dict
-        for k in myfunc_kwargs:
-            assert k not in kwargs_instance
+            # These should be removed from the original dict
+            for k in myfunc_kwargs:
+                assert k not in kwargs_instance
 
-    #################
-    ### otherfunc ###
-    #################
-    # Test main function
-    if True:
-        otherfunc_default_kwargs = myfunc_kwargs.copy()
-        otherfunc_default_kwargs.update(otherfunc_kwargs)
-        otherfunc_default_kwargs.update(default_kwargs)
-        otherfunc_default_kwargs.update(inherited_kwargs)
+        #################
+        ### otherfunc ###
+        #################
+        # Test main function
+        if True:
+            otherfunc_default_kwargs = myfunc_kwargs.copy()
+            otherfunc_default_kwargs.update(otherfunc_kwargs)
+            otherfunc_default_kwargs.update(default_kwargs)
+            otherfunc_default_kwargs.update(inherited_kwargs)
 
-        assert type(myfunc) is DefaultKwargs
+            assert type(myfunc) is DefaultKwargs
 
-        fkwargs = otherfunc.kwargs
-        assert type(fkwargs) is DefaultKwargs.Dict
-        assert fkwargs is not myfunc.kwargs  # Creates a new one each time
+            fkwargs = otherfunc.kwargs
+            assert type(fkwargs) is DefaultKwargs.Dict
+            assert fkwargs is not myfunc.kwargs  # Creates a new one each time
 
-        # Should contain all args with defaults either in the signature or set by the decorator
-        assert len(fkwargs) == len(otherfunc_default_kwargs)
-        for k in otherfunc_default_kwargs:
-            assert fkwargs[k] == otherfunc_default_kwargs[k]
+            # Should contain all args with defaults either in the signature or set by the decorator
+            assert len(fkwargs) == len(otherfunc_default_kwargs)
+            for k in otherfunc_default_kwargs:
+                assert fkwargs[k] == otherfunc_default_kwargs[k]
 
-        # Create expected result
-        result_expected_kwargs = otherfunc_default_kwargs.copy()
-        result_expected_kwargs.update(kwargs)
-        for i, arg in enumerate(otherfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
-        result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
-                           result_expected_kwargs.pop('three'), result_expected_kwargs.pop('five'),
-                           result_expected_kwargs.pop('seven'), result_expected_kwargs)
+            # Create expected result
+            result_expected_kwargs = otherfunc_default_kwargs.copy()
+            result_expected_kwargs.update(kwargs)
+            for i, arg in enumerate(otherfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
+            result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
+                               result_expected_kwargs.pop('three'), result_expected_kwargs.pop('five'),
+                               result_expected_kwargs.pop('seven'), result_expected_kwargs)
 
-        # Standard case
-        result = otherfunc(*args, **kwargs)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # Standard case
+            result = otherfunc(*args, **kwargs)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # passing kwargs item
-        kwargs_instance = kwargs.copy()
-        result = otherfunc(*args, kwargs=kwargs_instance)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # passing kwargs item
+            kwargs_instance = kwargs.copy()
+            result = otherfunc(*args, kwargs=kwargs_instance)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # These should be removed from the original dict
-        for k in otherfunc_kwargs:
-            assert k not in kwargs_instance
+            # These should be removed from the original dict
+            for k in otherfunc_kwargs:
+                assert k not in kwargs_instance
 
-    # Test shortcut
-    if True:
-        shortcut_default_kwargs = otherfunc_default_kwargs.copy()
-        shortcut_default_kwargs.update(shortcut_kwargs)
+        # Test shortcut
+        if True:
+            shortcut_default_kwargs = otherfunc_default_kwargs.copy()
+            shortcut_default_kwargs.update(shortcut_kwargs)
 
-        assert type(otherfunc.genvag) is DefaultKwargs.Shortcut
+            assert type(otherfunc.genvag) is DefaultKwargs.Shortcut
 
-        fkwargs = otherfunc.genvag.kwargs
-        assert type(fkwargs) is DefaultKwargs.Dict
-        assert fkwargs is not otherfunc.genvag.kwargs  # Creates a new one each time
+            fkwargs = otherfunc.genvag.kwargs
+            assert type(fkwargs) is DefaultKwargs.Dict
+            assert fkwargs is not otherfunc.genvag.kwargs  # Creates a new one each time
 
-        # Should contain all args with defaults either in the signature or set by the decorator
-        assert len(fkwargs) == len(shortcut_default_kwargs)
-        for k in shortcut_default_kwargs:
-            assert fkwargs[k] == shortcut_default_kwargs[k]
+            # Should contain all args with defaults either in the signature or set by the decorator
+            assert len(fkwargs) == len(shortcut_default_kwargs)
+            for k in shortcut_default_kwargs:
+                assert fkwargs[k] == shortcut_default_kwargs[k]
 
-        # Create expected result
-        result_expected_kwargs = shortcut_default_kwargs.copy()
-        result_expected_kwargs.update(kwargs)
-        for i, arg in enumerate(otherfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
-        result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
-                           result_expected_kwargs.pop('three'), result_expected_kwargs.pop('five'),
-                           result_expected_kwargs.pop('seven'), result_expected_kwargs)
+            # Create expected result
+            result_expected_kwargs = shortcut_default_kwargs.copy()
+            result_expected_kwargs.update(kwargs)
+            for i, arg in enumerate(otherfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
+            result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
+                               result_expected_kwargs.pop('three'), result_expected_kwargs.pop('five'),
+                               result_expected_kwargs.pop('seven'), result_expected_kwargs)
 
-        # Standard case
-        result = otherfunc.genvag(*args, **kwargs)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # Standard case
+            result = otherfunc.genvag(*args, **kwargs)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # passing kwargs item
-        kwargs_instance = kwargs.copy()
-        result = otherfunc.genvag(*args, kwargs=kwargs_instance)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # passing kwargs item
+            kwargs_instance = kwargs.copy()
+            result = otherfunc.genvag(*args, kwargs=kwargs_instance)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # These should be removed from the original dict
-        for k in otherfunc_kwargs:
-            assert k not in kwargs_instance
+            # These should be removed from the original dict
+            for k in otherfunc_kwargs:
+                assert k not in kwargs_instance
 
-    # Test shortcut override
-    if True:
-        otherfunc.add_shortcut('genvag')
-        shortcut_default_kwargs = otherfunc_default_kwargs.copy()
-        shortcut_default_kwargs.update({})
+        # Test shortcut override
+        if True:
+            otherfunc.add_shortcut('genvag')
+            shortcut_default_kwargs = otherfunc_default_kwargs.copy()
+            shortcut_default_kwargs.update({})
 
-        assert type(otherfunc.genvag) is DefaultKwargs.Shortcut
+            assert type(otherfunc.genvag) is DefaultKwargs.Shortcut
 
-        fkwargs = otherfunc.genvag.kwargs
-        assert type(fkwargs) is DefaultKwargs.Dict
-        assert fkwargs is not otherfunc.genvag.kwargs  # Creates a new one each time
+            fkwargs = otherfunc.genvag.kwargs
+            assert type(fkwargs) is DefaultKwargs.Dict
+            assert fkwargs is not otherfunc.genvag.kwargs  # Creates a new one each time
 
-        # Should contain all args with defaults either in the signature or set by the decorator
-        assert len(fkwargs) == len(shortcut_default_kwargs)
-        for k in shortcut_default_kwargs:
-            assert fkwargs[k] == shortcut_default_kwargs[k]
+            # Should contain all args with defaults either in the signature or set by the decorator
+            assert len(fkwargs) == len(shortcut_default_kwargs)
+            for k in shortcut_default_kwargs:
+                assert fkwargs[k] == shortcut_default_kwargs[k]
 
-        # Create expected result
-        result_expected_kwargs = shortcut_default_kwargs.copy()
-        result_expected_kwargs.update(kwargs)
-        for i, arg in enumerate(otherfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
-        result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
-                           result_expected_kwargs.pop('three'), result_expected_kwargs.pop('five'),
-                           result_expected_kwargs.pop('seven'), result_expected_kwargs)
+            # Create expected result
+            result_expected_kwargs = shortcut_default_kwargs.copy()
+            result_expected_kwargs.update(kwargs)
+            for i, arg in enumerate(otherfunc_pos_args[:len(args)]): result_expected_kwargs[arg] = args[i]
+            result_expected = (result_expected_kwargs.pop('one'), result_expected_kwargs.pop('two'),
+                               result_expected_kwargs.pop('three'), result_expected_kwargs.pop('five'),
+                               result_expected_kwargs.pop('seven'), result_expected_kwargs)
 
-        # Standard case
-        result = otherfunc.genvag(*args, **kwargs)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # Standard case
+            result = otherfunc.genvag(*args, **kwargs)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # passing kwargs item
-        kwargs_instance = kwargs.copy()
-        result = otherfunc.genvag(*args, kwargs=kwargs_instance)
-        assert type(result[-1]) is DefaultKwargs.Dict
-        assert result == result_expected
+            # passing kwargs item
+            kwargs_instance = kwargs.copy()
+            result = otherfunc.genvag(*args, kwargs=kwargs_instance)
+            assert type(result[-1]) is DefaultKwargs.Dict
+            assert result == result_expected
 
-        # These should be removed from the original dict
-        for k in otherfunc_kwargs:
-            assert k not in kwargs_instance
+            # These should be removed from the original dict
+            for k in otherfunc_kwargs:
+                assert k not in kwargs_instance
 
-@pytest.mark.parametrize("default_kwargs", [
+    @pytest.mark.parametrize("default_kwargs", [
     ({}, {}),
     ({'three': 3.3, 'six': 6.6, 'seven': 7.7}, {'three': 33.33, 'two': 22.22}),
     ({}, {'three': 33.33, 'two': 22.22}),
     ({'three': 3.3, 'six': 6.6, 'seven': 7.7}, {}),
-])
-@pytest.mark.parametrize("match_signatures", [(True, True), (True, False), (False, True), (False, False)])
-@pytest.mark.parametrize("include_signature", [(True, True), (True, False), (False, True), (False, False)])
-def test_kwargs_signatures(default_kwargs, match_signatures, include_signature):
-    # Test the signature arguments set_default_kwargs
-    # [x] include signature
-    # [x] match signature
-    # Note does not call the functions. This should not be necessary as calls use the .kwargs attribute tested here.
-    from simple.utils import set_default_kwargs
+    ])
+    @pytest.mark.parametrize("match_signatures", [(True, True), (True, False), (False, True), (False, False)])
+    @pytest.mark.parametrize("include_signature", [(True, True), (True, False), (False, True), (False, False)])
+    def test_kwargs_signatures(self, default_kwargs, match_signatures, include_signature):
+        # Test the signature arguments set_default_kwargs
+        # [x] include signature
+        # [x] match signature
+        # Note does not call the functions. This should not be necessary as calls use the .kwargs attribute tested here.
+        from simple.utils import set_default_kwargs
 
-    @set_default_kwargs(**default_kwargs[0],
-                        match_signatures=match_signatures[0], include_signature=include_signature[0])
-    def func1(one, two, three=3, *, four=4, five=5, kwargs=None):
-        return one, two, three, four, five, kwargs
+        @set_default_kwargs(**default_kwargs[0],
+                            match_signatures=match_signatures[0], include_signature=include_signature[0])
+        def func1(one, two, three=3, *, four=4, five=5, kwargs=None):
+            return one, two, three, four, five, kwargs
 
-    @set_default_kwargs(**default_kwargs[1], inherits=func1,
-                        match_signatures=match_signatures[1], include_signature=include_signature[1])
-    def func2(one, three, four=44, *, five=55, six=66, kwargs=None):
-        return one, three, four, five, six, kwargs
+        @set_default_kwargs(**default_kwargs[1], inherits=func1,
+                            match_signatures=match_signatures[1], include_signature=include_signature[1])
+        def func2(one, three, four=44, *, five=55, six=66, kwargs=None):
+            return one, three, four, five, six, kwargs
 
-    func1_kw_names = ['one', 'two', 'three', 'four', 'five']
-    func2_kw_names = ['one', 'three', 'four', 'five', 'six']
-    func1_kwargs = {'three': 3, 'four': 4, 'five': 5}
-    func2_kwargs = {'four': 44, 'five':55, 'six': 66}
+        func1_kw_names = ['one', 'two', 'three', 'four', 'five']
+        func2_kw_names = ['one', 'three', 'four', 'five', 'six']
+        func1_kwargs = {'three': 3, 'four': 4, 'five': 5}
+        func2_kwargs = {'four': 44, 'five':55, 'six': 66}
 
-    # func1
-    if True:
-        func1_default_kwargs = {}
-        if include_signature[0]:
-            func1_default_kwargs.update(func1_kwargs)
-        func1_default_kwargs.update(default_kwargs[0])
-
-        fkwargs = func1.kwargs
-        assert type(fkwargs) is DefaultKwargs.Dict
-
-        assert len(fkwargs) == len(func1_default_kwargs)
-        for k in func1_default_kwargs:
-            assert fkwargs[k] == func1_default_kwargs[k]
-
-    # func2
-    if True:
-        func2_default_kwargs = {}
-        if include_signature[1]:
+        # func1
+        if True:
+            func1_default_kwargs = {}
             if include_signature[0]:
-                func2_default_kwargs.update(func1_kwargs)
-            func2_default_kwargs.update(func2_kwargs)
-        func2_default_kwargs.update(default_kwargs[0])
-        func2_default_kwargs.update(default_kwargs[1])
+                func1_default_kwargs.update(func1_kwargs)
+            func1_default_kwargs.update(default_kwargs[0])
 
-        if match_signatures[1]:
-            for name in func1_kw_names:
-                if name not in func2_kw_names and name not in default_kwargs[1]:
-                    func2_default_kwargs.pop(name, None)
+            fkwargs = func1.kwargs
+            assert type(fkwargs) is DefaultKwargs.Dict
 
-        fkwargs = func2.kwargs
-        assert type(fkwargs) is DefaultKwargs.Dict
+            assert len(fkwargs) == len(func1_default_kwargs)
+            for k in func1_default_kwargs:
+                assert fkwargs[k] == func1_default_kwargs[k]
 
-        assert len(fkwargs) == len(func2_default_kwargs)
-        for k in func2_default_kwargs:
-            assert fkwargs[k] == func2_default_kwargs[k]
+        # func2
+        if True:
+            func2_default_kwargs = {}
+            if include_signature[1]:
+                if include_signature[0]:
+                    func2_default_kwargs.update(func1_kwargs)
+                func2_default_kwargs.update(func2_kwargs)
+            func2_default_kwargs.update(default_kwargs[0])
+            func2_default_kwargs.update(default_kwargs[1])
 
-def test_kwargs_update_remove():
-    # Test changing the default values for functions and shortcuts
-    # [x] update
-    # [x] remove
-    # [x] clear
-    # Note does not test inherited shortcuts. Not necessary the way its currently implemented.
+            if match_signatures[1]:
+                for name in func1_kw_names:
+                    if name not in func2_kw_names and name not in default_kwargs[1]:
+                        func2_default_kwargs.pop(name, None)
 
-    from simple.utils import DefaultKwargs, set_default_kwargs, add_shortcut
-    @add_shortcut('genvag', seven=777)
-    @set_default_kwargs()
-    def myfunc(one, two=2, three=3, *, four=4, six=6, kwargs=None):
-        return one, two, three, four, six, kwargs
+            fkwargs = func2.kwargs
+            assert type(fkwargs) is DefaultKwargs.Dict
 
-    assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
-    assert myfunc.genvag.kwargs == dict(two=2, three=3, four=4, six=6, seven=777)
+            assert len(fkwargs) == len(func2_default_kwargs)
+            for k in func2_default_kwargs:
+                assert fkwargs[k] == func2_default_kwargs[k]
 
-    myfunc.update(two=22, four=44, seven=77)
-    assert myfunc.kwargs == dict(two=22, three=3, four=44, six=6, seven=77)
-    assert myfunc.genvag.kwargs == dict(two=22, three=3, four=44, six=6, seven=777)
+    def test_kwargs_update_remove(self):
+        # Test changing the default values for functions and shortcuts
+        # [x] update
+        # [x] remove
+        # [x] clear
+        # Note does not test inherited shortcuts. Not necessary the way its currently implemented.
 
-    myfunc.genvag.update(two=222, five=555, six=666)
-    assert myfunc.kwargs == dict(two=22, three=3, four=44, six=6, seven=77)
-    assert myfunc.genvag.kwargs == dict(two=222, three=3, four=44, five=555, six=666, seven=777)
+        from simple.utils import DefaultKwargs, set_default_kwargs, add_shortcut
+        @add_shortcut('genvag', seven=777)
+        @set_default_kwargs()
+        def myfunc(one, two=2, three=3, *, four=4, six=6, kwargs=None):
+            return one, two, three, four, six, kwargs
 
-    myfunc.remove('three', 'four', 'seven')
-    assert myfunc.kwargs == dict(two=22, three=3, four=4, six=6)
-    assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666, seven=777)
+        assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
+        assert myfunc.genvag.kwargs == dict(two=2, three=3, four=4, six=6, seven=777)
 
-    myfunc.genvag.remove('three', 'seven')
-    assert myfunc.kwargs == dict(two=22, three=3, four=4, six=6)
-    assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666)
+        myfunc.update(two=22, four=44, seven=77)
+        assert myfunc.kwargs == dict(two=22, three=3, four=44, six=6, seven=77)
+        assert myfunc.genvag.kwargs == dict(two=22, three=3, four=44, six=6, seven=777)
 
-    myfunc.clear()
-    assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
-    assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666)
+        myfunc.genvag.update(two=222, five=555, six=666)
+        assert myfunc.kwargs == dict(two=22, three=3, four=44, six=6, seven=77)
+        assert myfunc.genvag.kwargs == dict(two=222, three=3, four=44, five=555, six=666, seven=777)
 
-    myfunc.genvag.clear()
-    assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
-    assert myfunc.genvag.kwargs == dict(two=2, three=3, four=4, six=6)
+        myfunc.remove('three', 'four', 'seven')
+        assert myfunc.kwargs == dict(two=22, three=3, four=4, six=6)
+        assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666, seven=777)
+
+        myfunc.genvag.remove('three', 'seven')
+        assert myfunc.kwargs == dict(two=22, three=3, four=4, six=6)
+        assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666)
+
+        myfunc.clear()
+        assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
+        assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666)
+
+        myfunc.genvag.clear()
+        assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
+        assert myfunc.genvag.kwargs == dict(two=2, three=3, four=4, six=6)
+
+    def test_priority(self):
+        # Make sure that `**kwargs` has priority over `kwargs`
+        from simple.utils import set_default_kwargs, add_shortcut
+
+        @add_shortcut('genvag')
+        @set_default_kwargs()
+        def func1(kwargs=None):
+            return kwargs
+
+        @set_default_kwargs(inherits=func1)
+        def func2(kwargs=None):
+            return kwargs
+
+        a = {'one': 1, 'two': 2}
+        b = {'two': 22, 'three': 33}
+        result = func1(kwargs=a, **b)
+        assert result == {'one': 1, 'two': 22, 'three': 33}
+
+        result = func1.genvag(kwargs=a, **b)
+        assert result == {'one': 1, 'two': 22, 'three': 33}
+
+        result = func2(kwargs=a, **b)
+        assert result == {'one': 1, 'two': 22, 'three': 33}
+
+        result = func2.genvag(kwargs=a, **b)
+        assert result == {'one': 1, 'two': 22, 'three': 33}
+
 
 def test_get_last_attr():
     class Item:
