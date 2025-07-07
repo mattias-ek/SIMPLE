@@ -22,16 +22,16 @@ jobs:
       - id: set-version
         run: |
           VERSION=$(cat VERSION.txt)
+          VERSION="v$VERSION"
 
           # Create tag if it doesn’t exist
           if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
-            TAG="v$VERSION"
-            if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
               git config user.name "github-actions"
               git config user.email "github-actions@github.com"
-              git tag "$TAG"
-              git push origin "$TAG"
-              echo "Created Tag: $TAG"
+              git tag "$VERSION"
+              git push origin "$VERSION"
+              echo "Created Tag: $VERSION"
             fi
           fi
           
@@ -113,6 +113,16 @@ jobs:
       # For the master branch.
       - run: mkdocs gh-deploy --force --clean --verbose
         if: github.ref == 'refs/heads/master'
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ needs.get-version.outputs.version }}"
+          name: "${{ needs.get-version.outputs.version }}"
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
 
       # For the staging branch.
       - run: mkdocs build --strict --site-dir site-pre
