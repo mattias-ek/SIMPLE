@@ -18,6 +18,9 @@ jobs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history
+          fetch-tags: true
 
       - id: set-version
         run: |
@@ -25,7 +28,7 @@ jobs:
           VERSION="v$VERSION"
 
           # Create tag if it doesn’t exist
-          if [[ "${GITHUB_REF}" == "refs/heads/master" ]]; then
+          if [[ ${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/master" ]]; then
             if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
               git config user.name "github-actions"
               git config user.email "github-actions@github.com"
@@ -76,11 +79,7 @@ jobs:
         with:
           python-version: '3.9'
 
-      - run: |
-          git tag --list
-          git describe --tags
-          python3 -m pip show setuptools_scm
-
+      - run: pip install setuptools_scm[toml]
       - run: pip install ".[test]"
       - run: pytest --cov --cov-branch --cov-report=xml
 
