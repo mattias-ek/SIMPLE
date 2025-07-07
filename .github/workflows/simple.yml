@@ -76,6 +76,11 @@ jobs:
         with:
           python-version: '3.9'
 
+      - run: |
+          git tag --list
+          git describe --tags
+          python3 -m pip show setuptools_scm
+
       - run: pip install ".[test]"
       - run: pytest --cov --cov-branch --cov-report=xml
 
