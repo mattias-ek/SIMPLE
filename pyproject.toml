@@ -19,7 +19,7 @@ fallback_version = "0.0.0"
 [project]
 name = "simple-chetec"
 dynamic = ["version"]
-version = "0.4.0"
+#version = "0.4.0"
 description = "Stellar Interpretation for Meteoritic data and PLotting (for Everyone)"
 authors = [{ name = "Mattias Ek", email = "mattias.ek@pm.me" }]
 license = { text = "LGPL-3.0-or-later" }
