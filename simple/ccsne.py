@@ -24,7 +24,42 @@ z_names = ['Neut', 'H', 'He', 'Li', 'Be', 'B', 'C', 'N', 'O', 'F', 'Ne', 'Na', '
            'Po', 'At', 'Rn', 'Fr', 'Ra', 'Ac', 'Th', 'Pa', 'U']
 """The element symbol for each atomic number (z) up to U"""
 
-def calc_default_onion_structure(abundance, keys, masscoord):
+##############
+### Models ###
+##############
+
+class CCSNe(models.ModelBase):
+    """
+    Model for CCSNe yields and their mass coordinates.
+    """
+    REQUIRED_ATTRS = ['type', 'dataset', 'citation', 'mass', 'masscoord', 'masscoord_mass',
+                      'abundance_values', 'abundance_keys', 'abundance_unit',
+                      'refid_isoabu', 'refid_isomass']
+    REPR_ATTRS = ['name', 'type', 'dataset', 'mass']
+    ABUNDANCE_KEYARRAY = 'abundance'
+    masscoord_label = 'Mass Coordinate [solar masses]'
+    masscoord_label_latex = 'Mass Coordinate [M${}_{\\odot}$]'
+    masscoord_mass_label = 'Coordinate Mass [solar masses]'
+    masscoord_mass_label_latex = 'Coordinate Mass [M${}_{\\odot}$]'
+
+
+# These functions cannot be tested without the original data so there
+# are no automatic tests, and they are ignored in coverage.
+# They should therefore be used with caution!
+def fudge_masscord_mass(masscoord):
+    """
+    Estimate the mass at each mass coordinate.
+
+    The mass associated with a coordinate is approximated by the difference
+    between successive coordinates. The last value is duplicated so the output
+    has the same length as the input array.
+    """
+    logging.info('Fudging the masscoord mass from masscoord')
+    masscoord = np.asarray(masscoord)
+    masscoord = masscoord[1:] - masscoord[:1]
+    return np.append(masscoord, masscoord[-1])
+
+def calc_default_onion_structure(abundance, keys, masscoord): # pragma: no cover
     """
     Calculated the boundaries of different layers within the CCSNe onion structure.
 
@@ -133,38 +168,7 @@ def calc_default_onion_structure(abundance, keys, masscoord):
 
     return onion_lbounds, zone
 
-def fudge_masscord_mass(masscoord):
-    """
-    Estimate the mass at each mass coordinate.
-
-    The mass associated with a coordinate is approximated by the difference
-    between successive coordinates. The last value is duplicated so the output
-    has the same length as the input array.
-    """
-    logging.info('Fudging the masscoord mass from masscoord')
-    masscoord = np.asarray(masscoord)
-    masscoord = masscoord[1:] - masscoord[:1]
-    return np.append(masscoord, masscoord[-1])
-
-##############
-### Models ###
-##############
-
-class CCSNe(models.ModelBase):
-    """
-    Model for CCSNe yields and their mass coordinates.
-    """
-    REQUIRED_ATTRS = ['type', 'dataset', 'citation', 'mass', 'masscoord', 'masscoord_mass',
-                      'abundance_values', 'abundance_keys', 'abundance_unit',
-                      'refid_isoabu', 'refid_isomass']
-    REPR_ATTRS = ['name', 'type', 'dataset', 'mass']
-    ABUNDANCE_KEYARRAY = 'abundance'
-    masscoord_label = 'Mass Coordinate [solar masses]'
-    masscoord_label_latex = 'Mass Coordinate [M${}_{\\odot}$]'
-    masscoord_mass_label = 'Coordinate Mass [solar masses]'
-    masscoord_mass_label_latex = 'Coordinate Mass [M${}_{\\odot}$]'
-
-def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
+def load_Ri18(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
     """Load the CCSNe models from Ritter et al. (2018)."""
     from nugridpy import nugridse as mp
     def load(emass, modelname):
@@ -209,7 +213,7 @@ def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
 
     return models
 
-def load_Pi16(fol2mod, ref_isoabu, ref_isomass):
+def load_Pi16(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
     """Load the CCSNe models from Pignatari et al. (2016)."""
     from nugridpy import nugridse as mp
     def load(emass, modelname):
@@ -254,7 +258,7 @@ def load_Pi16(fol2mod, ref_isoabu, ref_isomass):
 
     return models
 
-def load_La22(data_dir, ref_isoabu, ref_isomass):
+def load_La22(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
     """Load the CCSNe models from Lawson et al. (2022)."""
     def load(emass, model_name, default_onion_structure=True):
         mass_lines = []
@@ -337,7 +341,7 @@ def load_La22(data_dir, ref_isoabu, ref_isomass):
 
     return models
 
-def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False):
+def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False): # pragma: no cover
     """Load the CCSNe models from Sieverding et al. (2018)."""
     def load(emass, file_sie):
         with h5py.File(data_dir + file_sie) as data_file:
@@ -388,7 +392,7 @@ def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False):
 
     return models
 
-def load_Ra02(data_dir, ref_isoabu, ref_isomass):
+def load_Ra02(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
     """Load the CCSNe models from Rauscher et al. (2002)."""
     def load(emass, model_name):
         filename = data_dir + model_name
@@ -440,7 +444,7 @@ def load_Ra02(data_dir, ref_isoabu, ref_isomass):
 
     return models
 
-def load_LC18(data_dir, ref_isoabu, ref_isomass):
+def load_LC18(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
     """Load the CCSNe models from Limongi & Chieffi (2018)."""
     def load(emass, model_name):
         filename = data_dir + model_name

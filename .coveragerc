@@ -8,6 +8,9 @@ omit =
     */__init__.py
     *__version__.py
 
+exclude_lines =
+    pragma: no cover # Coverage ignores class/function/block/line
+
 [paths]
 source =
     simple
