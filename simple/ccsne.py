@@ -2,7 +2,6 @@ from simple import utils, models, plotting
 import numpy as np
 import h5py
 import re
-from nugridpy import nugridse as mp
 import logging
 
 logger = logging.getLogger('SIMPLE.ccsne')
@@ -167,6 +166,7 @@ class CCSNe(models.ModelBase):
 
 def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
     """Load the CCSNe models from Ritter et al. (2018)."""
+    from nugridpy import nugridse as mp
     def load(emass, modelname):
         pt_exp = mp.se(fol2mod, modelname, rewrite=True)
         cyc = pt_exp.se.cycles[-1]
@@ -211,6 +211,7 @@ def load_Ri18(fol2mod, ref_isoabu, ref_isomass):
 
 def load_Pi16(fol2mod, ref_isoabu, ref_isomass):
     """Load the CCSNe models from Pignatari et al. (2016)."""
+    from nugridpy import nugridse as mp
     def load(emass, modelname):
         pt_exp = mp.se(fol2mod, modelname, rewrite=True)
         cyc = pt_exp.se.cycles[-1]
