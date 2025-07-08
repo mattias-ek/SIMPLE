@@ -66,8 +66,9 @@ jobs:
             echo "✅ Creating $VERSION tag."
           fi
 
-  run-tests:
-    name: Run all the tests.
+  run-tests-quick:
+    name: Run test with coverage using python 3.9 and latest dependencies versions
+    if: github.event.name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -98,10 +99,32 @@ jobs:
           coverage xml
 
       - name: Upload results to Codecov
-        if: github.event.name != 'pull_request'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+  run-test-matrix:
+    name: Runs test using python 3.9 and 3.12 with the minimum and the latest dependency versions
+    #if: github.event.name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9", "3.12" ]
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install nox
+        run: pip install nox
+
+      - name: Run tests via nox
+        run: nox -s test_matrix-${{ matrix.python-version }}
   docs:
     name: Generate docs
     if: github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
