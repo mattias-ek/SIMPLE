@@ -80,8 +80,22 @@ jobs:
           python-version: '3.9'
 
       #- run: pip install setuptools_scm[toml]
-      - run: pip install pytest pytest-cov
-      - run: pytest --cov --cov-report=xml
+      - run: pip install ".[test]"
+
+      # Determine the installed path of the package
+      - name: Get package path
+        id: package-path
+        run: |
+          PKG_PATH=$(python -c "import simple, os; print(os.path.dirname(simple.__file__))")
+          echo "PKG_PATH=$PKG_PATH" >> "$GITHUB_ENV"
+
+      # Run coverage against installed package path
+      # running pytest --cov will not work as the tests runs the installed version
+      # and coverage checks against the "local" version, which is different.
+      - name: Run tests with coverage
+        run: |
+          coverage run --source=$PKG_PATH -m pytest
+          coverage xml
 
       - name: Upload results to Codecov
         if: github.event.name != 'pull_request'

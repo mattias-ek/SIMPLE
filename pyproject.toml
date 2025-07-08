@@ -41,6 +41,11 @@ dev = [
     "pytest-cov"
 ]
 
+test = [
+    "pytest",
+    "pytest-cov"
+]
+
 docs = [
     "mkdocs",
     "mkdocs-material",
