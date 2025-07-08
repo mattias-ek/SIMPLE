@@ -1,0 +1,13 @@
+[run]
+branch = True
+source = simple
+
+[report]
+omit =
+    */tests/*
+    */__init__.py
+
+[paths]
+source =
+    simple
+    */simple
