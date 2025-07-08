@@ -24,14 +24,14 @@ description = "Stellar Interpretation for Meteoritic data and PLotting (for Ever
 authors = [{ name = "Mattias Ek", email = "mattias.ek@pm.me" }]
 license = { text = "LGPL-3.0-or-later" }
 readme = "README.md"
-requires-python = ">= 3.9"
-
-[project.dependencies]
-numpy = ">=1.22"
-matplotlib = ">=3.5"
-scipy = ">=1.8"
-h5py = ">=3.6"
-pyyaml = ">=5.4"
+requires-python = ">=3.9"
+dependencies= [
+    "numpy >=1.22",
+    "matplotlib >=3.5",
+    "scipy >=1.8",
+    "h5py >=3.6",
+    "pyyaml >=5.4",
+]
 
 [project.optional-dependencies]
 dev = [
