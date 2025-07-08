@@ -840,7 +840,7 @@ def test_asisolist():
 def test_select_isolist():
     keys = utils.asisotopes('invalid, ar40, fe56*, zn70, pd105*, pt196', allow_invalid=True)
     values = np.array([[-100, 40, 56, 70, 105, 196],
-                       [-100 * 2, 40 * 2, 56 * 2, 70 * 2, 105 * 2, 196 * 2]])
+                       [-100 * 2, 40 * 2, 56 * 2, 70 * 2, 105 * 2, 196 * 2]], dtype=np.float64)
     array = utils.askeyarray(values, keys)
 
     isolist = {'ar40': 'ar40, zn70, ar40',
@@ -850,24 +850,24 @@ def test_select_isolist():
     # array
     if True:
         correct_keys = utils.asisotopes(['ar40', 'fe56*', 'pd105'])
-        correct_values = np.array([[150, 266, 161], [150 * 2, 266 * 2, 161 * 2]])
+        correct_values = np.array([[150, 266, 161], [150 * 2, 266 * 2, 161 * 2]], dtype=np.float64)
         correct_array = utils.askeyarray(correct_values, correct_keys)
 
         result = utils.select_isolist(isolist, array)
         assert isinstance(result, np.ndarray)
         assert result.dtype.names == correct_keys
-        np.testing.assert_allclose(result, correct_array)
+        np.testing.assert_array_equal(result, correct_array)
 
     # array - without_suffix=True
     if True:
         correct_keys = utils.asisotopes(['ar40', 'fe56', 'pd105'])
-        correct_values = np.array([[150, 266, 196], [150 * 2, 266 * 2, 196 * 2]])
+        correct_values = np.array([[150, 266, 196], [150 * 2, 266 * 2, 196 * 2]], dtype=np.float64)
         correct_array = utils.askeyarray(correct_values, correct_keys)
 
         result = utils.select_isolist(isolist, array, without_suffix=True)
         assert isinstance(result, np.ndarray)
         assert result.dtype.names == correct_keys
-        np.testing.assert_allclose(result, correct_array)
+        np.testing.assert_array_equal(result, correct_array)
 
 def test_askeyarray():
     keys = utils.asisotopes('Pd-102, Pd-104, Pd-105*')
