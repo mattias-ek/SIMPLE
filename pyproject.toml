@@ -9,16 +9,16 @@ include = ["simple", "simple.*"]
 log_cli = true
 log_cli_level = "INFO"
 
-#[tool.setuptools_scm]
-#version_scheme = "guess-dev"
-#local_scheme = "node-and-date"
-#write_to = "simple/__version__.py"
-#fallback_version = "0.0.0"
+[tool.setuptools_scm]
+version_scheme = "guess-dev"
+local_scheme = "node-and-date"
+write_to = "simple/__version__.py"
+fallback_version = "0.0.0"
 
 
 [project]
 name = "simple-chetec"
-#dynamic = ["version"]
+dynamic = ["version"]
 version = "0.4.0"
 description = "Stellar Interpretation for Meteoritic data and PLotting (for Everyone)"
 authors = [{ name = "Mattias Ek", email = "mattias.ek@pm.me" }]
