@@ -17,7 +17,7 @@ def test_matrix(session, numpy, matplotlib, scipy, h5py, pyyaml):
         pyyaml=pyyaml,
     )
     for package, version in packages.items():
-        session.install(package + "" if version == "latest" else f"=={version}")
+        session.install(package if version == "latest" else f"{package}=={version}")
 
     session.install(".[test]")
     session.run("pytest")
