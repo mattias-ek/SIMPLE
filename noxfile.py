@@ -6,6 +6,8 @@ import nox
     [("1.22", "3.5", "1.8", "3.6", "5.4")]
 )
 def test_minimum(session, numpy, matplotlib, scipy, h5py, pyyaml):
+    # Not all the minimum versions support newer versions of python
+    # e.g. cannot test numpy 1.22 with python 3.12
     session.install(f"numpy=={numpy}")
     session.install(f"matplotlib=={matplotlib}")
     session.install(f"scipy=={scipy}")
