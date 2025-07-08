@@ -4,9 +4,6 @@ import numpy as np
 import simple
 
 from fixtures import *
-import logging
-
-logging.basicConfig(level=logging.INFO)
 
 # The `norm_calc.xlsx` spreadsheet contains the calculation of the correct values used here.
 

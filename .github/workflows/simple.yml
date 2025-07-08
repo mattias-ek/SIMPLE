@@ -103,13 +103,13 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
   run-test-matrix:
-    name: Runs test using python 3.9 and 3.12 with the minimum and the latest dependency versions
+    name: Run nox tests for different python versions and the minimum version of the dependencies for 3.9.
     #if: github.event.name == 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ "3.9", "3.12" ]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - name: Check out repo
@@ -124,7 +124,7 @@ jobs:
         run: pip install nox
 
       - name: Run tests via nox
-        run: nox -s test_matrix-${{ matrix.python-version }}
+        run: nox --python ${{ matrix.python-version }}
   docs:
     name: Generate docs
     if: github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
