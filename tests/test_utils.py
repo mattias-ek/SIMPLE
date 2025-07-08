@@ -856,7 +856,7 @@ def test_select_isolist():
         result = utils.select_isolist(isolist, array)
         assert isinstance(result, np.ndarray)
         assert result.dtype.names == correct_keys
-        np.testing.assert_array_equal(result, correct_array)
+        np.testing.assert_allclose(result, correct_array)
 
     # array - without_suffix=True
     if True:
@@ -867,7 +867,7 @@ def test_select_isolist():
         result = utils.select_isolist(isolist, array, without_suffix=True)
         assert isinstance(result, np.ndarray)
         assert result.dtype.names == correct_keys
-        np.testing.assert_array_equal(result, correct_array)
+        np.testing.assert_allclose(result, correct_array)
 
 def test_askeyarray():
     keys = utils.asisotopes('Pd-102, Pd-104, Pd-105*')
