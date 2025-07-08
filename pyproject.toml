@@ -37,9 +37,6 @@ dev = [
     "pytest",
     "ipykernel",
     "nugridpy"
-]
-
-test = [
     "pytest",
     "pytest-cov"
 ]

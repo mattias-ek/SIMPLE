@@ -80,7 +80,7 @@ jobs:
           python-version: '3.9'
 
       #- run: pip install setuptools_scm[toml]
-      - run: pip install ".[test]"
+      - run: pip install pytest pytest-cov
       - run: pytest --cov --cov-report=xml
 
       - name: Upload results to Codecov

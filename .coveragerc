@@ -6,6 +6,7 @@ source = simple
 omit =
     */tests/*
     */__init__.py
+    *__version__.py
 
 [paths]
 source =
