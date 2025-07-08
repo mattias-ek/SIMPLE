@@ -36,7 +36,7 @@ dependencies = [
 dev = [
     "pytest",
     "ipykernel",
-    "nugridpy"
+    "nugridpy",
     "pytest",
     "pytest-cov"
 ]
