@@ -30,17 +30,6 @@ jobs:
         run: |
           VERSION=$(cat VERSION.txt)
           VERSION="v$VERSION"
-
-          # Create tag if it doesn’t exist
-          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/master" ]]; then
-            if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
-              git config user.name "github-actions"
-              git config user.email "github-actions@github.com"
-              git tag "$VERSION"
-              git push origin "$VERSION"
-              echo "Created Tag: $VERSION"
-            fi
-          fi
           
           # On staging, mark version as pre-release for display purposes
           if [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
@@ -150,22 +139,13 @@ jobs:
           sed -i "s|## \[Latest\]|## [$VERSION] - $DATE|" ./docs/changelog.md
           sed -i "s|__VERSION__|$VERSION|" ./docs/index.md
           sed -i "s|__DATE__|$DATE|" ./docs/index.md
+          sed -i "s|__VERSION__|$VERSION|" mkdocs.yml
 
       - uses: actions/setup-python@v5
         with:
           python-version: 3.9
 
       - run: pip install ".[docs]"
-
-      - name: Create GitHub Release
-        if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "${{ needs.get-version.outputs.version }}"
-          name: "${{ needs.get-version.outputs.version }}"
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
 
       # For the master branch.
       - run: mkdocs gh-deploy --force --clean --verbose
@@ -190,6 +170,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create version Tag
+        if: github.ref == 'refs/heads/master'
+        run: |
+          VERSION="${{ needs.get-version.outputs.version }}"
+          
+          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git tag "$VERSION"
+            git push origin "$VERSION"
+            echo "Created Tag: $VERSION"
+          fi
+
       - uses: actions/setup-python@v5
         with:
           python-version: 3.9
@@ -201,6 +194,16 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ needs.get-version.outputs.version }}"
+          name: "${{ needs.get-version.outputs.version }}"
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
   update-changelog:
     name: Update the root changelog file
     if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/master'
