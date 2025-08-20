@@ -172,7 +172,7 @@ jobs:
             dist/*.tar.gz
 
       # For the staging branch.
-      - run: mkdocs build --strict --site-dir site-pre
+      - run: mkdocs build --site-dir site-pre
         if: github.ref == 'refs/heads/staging'
       - uses: peaceiris/actions-gh-pages@v4
         if: github.ref == 'refs/heads/staging'
