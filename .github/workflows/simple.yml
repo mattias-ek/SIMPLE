@@ -59,7 +59,7 @@ jobs:
 
   run-tests-quick:
     name: Run test with coverage using python 3.9 and latest dependencies versions
-    if: github.actor != 'github-actions[bot]' && github.event.name != 'pull_request'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,7 +95,10 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
   run-test-matrix:
     name: Run nox tests for different python versions and the minimum version of the dependencies for 3.9.
-    if: github.actor != 'github-actions[bot]'
+    if: >
+      github.actor != 'github-actions[bot]' &&
+      (github.event.name != 'pull_request' ||
+      (github.ref != 'refs/heads/staging' || github.ref != 'refs/heads/master'))
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
