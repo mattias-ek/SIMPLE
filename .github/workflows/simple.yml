@@ -157,10 +157,6 @@ jobs:
 
       - run: pip install ".[docs]"
 
-      # For the master branch.
-      - run: mkdocs gh-deploy --force --clean --verbose
-        if: github.ref == 'refs/heads/master'
-
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
@@ -171,14 +167,19 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
 
+      # For the master branch.
+      - run: mkdocs gh-deploy --force --clean --verbose
+        if: github.ref == 'refs/heads/master'
+
       # For the staging branch.
       - run: mkdocs build --site-dir site-pre
         if: github.ref == 'refs/heads/staging'
       - uses: peaceiris/actions-gh-pages@v4
         if: github.ref == 'refs/heads/staging'
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site-pre
-          destination_dir: pre
+          destination_dir: pre-release
   release:
     name: Publish to PyPi
     if: >

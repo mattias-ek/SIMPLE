@@ -34,6 +34,7 @@ Documentation is built automatically during the release process.
 - Pull requests can be approved **only by administrators**.
 - Once merged, the `## [Latest]` heading in `changelog.md` will be automatically updated in both the `master` and `staging` branches
 - Once merged, the main PyPI package and the documentation are updated automatically. 
+- Version tags are created automatically from based on `VERSION.txt`.
 
 ### Personal Development Branches
 - Maintainers may create personal development branches directly in the main repository.  
