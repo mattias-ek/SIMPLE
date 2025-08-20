@@ -15,9 +15,9 @@ permissions:
   contents: write
 
 jobs:
-  if: github.actor != 'github-actions[bot]'
   get-version:
     runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
@@ -52,7 +52,7 @@ jobs:
 
   check-version:
     name: Make sure version for master in unique
-    if: github.event_name == 'pull_request' && github.ref == 'master'
+    if: github.actor != 'github-actions[bot]' && github.event_name == 'pull_request' && github.ref == 'master'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,7 +70,7 @@ jobs:
 
   run-tests-quick:
     name: Run test with coverage using python 3.9 and latest dependencies versions
-    if: github.event.name != 'pull_request'
+    if: github.actor != 'github-actions[bot]' && github.event.name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,6 +106,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
   run-test-matrix:
     name: Run nox tests for different python versions and the minimum version of the dependencies for 3.9.
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -128,7 +129,9 @@ jobs:
         run: nox --python ${{ matrix.python-version }}
   docs:
     name: Generate docs
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
+    if: >
+      github.actor != 'github-actions[bot]' &&
+      github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
     needs: get-version
     runs-on: ubuntu-latest
     steps:
@@ -179,7 +182,9 @@ jobs:
           destination_dir: pre
   release:
     name: Publish to PyPi
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
+    if: >
+      github.actor != 'github-actions[bot]' &&
+      github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
     needs: get-version
     runs-on: ubuntu-latest
     steps:
@@ -198,7 +203,7 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
   update-changelog:
     name: Update the root changelog file
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     needs: [docs, get-version]
     runs-on: ubuntu-latest
