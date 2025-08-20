@@ -9,9 +9,13 @@ on:
   pull_request:
     branches:
       - staging
-      - main
+      - master
+
+permissions:
+  contents: write
 
 jobs:
+  if: github.actor != 'github-actions[bot]'
   get-version:
     runs-on: ubuntu-latest
     outputs:
@@ -62,8 +66,6 @@ jobs:
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "❌ Version $VERSION already exists. Please update VERSION.txt."
             exit 1
-          else
-            echo "✅ Creating $VERSION tag."
           fi
 
   run-tests-quick:
@@ -104,7 +106,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
   run-test-matrix:
     name: Run nox tests for different python versions and the minimum version of the dependencies for 3.9.
-    #if: github.event.name == 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -140,10 +141,12 @@ jobs:
       # Replace placeholders
       - name: Update docs with version and data
         run: |
-          sed -i "s/__VERSION__/${{ needs.get-version.outputs.version }}/" CHANGELOG.md
-          sed -i "s/__DATE__/$(date +%Y-%m-%d)/" CHANGELOG.md
-          sed -i "s/__VERSION__/${{ needs.get-version.outputs.version }}/" index.md
-          sed -i "s/__DATE__/$(date +%Y-%m-%d)/" index.md
+          VERSION="${{ needs.get-version.outputs.version }}"
+          DATE="$(date +%Y-%m-%d)"
+          
+          sed -i "s|## \[Latest\]|## [$VERSION] - $DATE|" ./docs/CHANGELOG.md
+          sed -i "s|__VERSION__|$VERSION|" ./docs/index.md
+          sed -i "s|__DATE__|$DATE|" ./docs/index.md
 
       - uses: actions/setup-python@v5
         with:
@@ -193,5 +196,63 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+  update-changelog:
+    name: Update the root changelog file
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    needs: [docs, get-version]
+    runs-on: ubuntu-latest
+
+    steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+
+        - name: Update docs with version and data
+          id: update
+          run: |
+            VERSION='${{ needs.get-version.outputs.version }}'
+            DATE="$(date +%Y-%m-%d)"
+            
+            if ! grep -qE '^## \[Latest\]\s*$' CHANGELOG.md; then
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            
+            sed -i "s|^## \[Latest\]$|## \[Latest\]\n\n## [$VERSION] - $DATE|" CHANGELOG.md
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+
+        - name: Commit changes on master
+          if: steps.update.outputs.changed == 'true'
+          run: |
+            git config user.name  "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "chore(changelog): replace [Latest] with version and data"
+            git push
+
+        - name: Sync CHANGELOG.md to staging
+          if: steps.update.outputs.changed == 'true'
+          run: |
+            git fetch origin staging
+            # Save the just-updated file from the current working tree
+            cp CHANGELOG.md /tmp/CHANGELOG.md
+        
+            # Switch to staging, update file, commit if changed
+            git checkout -B staging origin/staging
+            cp /tmp/CHANGELOG.md CHANGELOG.md
+        
+            if git diff --quiet -- CHANGELOG.md; then
+              echo "No CHANGELOG differences on staging; skipping commit."
+              exit 0
+            fi
+        
+            git config user.name  "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "chore(changelog): replace [Latest] with version and data"
+            git push origin staging
+    
 
 

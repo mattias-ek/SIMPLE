@@ -2,18 +2,38 @@
 
 This is a development version of the SIMPLE package.
 
-Documentation for this version can be found [here](https://mattias-ek.github.io/SIMPLE/)
 
-## Installing SIMPLE
+## Stable
+BADGES
 
-Simple can be installed using the following command,  
+This latest release of the stable version of SIMPLE. Documentation for this version can be 
+found [here](https://mattias-ek.github.io/SIMPLE/).
+
+To install this version use
+```
+pip install chetec-simple
+```
+
+or to upgrade use, 
 
 ```
-pip install git+https://github.com/mattias-ek/SIMPLE@master
+pip install --upgrade chetec-simple
 ```
 
-You can update to a newer version using,
+
+## Pre-release
+BADGES
+
+This is the latest development/pre-release version of SIMPLE. Includes features and fixes ahead of stable, but may 
+also be less reliable. Documentation for the pre-release version can be found [here](https://mattias-ek.github.io/SIMPLE/dev)
+
+To install this version use
+```
+pip install --pre chetec-simple
+```
+
+or to upgrade use, 
 
 ```
-pip install --upgrade git+https://github.com/mattias-ek/SIMPLE@master
+pip install --upgrade --pre chetec-simple
 ```

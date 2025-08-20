@@ -1,6 +1,6 @@
 # Release Notes
 
-## [__version__] - __date__
+## [Latest]
 
 Added the LGPL-3.0 licence
 
