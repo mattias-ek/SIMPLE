@@ -147,7 +147,7 @@ jobs:
           VERSION="${{ needs.get-version.outputs.version }}"
           DATE="$(date +%Y-%m-%d)"
           
-          sed -i "s|## \[Latest\]|## [$VERSION] - $DATE|" ./docs/CHANGELOG.md
+          sed -i "s|## \[Latest\]|## [$VERSION] - $DATE|" ./docs/changelog.md
           sed -i "s|__VERSION__|$VERSION|" ./docs/index.md
           sed -i "s|__DATE__|$DATE|" ./docs/index.md
 
