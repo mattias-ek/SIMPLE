@@ -187,6 +187,7 @@ jobs:
         with:
           python-version: 3.9
 
+      - run: pip install -U build wheel setuptools twine
       - run: rm -rf build dist *.egg-info
       - run: python -m build
       - run: twine upload dist/*
