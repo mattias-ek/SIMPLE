@@ -10,8 +10,8 @@ log_cli = true
 log_cli_level = "INFO"
 
 [tool.setuptools_scm]
-version_scheme = "guess-dev"
-local_scheme = "node-and-date"
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
 write_to = "simple/__version__.py"
 fallback_version = "0.0.0"
 
