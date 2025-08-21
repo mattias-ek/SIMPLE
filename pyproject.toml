@@ -75,7 +75,9 @@ exclude_lines = [
 
 [tool.coverage.paths]
 source = [
-  "simple",
-  "*/simple",
+    "simple",
+    "*/simple",
     "*/site-packages/simple",
+    "*/.nox/*/lib/python*/site-packages/simple",
+    "*/.nox/*/site-packages/simple",
 ]
