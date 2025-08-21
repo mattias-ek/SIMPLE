@@ -120,16 +120,16 @@ jobs:
 
       - name: Run tests via nox
         env:
-          COVERAGE_FILE: .coverage.${{ matrix.python-version }}
+          COVERAGE_FILE: coverage.${{ matrix.python-version }}
         run: nox --python ${{ matrix.python-version }} -- -q --cov=simple --cov-report=
 
-      - run: find . -name ".coverage*"
+      - run: find . -name "coverage*"
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
         with:
           name: cov-${{ matrix.os }}-${{ matrix.python-version }}
-          path: ./.coverage.${{ matrix.python-version }}
+          path: ./coverage.${{ matrix.python-version }}
           if-no-files-found: error
 
   test-matrix-coverage:
