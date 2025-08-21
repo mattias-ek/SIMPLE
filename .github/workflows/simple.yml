@@ -121,6 +121,8 @@ jobs:
       - name: Run tests via nox
         run: nox --python ${{ matrix.python-version }} -- -q --cov=simple --cov-report=
 
+      - run: find . -name ".coverage*"
+
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
         with:
