@@ -97,9 +97,7 @@ jobs:
   run-test-matrix:
     name: Run nox tests for different python versions and the minimum version of the dependencies for 3.9.
     if: >
-      github.actor != 'github-actions[bot]' &&
-      (github.event.name != 'pull_request' ||
-      (github.ref != 'refs/heads/staging' || github.ref != 'refs/heads/master'))
+      github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -149,7 +147,9 @@ jobs:
         - run: pip install coverage[toml]
         - name: Combine & report
           run: |
-            coverage combine
+            files=(coverage.*)
+            echo "Combining: ${files[*]}"
+            coverage combine "${files[@]}"
             coverage report -m
             coverage xml -o coverage.xml
 
@@ -166,7 +166,7 @@ jobs:
     if: >
       github.actor != 'github-actions[bot]' && 
       github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
-    needs: get-version
+    needs: [get-version, run-test-matrix]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -268,7 +268,7 @@ jobs:
     if: >
       github.actor != 'github-actions[bot]' &&
       github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
-    needs: get-version
+    needs: [get-version, run-test-matrix]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
