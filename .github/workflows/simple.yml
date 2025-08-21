@@ -119,6 +119,8 @@ jobs:
         run: pip install nox
 
       - name: Run tests via nox
+        env:
+          COVERAGE_FILE: .coverage.${{ matrix.python-version }}
         run: nox --python ${{ matrix.python-version }} -- -q --cov=simple --cov-report=
 
       - run: find . -name ".coverage*"
@@ -129,7 +131,6 @@ jobs:
           name: cov-${{ matrix.os }}-${{ matrix.python-version }}
           path:
             .coverage*
-            .nox/**/.coverage*
           if-no-files-found: error
 
   test-matrix-coverage:
