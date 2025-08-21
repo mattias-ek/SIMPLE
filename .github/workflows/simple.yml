@@ -125,7 +125,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cov-${{ matrix.os }}-${{ matrix.python-version }}
-          path: .coverage*          # produced by coverage parallel mode
+          path:
+            .coverage*
+            .nox/**/.coverage*
           if-no-files-found: error
 
   test-matrix-coverage:
