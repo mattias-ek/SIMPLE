@@ -2,20 +2,6 @@
 requires = ["setuptools >= 61.0", "wheel", "setuptools_scm[toml]>=6.4"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-include = ["simple", "simple.*"]
-
-[tool.pytest.ini_options]
-log_cli = true
-log_cli_level = "INFO"
-
-[tool.setuptools_scm]
-version_scheme = "no-guess-dev"
-local_scheme = "no-local-version"
-write_to = "simple/__version__.py"
-fallback_version = "0.0.0"
-
-
 [project]
 name = "simple-chetec"
 dynamic = ["version"]
@@ -39,12 +25,14 @@ dev = [
     "nugridpy",
     "pytest",
     "pytest-cov",
+    "coverage[toml]",
     "nox"
 ]
 
 test = [
     "pytest",
-    "pytest-cov"
+    "pytest-cov",
+    "coverage[toml]"
 ]
 
 docs = [
@@ -54,4 +42,40 @@ docs = [
     "mkdocs-gen-files",
     "mkdocs-jupyter",
     "pymdown-extensions"
+]
+
+[tool.setuptools.packages.find]
+include = ["simple", "simple.*"]
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+
+[tool.setuptools_scm]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
+write_to = "simple/__version__.py"
+fallback_version = "0.0.0"
+
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["simple"]
+
+[tool.coverage.report]
+omit = [
+  "*/tests/*",
+  "*/__init__.py",
+  "*__version__.py",
+]
+skip_empty = true
+exclude_lines = [
+  "pragma: no cover",
+]
+
+[tool.coverage.paths]
+source = [
+  "simple",
+  "*/simple",
+    "*/site-packages/simple",
 ]

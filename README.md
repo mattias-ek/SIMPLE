@@ -25,7 +25,7 @@ pip install --upgrade chetec-simple
 BADGES
 
 This is the latest development/pre-release version of SIMPLE. Includes features and fixes ahead of stable, but may 
-also be less reliable. Documentation for the pre-release version can be found [here](https://mattias-ek.github.io/SIMPLE/dev)
+also be less reliable. Documentation for the pre-release version can be found [here](https://mattias-ek.github.io/SIMPLE/pre-release/)
 
 To install this version use
 ```

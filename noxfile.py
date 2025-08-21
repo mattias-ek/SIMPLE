@@ -1,4 +1,4 @@
-import nox
+import os, nox
 
 @nox.session(python=["3.9"])
 @nox.parametrize(
@@ -14,10 +14,18 @@ def test_minimum(session, numpy, matplotlib, scipy, h5py, pyyaml):
     session.install(f"h5py=={h5py}")
     session.install(f"pyyaml=={pyyaml}")
 
-    session.install(".[test]")
-    session.run("pytest")
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        session.install(".[test]")
+    else:
+        session.install("-e", ".[test]")
+
+    session.run("pytest", *session.posargs)
 
 @nox.session(python=["3.9", "3.10", "3.11", "3.12"])
 def test_latest(session):
-    session.install(".[test]")
-    session.run("pytest")
+    if os.getenv("GITHUB_ACTIONS") == "true":
+        session.install(".[test]")
+    else:
+        session.install("-e", ".[test]")
+
+    session.run("pytest", *session.posargs)

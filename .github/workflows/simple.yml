@@ -33,7 +33,7 @@ jobs:
           
           # On staging, mark version as pre-release for display purposes
           if [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
-            VERSION="${VERSION} (pre-release)"
+            VERSION="${VERSION}.dev"
           fi
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -93,6 +93,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
   run-test-matrix:
     name: Run nox tests for different python versions and the minimum version of the dependencies for 3.9.
     if: >
@@ -118,7 +119,44 @@ jobs:
         run: pip install nox
 
       - name: Run tests via nox
-        run: nox --python ${{ matrix.python-version }}
+        run: nox --python ${{ matrix.python-version }} -- -q --cov=simple --cov-report=
+
+      - name: Upload coverage data
+        uses: actions/upload-artifact@v4
+        with:
+          name: cov-${{ matrix.os }}-${{ matrix.python-version }}
+          path: .coverage*          # produced by coverage parallel mode
+          if-no-files-found: error
+
+  test-matrix-coverage:
+    needs: run-test-matrix
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/download-artifact@v4
+          with:
+            pattern: cov-*
+            merge-multiple: true     # drops all .coverage.* into CWD
+            path: .
+
+        - uses: actions/setup-python@v5
+          with:
+            python-version: "3.11"
+
+        - run: pip install coverage[toml]
+        - name: Combine & report
+          run: |
+            coverage combine
+            coverage report -m
+            coverage xml -o coverage.xml
+
+        - name: Upload results to Codecov
+          uses: codecov/codecov-action@v5
+          with:
+            files: coverage.xml
+            flags: combined
+            fail_ci_if_error: true
+            token: ${{ secrets.CODECOV_TOKEN }}
+
   docs:
     name: Generate docs
     if: >
