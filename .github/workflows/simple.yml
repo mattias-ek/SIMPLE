@@ -134,39 +134,41 @@ jobs:
     needs: run-test-matrix
     runs-on: ubuntu-latest
     steps:
-        - uses: actions/download-artifact@v4
-          with:
-            pattern: cov-*
-            merge-multiple: true     # drops all .coverage.* into CWD
-            path: .
+      - uses: actions/checkout@v4
 
-        - uses: actions/setup-python@v5
-          with:
-            python-version: "3.11"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cov-*
+          merge-multiple: true     # drops all .coverage.* into CWD
+          path: .
 
-        - run: pip install coverage[toml]
-        - name: Combine & report
-          run: |
-            files=(coverage.*)
-            echo "Combining: ${files[*]}"
-            coverage combine "${files[@]}"
-            coverage report -m
-            coverage xml -o coverage.xml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-        - name: Upload results to Codecov
-          uses: codecov/codecov-action@v5
-          with:
-            files: coverage.xml
-            flags: combined
-            fail_ci_if_error: true
-            token: ${{ secrets.CODECOV_TOKEN }}
+      - run: pip install coverage[toml]
+      - name: Combine & report
+        run: |
+          files=(coverage.*)
+          echo "Combining: ${files[*]}"
+          coverage combine "${files[@]}"
+          coverage report -m
+          coverage xml -o coverage.xml
+
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: combined
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   docs:
     name: Generate docs
     if: >
       github.actor != 'github-actions[bot]' && 
       github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
-    needs: [get-version, run-test-matrix]
+    needs: get-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -268,7 +270,7 @@ jobs:
     if: >
       github.actor != 'github-actions[bot]' &&
       github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
-    needs: [get-version, run-test-matrix]
+    needs: get-version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
