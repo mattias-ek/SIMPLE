@@ -17,7 +17,7 @@ permissions:
 jobs:
   get-version:
     runs-on: ubuntu-latest
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && false
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
@@ -122,6 +122,15 @@ jobs:
         run: nox --python ${{ matrix.python-version }} -- -q --cov=simple --cov-report=
 
       - run: find . -name "coverage*"
+
+      - run: | 
+          coverage debug config
+          python - <<'PY'
+          import os, sys, inspect, <import_name> as m
+          print("PYTHONPATH:", sys.path[0])
+          print("MODULE:", os.path.abspath(inspect.getsourcefile(m)))
+          PY
+          
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
