@@ -82,4 +82,5 @@ source = [
     "*/dist-packages/simple",
     "*/.nox/*/lib/python*/site-packages/simple",
     "*/.nox/*/site-packages/simple",
+    "*/build/lib/simple"
 ]
