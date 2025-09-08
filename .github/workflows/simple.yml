@@ -123,25 +123,7 @@ jobs:
 
       - run: find . -name "coverage*"
 
-      - run: |
-          set -euxo pipefail
-            for ROOT in \
-            "$GITHUB_WORKSPACE" \
-            /opt/hostedtoolcache/Python \
-            /usr/local/lib \
-            /usr/lib \
-            "$HOME/.local/lib"
-          do
-            [ -d "$ROOT" ] || continue
-            echo "## Searching in: $ROOT"
-            # dirs named exactly $PKG (e.g. site-packages/simple)
-            find "$ROOT" -type d -name "$PKG" -print || true
-            # module files like simple.py
-            find "$ROOT" -type f -name "$PKG.py" -print || true
-            # dist-info / egg-info that contain the name
-            find "$ROOT" -type d \( -name "*$PKG*.dist-info" -o -name "*$PKG*.egg-info" \) -print || true
-          done
-          
+      - run: find . -name "ccsne.py"
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
