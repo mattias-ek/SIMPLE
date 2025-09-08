@@ -76,7 +76,6 @@ exclude_lines = [
 
 [tool.coverage.paths]
 source = [
-    "simple",
     "*/simple",
     "*/site-packages/simple",
     "*/dist-packages/simple",
