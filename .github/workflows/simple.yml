@@ -57,8 +57,8 @@ jobs:
             exit 1
           fi
 
-  coverage:
-    name: Test Coverage for py3.9
+  test-and-coverage:
+    name: Test and Coverage for py3.9
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,7 +85,7 @@ jobs:
       # and coverage checks against the "local" version, which is different.
       - name: Run tests with coverage
         run: |
-          coverage run --source=$PKG_PATH -m pytest
+          coverage run -m pytest
           coverage xml
 
       - name: Upload results to Codecov
@@ -103,7 +103,11 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-
+        include: # minimum only for Mac/Windows
+          - os: windows-latest
+            python-version: "3.9"
+          - os: macos-latest
+            python-version: "3.9"
 
     steps:
       - name: Check out repo
