@@ -82,7 +82,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          coverage run -m pytest
+          coverage run -m pytest -q
           coverage report -m
           coverage xml -o coverage.xml
 
@@ -101,11 +101,11 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-        include: # minimum only for Mac/Windows
+        include: # Latest only for Mac/Windows
           - os: windows-latest
-            python-version: "3.9"
+            python-version: "3.12"
           - os: macos-latest
-            python-version: "3.9"
+            python-version: "3.12"
 
     steps:
       - name: Check out repo

@@ -49,7 +49,6 @@ include = ["simple", "simple.*"]
 
 [tool.pytest.ini_options]
 log_cli = true
-log_cli_level = "INFO"
 
 [tool.setuptools_scm]
 version_scheme = "no-guess-dev"

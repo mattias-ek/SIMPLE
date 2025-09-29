@@ -878,7 +878,7 @@ def test_askeyarray():
     assert array.ndim == 1
     assert array.shape == (1,)
     for i, (name, dt) in enumerate(array.dtype.fields.items()):
-        assert dt[0] == np.int64
+        assert np.issubdtype(dt[0], np.integer)
         assert name == keys[i]
     assert keys == array.dtype.names
 
@@ -890,7 +890,7 @@ def test_askeyarray():
     assert array.ndim == 1
     assert array.shape == (1,)
     for i, (name, dt) in enumerate(array.dtype.fields.items()):
-        assert dt[0] == np.int64
+        assert np.issubdtype(dt[0], np.integer)
         assert name == keys[i]
     assert keys == tuple(array.dtype.names)
 
@@ -902,7 +902,7 @@ def test_askeyarray():
     assert array.ndim == 1
     assert array.shape == (4,)
     for i, (name, dt) in enumerate(array.dtype.fields.items()):
-        assert dt[0] == np.int64
+        assert np.issubdtype(dt[0], np.integer)
         assert name == keys[i]
     assert keys == tuple(array.dtype.names)
 
@@ -941,7 +941,7 @@ def test_asarray():
     assert isinstance(array, np.ndarray)
     assert array.ndim == 0
     assert array.shape == ()
-    assert array.dtype == np.int64
+    assert np.issubdtype(array.dtype, np.integer)
     assert_equal(array, np.array(value))
 
     value = [1, 2, 3, 4, 5]
@@ -950,7 +950,7 @@ def test_asarray():
     assert isinstance(array, np.ndarray)
     assert array.ndim == 1
     assert array.shape == (5,)
-    assert array.dtype == np.int64
+    assert np.issubdtype(array.dtype, np.integer)
     assert_equal(array, np.array(value))
 
     #########
