@@ -57,9 +57,8 @@ jobs:
             exit 1
           fi
 
-  run-tests-quick:
+  coverage:
     name: Run test with coverage using python 3.9 and latest dependencies versions
-    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -98,11 +97,17 @@ jobs:
     name: Run nox tests for different python versions and the minimum version of the dependencies for 3.9.
     if: >
       github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: ubuntu-latest
         python-version: ["3.9", "3.10", "3.11", "3.12"]
+        include: # minimum only for Mac/Windows
+          - os: windows-latest
+            python-version: "3.9"
+          - os: macos-latest
+            python-version: "3.9"
 
     steps:
       - name: Check out repo
@@ -114,56 +119,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install nox
-        run: pip install nox
+        run: python -m pip install --upgrade pip nox
 
       - name: Run tests via nox
-        env:
-          COVERAGE_FILE: coverage.${{ matrix.python-version }}
-        run: nox --python ${{ matrix.python-version }} -- -q --cov=simple --cov-report=
+        run: nox --python ${{ matrix.python-version }} -- -q
 
-      - run: find . -name "coverage*"
-
-      - run: find . -name "ccsne.py"
-
-      - name: Upload coverage data
-        uses: actions/upload-artifact@v4
-        with:
-          name: cov-${{ matrix.os }}-${{ matrix.python-version }}
-          path: ./coverage.${{ matrix.python-version }}
-          if-no-files-found: error
-
-  test-matrix-coverage:
-    needs: run-test-matrix
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: cov-*
-          merge-multiple: true     # drops all .coverage.* into CWD
-          path: .
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - run: pip install coverage[toml]
-      - name: Combine & report
-        run: |
-          files=(coverage.*)
-          echo "Combining: ${files[*]}"
-          coverage combine "${files[@]}"
-          coverage report -m
-          coverage xml -o coverage.xml
-
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: coverage.xml
-          flags: combined
-          fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
 
   docs:
     name: Generate docs
