@@ -59,7 +59,6 @@ fallback_version = "0.0.0"
 
 [tool.coverage.run]
 branch = true
-parallel = true
 source = ["simple"]
 relative_files = true
 
@@ -79,4 +78,5 @@ source = [
     "*/simple",
     "*/site-packages/simple",
     "*/dist-packages/simple",
+    "*/.venv/lib/python*/site-packages/simple",
 ]

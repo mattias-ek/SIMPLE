@@ -80,13 +80,11 @@ jobs:
           PKG_PATH=$(python -c "import simple, os; print(os.path.dirname(simple.__file__))")
           echo "PKG_PATH=$PKG_PATH" >> "$GITHUB_ENV"
 
-      # Run coverage against installed package path
-      # running pytest --cov will not work as the tests runs the installed version
-      # and coverage checks against the "local" version, which is different.
       - name: Run tests with coverage
         run: |
           coverage run -m pytest
-          coverage xml
+          coverage report -m
+          coverage xml -o coverage.xml
 
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v5
