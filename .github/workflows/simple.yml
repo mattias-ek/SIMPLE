@@ -17,7 +17,7 @@ permissions:
 jobs:
   get-version:
     runs-on: ubuntu-latest
-    if: github.actor != 'github-actions[bot]' && false
+    if: github.actor != 'github-actions[bot]'
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     steps:
@@ -53,7 +53,7 @@ jobs:
           TAG="v$VERSION"
 
           if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "❌ Version $VERSION already exists. Please update VERSION.txt."
+            echo "Version $VERSION already exists. Please update VERSION.txt."
             exit 1
           fi
 
@@ -94,7 +94,7 @@ jobs:
   run-test-matrix:
     name: Test Matrix
     if: >
-      github.actor != 'github-actions[bot]'
+      github.actor != 'github-actions[bot]' && github.event_name == 'pull_request'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -121,7 +121,6 @@ jobs:
 
       - name: Run tests via nox
         run: nox --python ${{ matrix.python-version }} -- -q
-
 
   docs:
     name: Generate docs
