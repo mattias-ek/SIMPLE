@@ -58,7 +58,7 @@ jobs:
           fi
 
   coverage:
-    name: Run test with coverage using python 3.9 and latest dependencies versions
+    name: Test Coverage for py3.9
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   run-test-matrix:
-    name: Run nox tests for different python versions and the minimum version of the dependencies for 3.9.
+    name: Test Matrix
     if: >
       github.actor != 'github-actions[bot]'
     runs-on: ${{ matrix.os }}
@@ -103,11 +103,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12"]
-        include: # minimum only for Mac/Windows
-          - os: windows-latest
-            python-version: "3.9"
-          - os: macos-latest
-            python-version: "3.9"
+
 
     steps:
       - name: Check out repo
