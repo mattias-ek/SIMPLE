@@ -6,8 +6,7 @@ import logging
 
 logger = logging.getLogger('SIMPLE.ccsne')
 
-__all__ = ['plot_ccsne', 'rose_hist_ccsne',
-           'hist_ccsne', 'add_weights_ccsne']
+__all__ = ['plot_ccsne', 'hist_ccsne', 'add_weights_ccsne']
 
 ccsne_zones = ('Mrem', 'Ni', 'Si', 'O/Si', 'O/Ne', 'O/C', 'He/C', 'He/N', 'H')
 """The different shells of the onion structure going outwards."""
@@ -549,24 +548,24 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
     lbound_Si = masscoord[lower_bounds['Si'][0]]
     lbound_Ni = masscoord[lower_bounds['Ni'][0]]
 
-    default_line = kwargs.extract(prefix='default_line')
-    default_text = kwargs.extract(prefix='default_text')
-    default_fill = kwargs.extract( prefix='default_fill')
+    default_line = kwargs.pop_many(prefix='default_line')
+    default_text = kwargs.pop_many(prefix='default_text')
+    default_fill = kwargs.pop_many(prefix='default_fill')
 
     def add_line(name, x):
-        line_kwargs = kwargs.extract(prefix=f'{name}_line', **default_line)
+        line_kwargs = kwargs.pop_many(prefix=f'{name}_line', **default_line)
         if line_kwargs.pop('show', True):
             ax.axvline(x, **line_kwargs)
 
     def add_text(name, text, x):
-        text_kwargs = kwargs.extract(prefix=f'{name}_text', **default_text)
+        text_kwargs = kwargs.pop_many(prefix=f'{name}_text', **default_text)
         if text_kwargs.pop('show', True):
             # Using annotate instead of text as we can then specify x in absolute, and y coordinates relative, in space.
             ax.annotate(text_kwargs.pop('xytext', text), (x, text_kwargs.pop('y', 1.01)),
                         **text_kwargs)
 
     def add_fill(name, x):
-        fill_kwargs = kwargs.extract(prefix=f'{name}_fill', **default_fill)
+        fill_kwargs = kwargs.pop_many(prefix=f'{name}_fill', **default_fill)
         if fill_kwargs.pop('show', True):
             ax.fill_between(x, fill_kwargs.pop('y1', [ylim[0], ylim[0]]),
                              fill_kwargs.pop('y2', [ylim[1], ylim[1]]),
@@ -630,7 +629,7 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
     plotting.update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
 
 
-@utils.set_default_kwargs(inherits=plotting.add_weights)
+@utils.set_default_kwargs(inherits_=plotting.add_weights)
 def add_weights_ccsne(modeldata, axis, weights = 1, kwargs=None):
     """
     Add weights to the specified axis of each CCSNe datapoint in the modeldata dictionary.
@@ -674,7 +673,7 @@ def add_weights_ccsne(modeldata, axis, weights = 1, kwargs=None):
 
     norm_weights = kwargs.pop('norm_weights', True) # Defaults to the value of add_weights
     kwargs['norm_weights'] = False
-    modeldata = plotting.add_weights(modeldata, axis, weights=weights, **kwargs)
+    modeldata = plotting.add_weights(modeldata, axis, weights, kwargs=kwargs)
 
     logger.info('Multiplying all weights by the mass coordinate mass')
 
@@ -694,7 +693,7 @@ def add_weights_ccsne(modeldata, axis, weights = 1, kwargs=None):
 
     return modeldata
 
-@utils.set_default_kwargs(inherits=plotting.plot,
+@utils.set_default_kwargs(inherits_=plotting.plot,
                                   linestyle=True, marker=False, fig_size=(10,5),
                                   xhist=False)
 def plot_ccsne(models, ykey, *,
@@ -705,12 +704,14 @@ def plot_ccsne(models, ykey, *,
     automatically plotted against the mass coordinated on the x-axis. If a single model is shown then by default
     the onion shell structure is also drawn.
     """
-    onion_kwargs = kwargs.extract(prefix=['onion', 'zone'])
+
+    onion_kwargs = kwargs.pop_many(prefix=['onion', 'zone'])
     if semilog: kwargs.setdefault('ax_yscale', 'log')
     kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
 
     modeldata, axis_labels = plotting.plot_get_data(models, '.masscoord', ykey,
                                            xunit=None, kwargs=kwargs)
+
     ax = plotting.plot_draw(modeldata, axis_labels, kwargs=kwargs)
 
     if onion or (onion is None and len(modeldata) == 1):
@@ -721,47 +722,16 @@ def plot_ccsne(models, ykey, *,
 
     return ax
 
-@utils.set_default_kwargs(inherits=plotting.hist,
+@utils.set_default_kwargs(inherits_=plotting.hist,
                                   weights_default_attrname='abundance', weights_unit='mass',
                                   )
-def hist_ccsne(models, key, weights=1, kwargs=None):
+def hist_ccsne(models, xkey=None, ykey=None, weights=1, r=None, kwargs=None):
     """
     CCSNe implementation of [`hist`][simple.hist] where all weights are multiplied by the mass coordinate mass
     (see [`add_ccsne_weights`][simple.add_ccsne_weights]).
     """
     kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
-    return plotting.hist(models, key, weights=weights, kwargs=None)
+    return plotting.hist(models, xkey, ykey, weights=weights, r=r, kwargs=None)
 
 
-@utils.set_default_kwargs(inherits=plotting.rose_hist,
-                                  weights_default_attrname='abundance', weights_unit='mass',
-                                  )
-def rose_hist_ccsne(models, xkey, ykey, r=None, weights=1, kwargs=None):
-    """
-    CCSNe implementation of [`rose_hist`][simple.rose_hist] where all weights are multiplied by the mass coordinate mass
-    (see [`add_ccsne_weights`][simple.add_ccsne_weights]).
-    """
-    kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
-    return plotting.rose_hist(models, xkey, ykey, r=r, weights=weights, **kwargs)
 
-
-########################
-### Deprecated stuff ###
-########################
-@utils.deprecation_warning('``ccsne.plot_abundance`` has been deprecated: Use ``plot_ccsne.abundance`` instead')
-def plot_abundance(*args, **kwargs):
-    return plot_ccsne.abundance(*args, **kwargs)
-
-@utils.deprecation_warning('``ccsne.plot_intnorm`` has been deprecated: Use ``plot_ccsne.intnorm`` instead')
-def plot_intnorm(*args, **kwargs):
-    return plot_ccsne.intnorm(*args, **kwargs)
-
-@utils.deprecation_warning('``ccsne.plot_simplenorm`` has been deprecated: Use ``plot_ccsne.stdnorm`` instead')
-def plot_simplenorm(*args, **kwargs):
-    return plot_ccsne.stdnorm(*args, **kwargs)
-
-@utils.deprecation_warning('``ccsne.mhist_ccsne`` has been deprecated: Use ``rose_hist_ccsne`` instead')
-def mhist_ccsne(*args, **kwargs):
-    kwargs.setdefault('rose_colorbar_show', True)
-    kwargs.setdefault('cmap', True)
-    return rose_hist_ccsne(*args, **kwargs)
