@@ -1,5 +1,7 @@
 # Stellar Interpretation for Meteoritic data and PLotting (for Everyone) - SIMPLE
-BADGES 
+[![PyPI](https://img.shields.io/pypi/v/chetec-simple.svg)](https://pypi.org/project/chetec-simple/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/chetec-simple.svg)
+![PyPI - License](https://img.shields.io/pypi/l/chetec-simple.svg)
 
 This is a development version of the SIMPLE package.
 
@@ -7,9 +9,6 @@ This project is licensed under the GNU Lesser General Public License v3.0 or lat
 
 ## Stable
 [![Tests](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml)
-[![PyPI](https://img.shields.io/pypi/v/chetec-simple.svg)](https://pypi.org/project/chetec-simple/)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/chetec-simple.svg)
-![PyPI - License](https://img.shields.io/pypi/l/chetec-simple.svg)
 
 This latest release of the stable version of SIMPLE. Documentation for this version can be 
 found [here](https://mattias-ek.github.io/SIMPLE/).
