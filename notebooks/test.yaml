@@ -2,7 +2,7 @@ load_models:
     # The prefixes of the smaller file
     filename: test.hdf5
 
-    # The prefixes of the raw file
+    # The prefixes of the _func file
     dbfilename: data/SIMPLE_CCSNe_v2.hdf5
 
     default_isolist:

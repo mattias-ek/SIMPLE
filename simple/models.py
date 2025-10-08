@@ -131,7 +131,7 @@ def load_collection(filename, dbfilename=None, *, default_isolist=None, convert_
 
     Args:
         filename (str): Name of the file to load or create.
-        dbfilename (str): Name of the raw models file
+        dbfilename (str): Name of the _func models file
         default_isolist (): Isolist applied to loaded models from ``dbfilename``.
         convert_units (bool): If ``True``  and data is stored in a mass unit all values will be divided by the
             mass number of the isotope before summing values together. The final value is then multiplied by the

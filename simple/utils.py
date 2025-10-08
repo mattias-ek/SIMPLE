@@ -125,7 +125,7 @@ class DefaultKwargs:
 
     Allows attaching shortcuts with alternative default kwargs, inheritance from other `DefaultKwargs` instances,
     and matching function signatures while still accepting extended `kwargs` or `**kwargs_`. Optionally exposes the
-    original wrapped function as `.raw`.
+    original wrapped function as `._func`.
 
     Args:
         func (Callable): The function to be wrapped.
@@ -141,23 +141,23 @@ class DefaultKwargs:
         A callabe shortcut with its own additional set of default keyword arguments.
         """
 
-        def __init__(self, name, inherits, kwargs):
+        def __init__(self, name, parent, kwargs):
             self._name = name
-            self._inherits_from = inherits
+            self._parent = parent
             self._kwargs = kwargs
 
         def __repr__(self):
-            return f'<DefaultKwargs.Shortcut "{self.name}" for function: {self._inherits_from.raw.__name__}>'
+            return f'<DefaultKwargs.Shortcut "{self._name}" for function: {self._parent._func.__name__}>'
 
         def __call__(self, *args, kwargs=None, **kwargs_):
-            return self._inherits_from._call(self.kwargs, args, kwargs, kwargs_)
+            return self._parent._call_func(self.kwargs, args, kwargs, kwargs_)
 
         @property
         def kwargs(self):
             """
             The effective keyword arguments for the current instance, with inheritance and overrides applied.
             """
-            new_kwargs = self._inherits_from.kwargs
+            new_kwargs = self._parent.kwargs
             new_kwargs.update(self._kwargs)
             return new_kwargs
 
@@ -180,6 +180,11 @@ class DefaultKwargs:
             """
             self._kwargs.clear()
 
+    class DontUpdateDict:
+        def __init__(self, dict):
+            # Just to avoid the overhead of updating dicts without references.
+            self.dict = dict
+
     class Dict(collections.abc.MutableMapping):
         """
         A dictionary-like wrapper for managing and merging multiple keyword argument dictionaries.
@@ -194,11 +199,19 @@ class DefaultKwargs:
             *kwargs (dict): One or more dictionaries to be combined and managed.
         """
 
-        def __init__(self, *kwargs):
-            self.kwargs = kwargs
+        def __init__(self, *kwarg_dicts):
+            self.dicts = [d for d in kwarg_dicts if
+                          (isinstance(d, (dict, self.__class__)) and not isinstance(d, DefaultKwargs.DontUpdateDict))]
             self.combined = {}
-            for kwargs in self.kwargs:
-                self.combined.update(kwargs)
+            for d in kwarg_dicts:
+                if isinstance(d, DefaultKwargs.DontUpdateDict):
+                    self.combined.update(d.dict)
+                elif isinstance(d, (dict, self.__class__)):
+                    self.combined.update(d)
+                elif d is None:
+                    pass
+                else:
+                    raise TypeError(f'Items must be dictionaries or None (got {type(d)})')
 
         def __repr__(self):
             return f'DefaultKwargs.Dict({repr(self.combined)})'
@@ -208,14 +221,14 @@ class DefaultKwargs:
 
         def __setitem__(self, key, value):
             self.combined.__setitem__(key, value)
-            for kwarg in self.kwargs:
-                kwarg.__setitem__(key, value)
+            for d in self.dicts:
+                d.__setitem__(key, value)
 
         def __delitem__(self, key):
             self.combined.__delitem__(key)
-            for kwargs in self.kwargs:
-                if key in kwargs:
-                    kwargs.__delitem__(key)
+            for d in self.dicts:
+                if key in d:
+                    d.__delitem__(key)
 
         def __iter__(self):
             return self.combined.__iter__()
@@ -223,92 +236,131 @@ class DefaultKwargs:
         def __len__(self):
             return self.combined.__len__()
 
-        def extract(self, *keys, prefix=None, delete=True, remove_prefix=True, **default_kwargs):
+        def copy(self):
+            return self.__class__(self.combined.copy())
+
+        def _parse_keys(self, name, keys, allow_callabe=True):
+            if isinstance(keys, (list, tuple)):
+                new_keys = []
+                for k in keys:
+                    new_keys.extend(self._parse_keys(name, k, allow_callabe=allow_callabe))
+
+            elif keys is None:
+                new_keys = []
+            elif isinstance(keys, str):
+                if ',' in keys:
+                    new_keys = keys.split(',')
+                else:
+                    new_keys = keys.split()
+
+                new_keys = [k.strip() for k in new_keys]
+            elif callable(keys) and allow_callabe:
+                new_keys = [name
+                        for name, param in inspect.signature(keys).parameters.items()
+                        if (param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD or
+                            param.kind == inspect.Parameter.KEYWORD_ONLY)]
+            else:
+                raise TypeError(f'Item "{keys}" is not a string')
+
+            return new_keys
+
+        def pop_many(self, keys=None, prefix=None, remove_prefix=True, **default_kwargs):
             """
-            Extracts the given keys from this dictionary.
+            Created a new dictionary containing the matching keys.
+
+            This will remove the corresponding item from the original dictionary and its subdictionaries.
 
             Args:
-                *keys (): Keys to be extracted.
+                keys (): Keys to be extracted. This can be either a comma or space seperated string, a list of
+                    strings, or a callable where the named arguments will be used as keys.
+                    Missing keys are ignored. Default values can be defined using the *default_kwargs* argument.
                 prefix (): Any keyword with this prefix will be extracted. A ``"_"`` will be added to the end of the
-                    prefix if not already present.
-                delete (): Whether to remove the extracted keyword from the dictionary and its precursors.
-                remove_prefix ():  If ``True`` the prefix part of they keyword is removed from the returned dictionary.
+                    prefix if not already present. Can be a comma or space seperated string, or a list of strings.
+                remove_prefix ():  If ``True`` the prefix part of the keyword is removed from the key in the returned
+                    dictionary.
                 **default_kwargs (): Forms the basis of the returned dictionary. Extracted values will overwrite these
                     values.
 
             Returns:
-                dict: A dictionary containing the extracted keyword arguments.
+                dict: A dictionary containing the extracted items.
             """
-            extracted = self.__class__(default_kwargs)
+            return self._get_many(keys, prefix, remove_prefix, default_kwargs, True)
+
+        def get_many(self, keys=None, prefix=None, remove_prefix=True, **default_kwargs):
+            """
+            Created a new dictionary containing the matching keys.
+
+            This will not alter the original dictionary and its associated subdictionaries.
+
+            Args:
+                keys (): Keys to be extracted. This can be either a comma or space seperated string, a list of
+                    strings, or a callable where the named arguments will be used as keys.
+                    Missing keys are ignored. Default values can be defined using the *default_kwargs* argument.
+                prefix (): Any keyword with this prefix will be extracted. A ``"_"`` will be added to the end of the
+                    prefix if not already present. Can be a comma or space seperated string, or a list of strings.
+                remove_prefix ():  If ``True`` the prefix part of the keyword is removed from the key in the returned
+                    dictionary.
+                **default_kwargs (): Forms the basis of the returned dictionary. Extracted values will overwrite these
+                    values.
+
+            Returns:
+                dict: A dictionary containing the extracted items.
+            """
+            return self._get_many(keys, prefix, remove_prefix, default_kwargs, False)
+
+        def _get_many(self, keys, prefix, remove_prefix, default_kwargs, delete):
+            new_dict = self.__class__(default_kwargs)
+
+            keys = self._parse_keys('keys', keys, allow_callabe=True)
+            prefix = self._parse_keys('prefix', prefix, allow_callabe=False)
 
             for k in keys:
-                if type(k) is tuple:
+                if k in self:
                     if delete:
-                        extracted[k] = self.pop(*k)
+                        new_dict[k] = self.pop(k)
                     else:
-                        extracted[k] = self.get(*k)
-                else:
-                    if k in self:
-                        if delete:
-                            extracted[k] = self.pop(k)
-                        else:
-                            extracted[k] = self.get(k)
-
-            if not isinstance(prefix, (list, tuple)):
-                prefix = (prefix,)
+                        new_dict[k] = self.get(k)
 
             for prfx in prefix:
-                if type(prfx) is not str:
-                    continue
-
                 if prfx[-1] != '_': prfx += '_'
 
-                for kwargs in self.kwargs:
-                    for k in list(kwargs.keys()):
-                        if k[:len(prfx)] == prfx:
-                            if remove_prefix:
-                                name = k[len(prfx):]
-                            else:
-                                name = k
-                            if delete:
-                                extracted[name] = self.pop(k)
-                            else:
-                                extracted[name] = self.get(k)
+                for k in list(self.keys()):
+                    if k[:len(prfx)] == prfx:
+                        if remove_prefix:
+                            name = k[len(prfx):]
+                        else:
+                            name = k
+                        if delete:
+                            new_dict[name] = self.pop(k)
+                        else:
+                            new_dict[name] = self.get(k)
 
-            return extracted
+            return new_dict
 
-        def _fextract(self, func, prefix=None, delete=True, remove_prefix=True, **default_kwargs):
-            arg_names = [name
-                         for name, param in inspect.signature(func).parameters.items()
-                         if param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
-            return self.extract(*arg_names,
-                                prefix=prefix, delete=delete, remove_prefix=remove_prefix,
-                                **default_kwargs)
-
-    def __init__(self, func, default_kwargs, inherits, match_signature, include_signature):
-        self.raw = func
+    def __init__(self, func, default_kwargs, inherits):
+        self._func = func
         self._kwargs = default_kwargs
-        if inherits is True:
-            self._inherits_from = self
-        elif inherits:
+
+        if inherits:
             if type(inherits) is not self.__class__:
                 raise TypeError('Can only inherit from other DefaultKwargs instances')
+            elif inherits is self:
+                raise ValueError('Cannot inherit from itself')
             else:
                 self._inherits_from = inherits
         else:
             self._inherits_from = None
-        self._match_signature = match_signature
-        self._include_signature = include_signature
+
         self._shortcuts = {}
 
         parameters = inspect.signature(func).parameters
 
-        # Number of args that can be positional only
-        self._func_nposonly = len([name
-                                   for name, param in parameters.items()
-                                   if param.kind == inspect.Parameter.POSITIONAL_ONLY])
+        if any([param.kind == inspect.Parameter.POSITIONAL_ONLY
+                for name, param in parameters.items()]):
+            raise ValueError('The DefaultKwargs wrapper does not work on functions with positional only arguments')
 
-        # All the argumanets that can be positional or keyword
+
+        # All the arguments that can be positional
         self._func_pos_names = [name
                                 for name, param in parameters.items()
                                 if param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
@@ -331,51 +383,61 @@ class DefaultKwargs:
         else:
             self._has_kwargs_arg = False
 
+        if any([param.kind == inspect.Parameter.VAR_KEYWORD for name, param in parameters.items()]):
+            self._has_star_star_arg = True
+        else:
+            self._has_star_star_arg = False
+
         functools.update_wrapper(self, func)
 
     def __repr__(self):
-        return f'<DefaultKwargs for function: {self.raw.__name__}>'
+        return f'<DefaultKwargs for function: {self._func.__name__}>'
 
     def __getattr__(self, name, inherit_from=None):
-        if inherit_from is None:
-            inherit_from = self
-
         if name in self._shortcuts:
-            return self.Shortcut(name, inherit_from, self._shortcuts[name])
+            return self.Shortcut(name, inherit_from or self, self._shortcuts[name])
 
         elif self._inherits_from:
             try:
-                return self._inherits_from.__getattr__(name, inherit_from=self)
+                return self._inherits_from.__getattr__(name, inherit_from=inherit_from or self)
             except AttributeError:
                 pass
 
-        raise AttributeError(f'{self.raw.__name__} has no shortcut called {name}')
+        raise AttributeError(f'{self._func.__name__} does not have, or inherits, a shortcut called {name}')
 
     def __call__(self, *args, kwargs=None, **kwargs_):
         """
         Calls the wrapped function with arguments, resolving default kwargs and matching against the function signature.
         Values in `kwargs` take precedence over `**kwargs_`.
         """
-        return self._call(self.kwargs, args, kwargs, kwargs_)
+        return self._call_func(self.kwargs, args, kwargs, kwargs_)
 
-        # old
-        new_kwargs = self.kwargs
-        new_kwargs.update(kwargs)
-        all_kwargs = KwargDict(self.kwargs, kwargs_, kwargs or {})
-        return self.raw(*args, **new_kwargs)
+    def _call_func(self, default_kwargs, args, kwargs_item, kwargs_):
+        # The order of priority is: *args, **kwargs, kwargs_item, defaults_inherited, (defaults_wrapper, default_signature)
+        if len(args) > len(self._func_kw_names):
+            raise ValueError(f'Too many positional arguments ({len(args)}). The function `{self._func.__name__}` '
+                             f'only accepts {len(self._func_kw_names)} positional arguments')
 
-    def _call(self, fkwargs, args, kwargs, kwargs_):
-        all_kwargs = self.Dict(fkwargs, kwargs or {}, kwargs_)
+        # Combine all the arguments
+        all_kwargs = self.Dict(self.DontUpdateDict(default_kwargs),
+                               kwargs_item,
+                               self.DontUpdateDict(kwargs_),
+                               self.DontUpdateDict(dict(zip(self._func_pos_names, args))))
 
-        for name in self._func_pos_names[:len(args[self._func_nposonly:])]:
-            all_kwargs.pop(name, None)
-        kw_kwargs = all_kwargs.extract(*self._func_kw_names)
+        # Fetch all the names kwargs
+        kw_kwargs = all_kwargs.pop_many(self._func_kw_names)
 
-        if self._has_kwargs_arg:
-            return self.raw(*args, kwargs=all_kwargs, **kw_kwargs)
+        # Sort out what which arguments to send.
+        if self._has_star_star_arg:
+            if self._has_kwargs_arg:
+                return self._func(kwargs=all_kwargs, **kw_kwargs, **all_kwargs)
+            else:
+                return self._func(**kw_kwargs, **all_kwargs)
         else:
-            return self.raw(*args, **kw_kwargs, **all_kwargs)
-
+            if self._has_kwargs_arg:
+                return self._func(kwargs=all_kwargs, **kw_kwargs)
+            else:
+                return self._func(**kw_kwargs)
 
     def add_shortcut(self, name,  **kwargs):
         """
@@ -383,53 +445,29 @@ class DefaultKwargs:
         """
         self._shortcuts[name] = kwargs
 
-    def _signature_kwargs(self):
-        # These are the kwargs that are defined in the signatures
-        new_kwargs = {}
-        if self._include_signature:
-            if self._inherits_from:
-                new_kwargs.update(self._inherits_from._signature_kwargs())
-
-            new_kwargs.update(self._func_kw_defaults)
-
-        return new_kwargs
-
-    def _default_kwargs(self):
-        # These are the default kwargs
-        # Does not include the default values defined in the signature.
-        if self._inherits_from:
-            new_kwargs = self._inherits_from._default_kwargs()
-        else:
-            new_kwargs = {}
-
-        new_kwargs.update(self._kwargs)
-        return new_kwargs
-
-    def _inherited_kw_names(self):
-        names = {*self._func_pos_names}
-        if self._inherits_from:
-            names.update(self._inherits_from._inherited_kw_names(True))
-        return names
-
     @property
     def kwargs(self):
         """
         The effective keyword arguments for the current instance, with inheritance and overrides applied.
         """
-        new_kwargs = self._signature_kwargs()
-        new_kwargs.update(self._default_kwargs())
-        if self._inherits_from and self._match_signature:
-            for name in self._inherits_from._inherited_kw_names():
-                if name in new_kwargs and (name not in self._func_kw_names and name not in self._kwargs):
-                    new_kwargs.pop(name)
+        if self._inherits_from:
+            new_kwargs = self._inherits_from.kwargs
+        else:
+            new_kwargs = self.Dict()
 
-        return self.Dict(new_kwargs)
+        new_kwargs.update(self._func_kw_defaults)
+        new_kwargs.update(self._kwargs)
 
-    def update(self, **kwargs):
+        return new_kwargs
+
+    def update(self, d=None, **kwargs):
         """
         Update the default kwargs of this function.
         """
-        self._kwargs.update(kwargs)
+        if d is not None:
+            self._kwargs.update(d)
+        if kwargs:
+            self._kwargs.update(kwargs)
 
     def remove(self, *args):
         """
@@ -449,7 +487,7 @@ class DefaultKwargs:
         self._kwargs.clear()
 
 
-def set_default_kwargs(*, inherits = False, match_signatures=False, include_signature=True, **default_kwargs):
+def set_default_kwargs(*, inherits_ = None, **default_kwargs):
     """
     Decorator sets the default keyword arguments for the function. It wraps the function so that the
     default kwargs are always passed to the function.
@@ -458,7 +496,7 @@ def set_default_kwargs(*, inherits = False, match_signatures=False, include_sign
     ``update__kwargs`` attached to the return function.
     """
     def decorator(func):
-        return DefaultKwargs(func, default_kwargs, inherits, match_signatures, include_signature)
+        return DefaultKwargs(func, default_kwargs, inherits_)
     return decorator
 
 def add_shortcut(name, **shortcut_kwargs):

@@ -1,7 +1,9 @@
 # Stellar Interpretation for Meteoritic data and PLotting (for Everyone) - SIMPLE
+BADGES 
 
 This is a development version of the SIMPLE package.
 
+This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPLv3+).
 
 ## Stable
 BADGES
