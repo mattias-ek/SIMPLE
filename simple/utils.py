@@ -129,10 +129,8 @@ class DefaultKwargs:
 
     Args:
         func (Callable): The function to be wrapped.
-        inherits (bool or DefaultKwargs): If `True`, inherit defaults from self. If another instance, inherit from it.
-        match_signature (bool): If True, only arguments that are defined in both this function and the inherited
-            function are included. Everything passed to `kwargs` in the inherited function will still be included though.
-        **default_kwargs: Default keyword arguments that will be applied unless explicitly overridden.
+        parent (DefaultKwargs): If supplied, all kwargs from this instance will be inherited unless overridden.
+        **kwargs: Default keyword arguments that will be applied unless explicitly overridden.
 
     """
 
@@ -563,9 +561,9 @@ def askeyarray(values, keys, dtype=None):
 
     Args:
         values (): An array consisting of 2 dimensions where first dimension is the row and the second
-        dimension is the column.
+            dimension is the column.
         keys (): The keys for each column in ``values``. Must be the same length as the second dimension of ``values``.
-        of ``array``.
+            of ``array``.
         dtype (): The values type of the returned array. All columns will have the same dtype.
 
     **Notes**
@@ -1061,7 +1059,6 @@ def get_isotopes_of_element(isotopes, element, isotopes_without_suffix=False):
     Args:
         isotopes (): An iterable of strings representing isotopes.
         element (str): The element symbol.
-        suffix (str): If given the isotopes must also have this suffix.
         isotopes_without_suffix (bool): If ``True`` suffixes will be removed from the isotopes in ``isotopes``
             before the evaluation takes place.
 
