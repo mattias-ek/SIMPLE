@@ -46,9 +46,8 @@ nav:
         - simple.utils: api/utils.md
         - simple.ccsne: api/ccsne.md
         - simple.roseaxes: api/roseaxes.md
-    - About: about.md
     - Changelog: changelog.md
-    - License: license.md
+    - About: about.md
 
 markdown_extensions:
   - pymdownx.arithmatex:

@@ -531,7 +531,7 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
     title = ax.get_title()
     if title:
         kwargs.setdefault('ax_title', title)
-    delayed_kwargs = plotting.update_axes(ax, kwargs, delay='ax_legend', update_ax=update_ax, update_fig=update_fig)
+    plotting.update_axes(ax, kwargs, update_ax=update_ax, update_fig=update_fig)
 
     lower_bounds = getattr(model, 'onion_lbounds', None)
     if lower_bounds is None:
@@ -626,7 +626,7 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
         add_text('remnant', r'M$_{\rm rem}$', ((lbound_rem + masscut) / 2))
         add_fill('remnant', [lbound_rem, masscut])
 
-    plotting.update_axes(ax, delayed_kwargs, update_ax=update_ax, update_fig=update_fig)
+    return ax
 
 
 @utils.set_default_kwargs(inherits_=plotting.add_weights)
@@ -718,7 +718,7 @@ def plot_ccsne(models, ykey, *,
         if len(modeldata) > 1:
             raise ValueError(f"Can only plot onion structure for a single model")
         else:
-            plot_zonal_structure(models[0], ax=ax, **onion_kwargs)
+            plot_zonal_structure(list(modeldata.keys())[0], ax=ax, **onion_kwargs)
 
     return ax
 
