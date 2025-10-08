@@ -5,7 +5,6 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "simple-chetec"
 dynamic = ["version"]
-#version = "0.4.0"
 description = "Stellar Interpretation for Meteoritic data and PLotting (for Everyone)"
 authors = [{ name = "Mattias Ek", email = "mattias.ek@pm.me" }]
 license = { text = "LGPL-3.0-or-later" }
@@ -17,6 +16,10 @@ dependencies= [
     "scipy >=1.8",
     "h5py >=3.6",
     "pyyaml >=5.4",
+]
+
+classifiers = [
+  "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
 ]
 
 [project.optional-dependencies]

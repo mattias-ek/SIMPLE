@@ -57,44 +57,11 @@ jobs:
             exit 1
           fi
 
-  test-and-coverage:
-    name: Test and Coverage for py3.9
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
-
-      #- run: pip install setuptools_scm[toml]
-      - run: pip install ".[test]"
-
-      # Determine the installed path of the package
-      - name: Get package path
-        id: package-path
-        run: |
-          PKG_PATH=$(python -c "import simple, os; print(os.path.dirname(simple.__file__))")
-          echo "PKG_PATH=$PKG_PATH" >> "$GITHUB_ENV"
-
-      - name: Run tests with coverage
-        run: |
-          coverage run -m pytest -q
-          coverage report -m
-          coverage xml -o coverage.xml
-
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
   run-test-matrix:
     name: Test Matrix
     if: >
-      github.actor != 'github-actions[bot]' && github.event_name == 'pull_request'
+      github.actor != 'github-actions[bot]' && github.event_name == 'pull_request' &&
+      !contains(github.event.head_commit.message, '[docs-only]')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -121,7 +88,6 @@ jobs:
 
       - name: Run tests via nox
         run: nox --python ${{ matrix.python-version }} -- -q
-
   docs:
     name: Generate docs
     if: >
@@ -168,7 +134,9 @@ jobs:
           destination_dir: pre-release
   update-changelog:
     name: Update the root changelog file
-    if: github.actor != 'github-actions[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: >
+      github.actor != 'github-actions[bot]' && github.event_name == 'push' && github.ref == 'refs/heads/master' &&
+      !contains(github.event.head_commit.message, '[docs-only]')
 
     needs: [ docs, get-version ]
     runs-on: ubuntu-latest
@@ -228,7 +196,8 @@ jobs:
     name: Publish to PyPi
     if: >
       github.actor != 'github-actions[bot]' &&
-      github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master')
+      github.event_name == 'push' && (github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/master') &&
+      !contains(github.event.head_commit.message, '[docs-only]')
     needs: get-version
     runs-on: ubuntu-latest
     steps:
