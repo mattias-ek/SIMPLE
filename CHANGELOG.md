@@ -1,8 +1,8 @@
 # Release Notes
 
-## [Latest]n 
+## [Latest] 
 
-Added the LGPL-3.0 licence
+Added the LGPL-3.0+ licence
 
 ### Model and ModelCollection implementation
 Redid how data is meant to be saved to the database file is handled. The type of the data
@@ -26,6 +26,7 @@ the ``.`` method, the same as for ``where``.
 The ``where`` method now return a model collection containing the original model objects rather than copies.
 
 Renamed ``ModelTemplate`` to ``ModelBase``.
+
 ### CCSNe Models
 Added the *masscoord_mass* attribute to the mandatory attributes of the CCSNe models. 
 
@@ -36,7 +37,8 @@ in ``get_mask``. Instead use ``.zone == <name>`` instead.
 ### Plotting
 Added a new plot type - A traditional histogram. The new plot type can be accessed using 
 the ``hist`` function. Additionally, it is now possible to automatically add a histogram to
-of the data show in ``plot`` using the ``hist``, ``yhist`` and ``xhist`` keywords.
+of the data show in ``plot`` using the ``hist``, ``yhist`` and ``xhist`` keywords. This replaces
+the old ``hist_host``/``mhist`` functions to plot circular histograms.
 
 ``get_data`` now return the datapoints mapped to the Model object rather than the model name. 
 

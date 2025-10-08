@@ -45,6 +45,7 @@ nav:
         - simple.models: api/models.md
         - simple.utils: api/utils.md
         - simple.ccsne: api/ccsne.md
+        - simple.roseaxes: api/roseaxes.md
     - About: about.md
     - Changelog: changelog.md
     - License: license.md
