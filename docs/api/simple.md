@@ -11,6 +11,7 @@ For more advanced, specialised, or lower-level functionality, you can import dir
 - [`simple.plotting`](/api/plotting): visualisation utilities
 - [`simple.utils`](/api/utils): miscellaneous internal and support utilities
 - [`simple.ccsne`](/api/ccsne): CCSNe-specific utilities
+- [`simple.roseaxes`](/api/roseaxes): contains the RoseAxes class and associated utilities.
 
 ---
 
