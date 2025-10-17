@@ -41,7 +41,9 @@ jobs:
 
   check-version:
     name: Make sure version for master in unique
-    if: github.actor != 'github-actions[bot]' && github.event_name == 'pull_request' && github.ref == 'master'
+    if: >
+      github.actor != 'github-actions[bot]' && github.event_name == 'pull_request' && github.ref == 'master' &&
+      !contains(github.event.head_commit.message, '[docs-only]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
