@@ -52,6 +52,9 @@ for each datapoint in a *data* returned from ``get_data``.
 Split the main plotting functions into two steps. <func>_get_data and <func>_draw to allow easier customisation 
 of plots.
 
+Added test based on Tutorial 3. Does not verify output only that the commands run without error.
+Added check that the tutorial notebooks run without error.
+
 ### Utils
 Updated how the default kwargs works. You can now pass the whole kwargs dictionary to another function so that 
 removed/added items are synced between the functions. 

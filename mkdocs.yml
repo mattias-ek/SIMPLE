@@ -36,7 +36,6 @@ nav:
         - Part 2 - Plotting: examples/ccsne_tutorial3.ipynb
     - Examples:
         - Create CCSNe database: examples/create_simple_db.ipynb
-        - CCSNE Exmple: examples/simple_mattias_version.ipynb
         - Rose Diagrams: examples/rose_diagram.ipynb
     - User Reference: api/simple.md
     - API Reference:

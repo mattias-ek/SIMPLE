@@ -45,7 +45,7 @@ class CCSNe(models.ModelBase):
 # These functions cannot be tested without the original data so there
 # are no automatic tests, and they are ignored in coverage.
 # They should therefore be used with caution!
-def fudge_masscord_mass(masscoord):
+def fudge_masscord_mass(masscoord): # pragma: no cover
     """
     Estimate the mass at each mass coordinate.
 
@@ -731,7 +731,7 @@ def hist_ccsne(models, xkey=None, ykey=None, weights=1, r=None, kwargs=None):
     (see [`add_ccsne_weights`][simple.add_ccsne_weights]).
     """
     kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
-    return plotting.hist(models, xkey, ykey, weights=weights, r=r, kwargs=None)
+    return plotting.hist(models, xkey, ykey, weights=weights, r=r, kwargs=kwargs)
 
 
 
