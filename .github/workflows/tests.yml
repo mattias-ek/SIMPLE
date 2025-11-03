@@ -32,8 +32,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           coverage run -m pytest -q
-          cd notebooks
-          coverage run -m pytest --nbmake ccsne_tutorial1.ipynb 
+          coverage run -m pytest --nbmake notebooks/ccsne_tutorial1.ipynb 
           coverage report -m
           coverage xml -o coverage.xml
 
