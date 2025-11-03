@@ -56,4 +56,4 @@ jobs:
         run: python -m pip install --upgrade pip nox
 
       - name: Run tests via nox
-        run: nox --python ${{ matrix.python-version }} -- -q
+        run: MPLBACKEND=Agg nox --python ${{ matrix.python-version }} -- -q

@@ -45,7 +45,7 @@ class CCSNe(models.ModelBase):
 # These functions cannot be tested without the original data so there
 # are no automatic tests, and they are ignored in coverage.
 # They should therefore be used with caution!
-def fudge_masscord_mass(masscoord):
+def fudge_masscord_mass(masscoord): # pragma: no cover
     """
     Estimate the mass at each mass coordinate.
 

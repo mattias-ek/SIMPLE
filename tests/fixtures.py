@@ -98,3 +98,8 @@ def model3b(collection, input_values):
                                  abundance_values=abu, abundance_keys=input_values['abukeys'],
                                  abundance_unit='mol')
     return model
+
+
+@pytest.fixture
+def ccsne_models():
+    return simple.load_collection('tests/data/CCSNe_FeNi.hdf5')
