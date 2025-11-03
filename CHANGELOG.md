@@ -4,6 +4,10 @@
 
 Added the LGPL-3.0+ licence
 
+Updated GitHub workflows.
+
+Updated Example notebooks.
+
 ### Model and ModelCollection implementation
 Redid how data is meant to be saved to the database file is handled. The type of the data
 is now preserved. I.e. a list will always be a list etc. The types that can be saved are 
