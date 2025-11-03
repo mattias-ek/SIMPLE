@@ -55,6 +55,6 @@ jobs:
       - run: pip install nbmake
 
       - name: Run tutorial notebooks
-        run: MPLBACKEND=Agg pytest --nbmake notebooks/ccsne_tutorial*.ipynb
+        run: pytest --nbmake notebooks/ccsne_tutorial*.ipynb
 
 
