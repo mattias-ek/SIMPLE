@@ -1,5 +1,7 @@
 # Stellar Interpretation for Meteoritic data and PLotting (for Everyone) - SIMPLE
-BADGES 
+[![PyPI](https://img.shields.io/pypi/v/simple-chetec.svg)](https://pypi.org/project/simple-chetec/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/simple-chetec.svg)
+![PyPI - License](https://img.shields.io/pypi/l/simple-chetec.svg)
 
 This is a development version of the SIMPLE package.
 
@@ -7,39 +9,38 @@ This project is licensed under the GNU Lesser General Public License v3.0 or lat
 
 ## Stable
 [![Tests](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml)
-[![PyPI](https://img.shields.io/pypi/v/chetec-simple.svg)](https://pypi.org/project/chetec-simple/)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/chetec-simple.svg)
-![PyPI - License](https://img.shields.io/pypi/l/chetec-simple.svg)
+[![Build & Release](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml)
 
 This latest release of the stable version of SIMPLE. Documentation for this version can be 
 found [here](https://mattias-ek.github.io/SIMPLE/).
 
 To install this version use
 ```
-pip install chetec-simple
+pip install simple-chetec
 ```
 
-or to upgrade use, 
+or, to upgrade use 
 
 ```
-pip install --upgrade chetec-simple
+pip install --upgrade simple-chetec
 ```
 
 
 ## Pre-release
 [![Tests](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml/badge.svg?branch=staging)](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml)
+[![Build & Release](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml/badge.svg?branch=staging)](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml)
 [![codecov](https://codecov.io/gh/mattias-ek/SIMPLE/branch/staging/graph/badge.svg?token=tOp92fxmeF)](https://codecov.io/gh/mattias-ek/SIMPLE)
 
-This is the latest development/pre-release version of SIMPLE. Includes features and fixes ahead of stable, but may 
+The pre-release version of SIMPLE includes features and fixes ahead of stable, but may 
 also be less reliable. Documentation for the pre-release version can be found [here](https://mattias-ek.github.io/SIMPLE/pre-release/)
 
 To install this version use
 ```
-pip install --pre chetec-simple
+pip install --pre simple-chetec
 ```
 
 or to upgrade use, 
 
 ```
-pip install --upgrade --pre chetec-simple
+pip install --upgrade --pre simple-chetec
 ```

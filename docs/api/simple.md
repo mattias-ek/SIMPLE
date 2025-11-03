@@ -6,12 +6,12 @@ point for most workflows.
 
 For more advanced, specialised, or lower-level functionality, you can import directly from the individual submodules:
 
-- [`simple.models`](/api/models): primary object structures
-- [`simple.norm`](/api/norm): normalisation schemes
-- [`simple.plotting`](/api/plotting): visualisation utilities
-- [`simple.utils`](/api/utils): miscellaneous internal and support utilities
-- [`simple.ccsne`](/api/ccsne): CCSNe-specific utilities
-- [`simple.roseaxes`](/api/roseaxes): contains the RoseAxes class and associated utilities.
+- [`simple.models`](/api/models/): primary object structures
+- [`simple.norm`](/api/norm/): normalisation schemes
+- [`simple.plotting`](/api/plotting/): visualisation utilities
+- [`simple.utils`](/api/utils/): miscellaneous internal and support utilities
+- [`simple.ccsne`](/api/ccsne/): CCSNe-specific utilities
+- [`simple.roseaxes`](/api/roseaxes/): contains the RoseAxes class and associated utilities.
 
 ---
 
