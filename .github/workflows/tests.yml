@@ -20,6 +20,7 @@ jobs:
 
       #- run: pip install setuptools_scm[toml]
       - run: pip install ".[test]"
+      - run: pip install nbmake
 
       # Determine the installed path of the package
       - name: Get package path
@@ -31,6 +32,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           coverage run -m pytest -q
+          coverage run -m pytest --nbmake notebooks/ccsne_tutorial1.ipynb 
           coverage report -m
           coverage xml -o coverage.xml
 
