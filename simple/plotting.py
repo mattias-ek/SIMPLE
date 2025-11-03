@@ -1008,36 +1008,6 @@ def _update_fig_or_ax(obj, name, meth_kwargs, kw_kwargs):
 
         method(*arg, **var_kwargs)
 
-def _axline(direction, ax, v, verr, lim, lim_coord, kwargs):
-    fill_kwargs = kwargs.pop_many(prefix='fill')
-    ax = get_axes(ax)
-
-    if lim_coord == 'data' and lim is not None:
-        if direction == 'h':
-            if lim is None: lim = ax.get_xlim()
-            ax.hline(v, *lim, **kwargs)
-        elif direction == 'v':
-            if lim is None: lim = ax.get_ylim()
-            ax.vline(v, *lim, **kwargs)
-
-    if lim_coord == 'axis':
-        if lim is None: lim == (0, 1)
-
-        if verr is not None:
-            pass
-
-
-        if direction == 'h':
-            ax.axhline(v, *lim, **kwargs)
-        elif direction == 'v':
-            ax.axvline(v, *lim, **kwargs)
-
-
-def _axhline(ax, y, yerr = None, lim = None, lim_coord='axes', **kwargs):
-
-
-    pass
-
 
 @utils.add_shortcut('abundance', default_attrname ='abundance', unit=None)
 @utils.add_shortcut('stdnorm', default_attrname ='stdnorm.Ri', unit=None)

@@ -6,7 +6,7 @@ on:
 
 jobs:
   test-and-coverage:
-    name: Test and Coverage for py3.9
+    name: Test and Coverage (py3.9)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,3 +38,23 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  notebooks:
+    name: Test Notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - run: pip install ".[test]"
+      - run: pip install nbmake
+
+      - name: Run tutorial notebooks
+        run: MPLBACKEND=Agg pytest --nbmake notebooks/ccsne_tutorial*.ipynb
+
+
