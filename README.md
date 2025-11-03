@@ -9,6 +9,7 @@ This project is licensed under the GNU Lesser General Public License v3.0 or lat
 
 ## Stable
 [![Tests](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml)
+[![Build & Release](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml)
 
 This latest release of the stable version of SIMPLE. Documentation for this version can be 
 found [here](https://mattias-ek.github.io/SIMPLE/).
@@ -18,7 +19,7 @@ To install this version use
 pip install simple-chetec
 ```
 
-or to upgrade use, 
+or, to upgrade use 
 
 ```
 pip install --upgrade simple-chetec
@@ -27,6 +28,7 @@ pip install --upgrade simple-chetec
 
 ## Pre-release
 [![Tests](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml/badge.svg?branch=staging)](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml)
+[![Build & Release](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml/badge.svg?branch=staging)](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml)
 [![codecov](https://codecov.io/gh/mattias-ek/SIMPLE/branch/staging/graph/badge.svg?token=tOp92fxmeF)](https://codecov.io/gh/mattias-ek/SIMPLE)
 
 The pre-release version of SIMPLE includes features and fixes ahead of stable, but may 
