@@ -1,5 +1,5 @@
 # Stellar Interpretation for Meteoritic data and PLotting (for Everyone) - SIMPLE
-[![PyPI](https://img.shields.io/pypi/v/simple-chetec.svg)](https://pypi.org/project/simple-chetec/)
+[![PyPI](https://img.shields.io/pypi/v/simple-chetec.svg?include_prereleases)](https://pypi.org/project/simple-chetec/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/simple-chetec.svg)
 ![PyPI - License](https://img.shields.io/pypi/l/simple-chetec.svg)
 
