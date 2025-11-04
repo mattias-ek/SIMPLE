@@ -7,7 +7,7 @@ name = "simple-chetec"
 dynamic = ["version"]
 description = "Stellar Interpretation for Meteoritic data and PLotting (for Everyone)"
 authors = [{ name = "Mattias Ek", email = "mattias.ek@pm.me" }]
-license = { text = "LGPL-3.0-or-later" }
+license = "LGPL-3.0-or-later"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies= [
@@ -16,10 +16,6 @@ dependencies= [
     "scipy >=1.8",
     "h5py >=3.6",
     "pyyaml >=5.4",
-]
-
-classifiers = [
-  "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
 ]
 
 [project.optional-dependencies]
@@ -58,7 +54,6 @@ log_cli = true
 version_scheme = "no-guess-dev"
 local_scheme = "no-local-version"
 write_to = "simple/__version__.py"
-fallback_version = "0.0.0"
 
 [tool.coverage.run]
 branch = true
