@@ -47,7 +47,7 @@ jobs:
           VERSION=${{ steps.base-version.outputs.version }}
           BASE=${{ steps.base-version.outputs.base }}
           
-          if git tag -l "$VERSION" | grep -qx "$VERSION"; then
+          if git tag -l "$BASE" | grep -qx "$BASE"; then
             echo "Version $BASE has already been released. Please update VERSION.txt."
             exit 1
           fi
