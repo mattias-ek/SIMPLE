@@ -39,9 +39,10 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  notebooks:
+  test-notebooks:
     name: Test Notebooks
     runs-on: ubuntu-latest
+    if: ${{ github.ref_name != 'staging' && github.ref_name != 'master' }}
     steps:
       - uses: actions/checkout@v4
         with:

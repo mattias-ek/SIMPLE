@@ -60,3 +60,21 @@ jobs:
         env:
           MPLBACKEND: Agg
         run: nox --python ${{ matrix.python-version }} -- -q
+
+  test-notebooks:
+    name: Test Notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - run: pip install ".[test]"
+      - run: pip install nbmake
+
+      - name: Run tutorial notebooks
+        run: pytest --nbmake notebooks/ccsne_tutorial*.ipynb
