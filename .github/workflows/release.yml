@@ -6,8 +6,7 @@ on:
 jobs:
   release:
     name: Publish to PyPi
-    if: >
-      github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,8 +39,7 @@ jobs:
             dist/*.tar.gz
   update-changelog:
     name: Update the root changelog file
-    if: >
-      github.actor != 'github-actions[bot]' && github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master'
 
     needs: [ release ]
     runs-on: ubuntu-latest
