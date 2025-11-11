@@ -14,25 +14,56 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor != 'github-actions[bot]'
     outputs:
-      version: ${{ steps.set-version.outputs.version }}
+      version: ${{ steps.base-version.outputs.version || steps.release-version.outputs.version}}
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch full history
+          fetch-depth: 0
           fetch-tags: true
 
-      - id: set-version
+      - id: base-version
         run: |
-          VERSION=$(cat VERSION.txt)
-          VERSION="v$VERSION"
+          BASE=$(cat VERSION.txt)
+          BASE="v$BASE"
           
-          # On staging, mark version as pre-release for display purposes
           if [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
-            VERSION="${VERSION}.dev"
+            LAST=$(git tag -l "${BASE}b*" | sort -V | tail -1)
+            if [ -z "$LAST" ]; then
+              VERSION="${BASE}b0"
+            else
+              VERSION="${LAST}"
+            fi
+          else
+            VERSION="${BASE}"
           fi
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "base=$BASE" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
+
+      - id: release-version
+        if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
+        run: |
+          VERSION=${{ steps.base-version.outputs.version }}
+          BASE=${{ steps.base-version.outputs.base }}
+          
+          if git tag -l "$VERSION" | grep -qx "$VERSION"; then
+            echo "Version $BASE has already been released. Please update VERSION.txt."
+            exit 1
+          fi
+          
+          if [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
+            N=$(echo "$VERSION" | sed -E 's/.*b([0-9]+)$/\1/')
+            VERSION="${BASE}b$((N+1))"
+          fi
+          
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+          echo "Created Tag: $VERSION"
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
   docs:
     name: Generate docs
@@ -81,7 +112,7 @@ jobs:
     name: Publish to PyPi
     if: >
       github.actor != 'github-actions[bot]' &&
-      !contains(github.event.head_commit.message, '[docs-only]')
+      !contains(github.event.head_commit.message, '[skip release]')
     needs: get-version
     runs-on: ubuntu-latest
     steps:
@@ -89,19 +120,6 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-
-      - name: Create version Tag
-        if: github.ref == 'refs/heads/master'
-        run: |
-          VERSION="${{ needs.get-version.outputs.version }}"
-          
-          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
-            git config user.name "github-actions"
-            git config user.email "github-actions@github.com"
-            git tag "$VERSION"
-            git push origin "$VERSION"
-            echo "Created Tag: $VERSION"
-          fi
 
       - uses: actions/setup-python@v5
         with:
@@ -129,7 +147,7 @@ jobs:
     name: Update the root changelog file
     if: >
       github.actor != 'github-actions[bot]' && github.ref == 'refs/heads/master' &&
-      !contains(github.event.head_commit.message, '[docs-only]')
+      !contains(github.event.head_commit.message, '[skip release]')
 
     needs: [ docs, get-version, release ]
     runs-on: ubuntu-latest

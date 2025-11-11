@@ -9,20 +9,21 @@ jobs:
   check-master-version:
     name: Make sure version for master in unique
     if: >
-      github.actor != 'github-actions[bot]' && github.ref == 'master' &&
-      !contains(github.event.head_commit.message, '[docs-only]')
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip release]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Needed to switch branches
+          fetch-tags: true
 
       - run: |
           VERSION=$(cat VERSION.txt)
-          TAG="v$VERSION"
+          VERSION="v$VERSION"
 
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Version $VERSION already exists. Please update VERSION.txt."
+           if git tag -l "$VERSION" | grep -qx "$VERSION"; then
+            echo "Version $VERSION has already been released. Please update VERSION.txt."
             exit 1
           fi
 
@@ -30,7 +31,7 @@ jobs:
     name: Test Matrix
     if: >
       github.actor != 'github-actions[bot]' &&
-      !contains(github.event.head_commit.message, '[docs-only]')
+      !contains(github.event.head_commit.message, '[skip release]')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
