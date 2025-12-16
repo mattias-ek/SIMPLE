@@ -259,7 +259,7 @@ def load_Pi16(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
 
 def load_La22(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
     """Load the CCSNe models from Lawson et al. (2022)."""
-    def load(emass, model_name, default_onion_structure=True):
+    def load(emass, model_name):
         mass_lines = []
         with open(data_dir + model_name, "rt") as f:
             for ln, line in enumerate(f):
@@ -317,8 +317,7 @@ def load_La22(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
                     abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
-        if default_onion_structure:
-            data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -701,13 +700,21 @@ def plot_ccsne(models, ykey, *,
          kwargs=None):
     """
     CCSNe implementation of the [`plot`][simple.plot] function where you specify the data on the y-axis which is
-    automatically plotted against the mass coordinated on the x-axis. If a single model is shown then by default
-    the onion shell structure is also drawn.
+    automatically plotted against the mass coordinates on the x-axis. See this function for more details and a
+    description of the optional arguments.
+
+    If a single model is shown, then by default the onion shell structure is also drawn if
+    `onion=True` or if `onion=None`.
+
+    The y-axis is drawn on a logarithmic scale if `semilog=True`.
+
+    **Note** Weights are calculated using [`add_weights_ccsne`][simple.ccsne.add_weights_ccsne] where each
+    weight is multiplied by the mass associated with each mass coordinate in CCSNe models.
     """
 
     onion_kwargs = kwargs.pop_many(prefix=['onion', 'zone'])
     if semilog: kwargs.setdefault('ax_yscale', 'log')
-    kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
+    kwargs.setdefault('SIMPLE_add_weights', add_weights_ccsne)
 
     modeldata, axis_labels = plotting.plot_get_data(models, '.masscoord', ykey,
                                            xunit=None, kwargs=kwargs)
@@ -727,10 +734,13 @@ def plot_ccsne(models, ykey, *,
                                   )
 def hist_ccsne(models, xkey=None, ykey=None, weights=1, r=None, kwargs=None):
     """
-    CCSNe implementation of [`hist`][simple.hist] where all weights are multiplied by the mass coordinate mass
-    (see [`add_ccsne_weights`][simple.add_ccsne_weights]).
+    CCSNe implementation of [`hist`][simple.hist]. See this function for more details and a
+    description of the optional arguments.
+
+    **Note** Weights are calculated using [`add_weights_ccsne`][simple.ccsne.add_weights_ccsne] where each
+    weight is multiplied by the mass associated with each mass coordinate in CCSNe models.
     """
-    kwargs.setdefault('_SIMPLE_add_weights', add_weights_ccsne)
+    kwargs.setdefault('SIMPLE_add_weights', add_weights_ccsne)
     return plotting.hist(models, xkey, ykey, weights=weights, r=r, kwargs=kwargs)
 
 

@@ -195,27 +195,27 @@ class TestDefaultKwargs:
         assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
         assert myfunc.genvag.kwargs == dict(two=2, three=3, four=4, six=6, seven=777)
 
-        myfunc.update(two=22, four=44, seven=77)
+        myfunc.update_kwargs(two=22, four=44, seven=77)
         assert myfunc.kwargs == dict(two=22, three=3, four=44, six=6, seven=77)
         assert myfunc.genvag.kwargs == dict(two=22, three=3, four=44, six=6, seven=777)
 
-        myfunc.genvag.update(two=222, five=555, six=666)
+        myfunc.genvag.update_kwargs(two=222, five=555, six=666)
         assert myfunc.kwargs == dict(two=22, three=3, four=44, six=6, seven=77)
         assert myfunc.genvag.kwargs == dict(two=222, three=3, four=44, five=555, six=666, seven=777)
 
-        myfunc.remove('three', 'four', 'seven')
+        myfunc.remove_kwargs('three', 'four', 'seven')
         assert myfunc.kwargs == dict(two=22, three=3, four=4, six=6)
         assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666, seven=777)
 
-        myfunc.genvag.remove('three', 'seven')
+        myfunc.genvag.remove_kwargs('three', 'seven')
         assert myfunc.kwargs == dict(two=22, three=3, four=4, six=6)
         assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666)
 
-        myfunc.clear()
+        myfunc.clear_kwargs()
         assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
         assert myfunc.genvag.kwargs == dict(two=222, three=3, four=4, five=555, six=666)
 
-        myfunc.genvag.clear()
+        myfunc.genvag.clear_kwargs()
         assert myfunc.kwargs == dict(two=2, three=3, four=4, six=6)
         assert myfunc.genvag.kwargs == dict(two=2, three=3, four=4, six=6)
 
