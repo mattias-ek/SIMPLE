@@ -586,7 +586,7 @@ class TestPlotting:
             simple.plot_ccsne.kwargs
             simple.plot_ccsne.abundance.kwargs
 
-            simple.plot.update(ax_tick_params=dict(left=True, right=True, top=True, labelleft=True, which='both'),
+            simple.plot.update_kwargs(ax_tick_params=dict(left=True, right=True, top=True, labelleft=True, which='both'),
                                ax_grid=(True,))
 
             simple.plot_ccsne.abundance(ccsne_models, 'o16/c12', where='.dataset==Ra02', unit='mol');

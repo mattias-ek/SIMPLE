@@ -159,20 +159,20 @@ class DefaultKwargs:
             new_kwargs.update(self._kwargs)
             return new_kwargs
 
-        def update(self, **kwargs):
+        def update_kwargs(self, **kwargs):
             """
             Update the default kwargs of this shortcut.
             """
             self._kwargs.update(kwargs)
 
-        def remove(self, *args):
+        def remove_kwargs(self, *args):
             """
             Remove items from the default kwargs of this shortcut.
             """
             for arg in args:
                 self._kwargs.pop(arg, None)
 
-        def clear(self):
+        def clear_kwargs(self):
             """
             Removes all items from the default kwargs of this shortcut.
             """
@@ -458,7 +458,7 @@ class DefaultKwargs:
 
         return new_kwargs
 
-    def update(self, d=None, **kwargs):
+    def update_kwargs(self, d=None, **kwargs):
         """
         Update the default kwargs of this function.
         """
@@ -467,7 +467,7 @@ class DefaultKwargs:
         if kwargs:
             self._kwargs.update(kwargs)
 
-    def remove(self, *args):
+    def remove_kwargs(self, *args):
         """
         Remove items from the default kwargs of this function.
 
@@ -476,7 +476,7 @@ class DefaultKwargs:
         for arg in args:
             self._kwargs.pop(arg, None)
 
-    def clear(self):
+    def clear_kwargs(self):
         """
         Removes all items from the default kwargs of this function.
 
