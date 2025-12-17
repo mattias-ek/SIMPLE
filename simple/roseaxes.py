@@ -162,8 +162,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         Define the colorbar used for histograms.
 
         Currently, there is no way to delete any existing colorbars. Thus, everytime this function is called a new
-        colorbar is created. Therefore, It's advisable to only call this method once. Note that it is always called
-        by the [create_rose_plot](simple.plot.create_rose_plot) function.
+        colorbar is created. Therefore, It's advisable to only call this method once.
 
         Args:
             vmin (float): The lower limit of the colour map. If no value is given the minimum value is ``0`` (or ``1E-10`` if
@@ -203,8 +202,10 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
 
         This can be used to distort the diagram to e.g. better show large or small slopes.
 
-        **Note** Should not be confused with matplotlibs ``set_xscale`` and the ``set_yscale`` methods. They have
+        **Note** Should not be confused with matplotlibs ``set_xscale`` and the ``set_yscale`` methods. They
         are used to set the type of scale, e.g. log, linear etc., used for the different axis.
+
+        Calling this method will clear the current axes as it cannot update what has already been drawn.
 
         Args:
             xscale (float): The scale of the *x* dimension of the rose diagram.
@@ -494,7 +495,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         """
         Draw a line along a slope.
 
-        Used matplotlibs [axvline](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.axvline.html) method
+        Uses matplotlibs [axvline](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.axvline.html) method
         to draw the line(s).
 
         Args:
@@ -602,9 +603,9 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
 
         return bin_weights, bin_edges, bin_heights
 
-    def mhist(self, m, r=None, weights=1, rheight=0.9, rscale=True,
-              rescale=False, antipodal=None, update_rticks=True, minor_rticks=2,
-              bins=72, rtext=None, fill=True, outline=None, cmap=False, **kwargs):
+    def mhist(self, m, r=None, weights=1, color=None, *,
+              rheight=0.9, rescale=False, antipodal=None, bins=72, rtext=None, fill=True, outline=None,
+              update_rticks=True, minor_rticks=2, rscale=True, cmap=False, **kwargs):
         """
         Create a histogram of the given slopes.
 
@@ -613,17 +614,45 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
                 coordinates from which a slope will be calculated.
             r (): The radius at which the histogram will be drawn. If 'None' it will be plotted ``1`` above the
                 previous histogram, or at 1 if no histogram have been drawn.
+            color (): The color of the bars and the outline of the bars.
             weights (): The weight assigned to each slope.
-            rheight (): The height of the histogram bars.
-            rscale (): If ``True`` height of the individual bins will be scaled to their weight. Otherwise all bins
-                will have the same height.
+            rheight (): The height of the histogram. If ``rscale=True`` this is the relative height of the histogram.
+                Otherwise the cumulative height of all the bins will total to this value.
             rescale (): If ``True`` all bin heights will be scaled relative to the heaviest bin. Otherwise, they are
                 scaled relative to the sum of all bin weights or the range set by the colormap.
             antipodal (): Whether the antipodal data points will be included in the histogram. By default,
             ``antipodal=True`` when ``m`` is a slope and ``antipodal=False`` when ``m`` is *x,y* coordinates.
             bins (): The number of even sized bin in the histogram.
-            rtext (): A text label for the histogram in the plot. Created using the ``rtext`` method. Addtional keywords
+            rtext (): A text label for the histogram in the plot. Created using the ``rtext`` method. Keyword
                 arguments can be passed using the prefix ``rtext_``.
+            fill (bool): If ``True`` the bars will be filled in.
+            outline (): If ``True`` the bar will be drawn with an outline. If ``False`` no outline will be drawn.
+            update_rticks (): If ``True`` the y axis ticks will be updated to include the radius of the histogram.
+            minor_rticks (): The number of minor ticks to draw between the major ticks.
+            rscale (): If ``True`` height of the individual bins will be scaled to their weight. Otherwise all bins
+                will have the same height.
+            cmap (): If ``True``, or the name of a colormap, the bars be coloured depending on their weight based on
+                the colour map. If `False` all bars will have the same colour based on *color*.
+            **kwargs: Additional keyword arguments. A description of
+                accepted keywords is provided below.
+
+
+        Accepted keyword arguments:
+            Direct keywords:
+                - `zorder` the zorder of the bars and outline. The outline will be drawn on top of the bars.
+                - `label` the label of the histogram. Note that the label is created as an emtpy artist to ensure
+                    consistensy with the label on 1-d histograms.
+                - `linestyle`, `linewidth` the linestyle and linewidth of the outline and baseline. Can be set
+                    individually using the prefix `outline_` and `baseline_` respectively.
+
+
+            Prefixed keywords:
+                - `fill_<keyword>`: Keywords passed to [`PolarAxes.fill_between`](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.PolarAxes.fill_between.html) when drawing the bars.
+                - `outline_<keyword>`: Keywords passed to [`PolarAxes.plot`](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.PolarAxes.plot.html) when drawing the outline.
+                - `baseline_<keyword>`: Keywords passed to [`PolarAxes.plot`](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.PolarAxes.plot.html) when drawing the baseline.
+                - `rtext_<keyword>`: Keywords passed to [`PolarAxes.rtext`](https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.PolarAxes.rtext.html) when drawing the text label.
+
+
 
         """
         kwargs = utils.DefaultKwargs.Dict(kwargs)
@@ -637,7 +666,6 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             else:
                 outline = True
 
-        color = kwargs.pop('color', None)
         if color is None:
             color = next(self._bar_color_cycle)
 
