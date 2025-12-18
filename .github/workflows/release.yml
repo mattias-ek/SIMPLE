@@ -136,7 +136,6 @@ jobs:
         run: python -m build
 
       - run: twine upload dist/*
-        if: github.ref == 'refs/heads/staging' # Remove once testing is complete
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
@@ -151,60 +150,3 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
-  update-changelog:
-    name: Update the root changelog file
-    if: github.actor != 'github-actions[bot]' && github.ref == 'refs/heads/master'
-
-    needs: [ docs, release ]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Update docs with version and data
-        id: update
-        run: |
-          VERSION='${{ needs.get-version.outputs.version }}'
-          DATE="$(date +%Y-%m-%d)"
-
-          if ! grep -qE '^## \[Latest\]\s*$' CHANGELOG.md; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          sed -i "s|^## \[Latest\]$|## \[Latest\]\n\n## [$VERSION] - $DATE|" CHANGELOG.md
-          echo "changed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Commit changes on master
-        if: steps.update.outputs.changed == 'true'
-        run: |
-          git config user.name  "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git add CHANGELOG.md
-          git commit -m "chore(changelog): replace [Latest] with version and data"
-          git push
-
-      - name: Sync CHANGELOG.md to staging
-        if: steps.update.outputs.changed == 'true'
-        run: |
-          git fetch origin staging
-          # Save the just-updated file from the current working tree
-          cp CHANGELOG.md /tmp/CHANGELOG.md
-
-          # Switch to staging, update file, commit if changed
-          git checkout -B staging origin/staging
-          cp /tmp/CHANGELOG.md CHANGELOG.md
-
-          if git diff --quiet -- CHANGELOG.md; then
-            echo "No CHANGELOG differences on staging; skipping commit."
-            exit 0
-          fi
-
-          git config user.name  "github-actions"
-          git config user.email "github-actions@users.noreply.github.com"
-          git add CHANGELOG.md
-          git commit -m "chore(changelog): replace [Latest] with version and data"
-          git push origin staging
