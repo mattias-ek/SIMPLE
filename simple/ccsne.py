@@ -3,6 +3,7 @@ import numpy as np
 import h5py
 import re
 import logging
+import contextlib, io
 
 logger = logging.getLogger('SIMPLE.ccsne')
 
@@ -45,6 +46,11 @@ class CCSNe(models.ModelBase):
 # These functions cannot be tested without the original data so there
 # are no automatic tests, and they are ignored in coverage.
 # They should therefore be used with caution!
+
+def mute_stdout(): # pragma: no cover
+    # Mute the nugrid messages
+    return contextlib.redirect_stdout(io.StringIO())
+
 def fudge_masscord_mass(masscoord): # pragma: no cover
     """
     Estimate the mass at each mass coordinate.
@@ -53,7 +59,7 @@ def fudge_masscord_mass(masscoord): # pragma: no cover
     between successive coordinates. The last value is duplicated so the output
     has the same length as the input array.
     """
-    logging.info('Fudging the masscoord mass from masscoord')
+    logger.info('Fudging the masscoord mass from masscoord')
     masscoord = np.asarray(masscoord)
     masscoord = masscoord[1:] - masscoord[:1]
     return np.append(masscoord, masscoord[-1])
@@ -81,9 +87,9 @@ def calc_default_onion_structure(abundance, keys, masscoord): # pragma: no cover
 
     masscut = mass[0]
     massmax = mass[-1]
-    logging.info('Calculating Default Onion Structure')
-    logging.info("m_cut: " + str(masscut))
-    logging.info("massmax: " + str(massmax))
+    logger.info('Calculating Default Onion Structure')
+    logger.debug("m_cut: " + str(masscut))
+    logger.debug("massmax: " + str(massmax))
 
     zones = 'H He/N He/C O/C O/Ne O/Si Si Ni'.split()
     boundaries = []
@@ -93,7 +99,7 @@ def calc_default_onion_structure(abundance, keys, masscoord): # pragma: no cover
 
     # definition of borders
     ih = np.where((he4 > 0.5))[0][-1]
-    logging.info("Lower boundary of the H shell: " + str(mass[ih]))
+    logger.debug("Lower boundary of the H shell: " + str(mass[ih]))
     boundaries.append(ih)
 
     ihe1 = np.where((n14 > o16) & (n14 > c12) & (n14 > 1.e-3))[0][0]
@@ -101,25 +107,25 @@ def calc_default_onion_structure(abundance, keys, masscoord): # pragma: no cover
     if ihe_check < len(mass) and not (
             (n14[ihe_check] > o16[ihe_check]) and (n14[ihe_check] > c12[ihe_check]) and (n14[ihe_check] > 1.e-3)):
         ihe1 = np.where((n14 > o16) & (n14 > c12) & (n14 > 1.e-3) & (mass >= mass[ihe1] + 0.005))[0][0]
-    logging.info("Lower boundary of the He/N shell: " + str(mass[ihe1]))
+    logger.debug("Lower boundary of the He/N shell: " + str(mass[ihe1]))
     boundaries.append(ihe1)
 
     ihe = np.where((c12 > he4) & (mass <= mass[ih]))[0][-1]
-    logging.info("Lower boundary of the He/C shell: " + str(mass[ihe]))
+    logger.debug("Lower boundary of the He/C shell: " + str(mass[ihe]))
     boundaries.append(ihe)
 
     ic2 = np.where((c12 > ne20) & (si28 < c12) & (c12 > 8.e-2))[0][0]
-    logging.info("Lower boundary of the O/C shell: " + str(mass[ic2]))
+    logger.debug("Lower boundary of the O/C shell: " + str(mass[ic2]))
     boundaries.append(ic2)
 
     ine = np.where((ne20 > 1.e-3) & (si28 < ne20) & (ne20 > c12))[0][0]
     if ine > ic2:
         ine = ic2
-    logging.info("Lower boundary of the O/Ne shell: " + str(mass[ine]))
+    logger.debug("Lower boundary of the O/Ne shell: " + str(mass[ine]))
     boundaries.append(ine)
 
     io = np.where((si28 < o16) & (o16 > 5.e-3))[0][0]
-    logging.info("Lower boundary of the O/Si layer: " + str(mass[io]))
+    logger.debug("Lower boundary of the O/Si layer: " + str(mass[io]))
     boundaries.append(io)
 
     try:
@@ -132,23 +138,23 @@ def calc_default_onion_structure(abundance, keys, masscoord): # pragma: no cover
             else:
                 raise IndexError("No suitable boundary found")
     except IndexError:
-        logging.info("No lower boundary of Si layer")
+        logger.debug("No lower boundary of Si layer")
         boundaries.append(-1)
     else:
         if len(mass[isi:io]) < 2:
             boundaries.append(-1)
-            logging.info("No lower boundary of Si layer")
+            logger.debug("No lower boundary of Si layer")
         else:
-            logging.info(f"Lower boundary of the Si layer: {mass[isi]}")
+            logger.debug(f"Lower boundary of the Si layer: {mass[isi]}")
             boundaries.append(isi)
 
     try:
         ini = np.where((ni56 > si28))[0][0]
     except IndexError:
-        logging.info("No lower boundary of Ni layer")
+        logger.debug("No lower boundary of Ni layer")
         boundaries.append(-1)
     else:
-        logging.info("Lower boundary of the Ni layer: " + str(mass[ini]))
+        logger.debug("Lower boundary of the Ni layer: " + str(mass[ini]))
         boundaries.append(ini)
 
     onion_lbounds =  utils.askeyarray(boundaries, zones, dtype=np.int64)
@@ -165,9 +171,9 @@ def calc_default_onion_structure(abundance, keys, masscoord): # pragma: no cover
         # Remnant is everything inside the lowermost shell.
         zone[slice(None, ubound)] = 'Mrem'
 
-    return onion_lbounds, zone
+    return zone
 
-def load_Ri18(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
+def load_Ri18(fol2mod, ref_isoabu, ref_isomass, remove_Mrem = False): # pragma: no cover
     """Load the CCSNe models from Ritter et al. (2018)."""
     from nugridpy import nugridse as mp
     def load(emass, modelname):
@@ -192,7 +198,17 @@ def load_Ri18(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
                     abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
-        data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        if np.any(data['zone'] == 'Mrem'):
+            if remove_Mrem:
+                logger.info(f"Removing datapoints from the Mrem zone")
+                keep = data['zone'] != 'Mrem'
+                data['zone'] = np.ascontiguousarray(data['zone'][keep])
+                data['masscoord'] = np.ascontiguousarray(data['masscoord'][keep])
+                data['masscoord_mass'] = np.ascontiguousarray(data['masscoord_mass'][keep])
+                data['abundance_values'] = np.ascontiguousarray(data['abundance_values'][keep])
+            else:
+                logger.warning(f"Model contains data points from the Mrem zone.")
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -201,18 +217,19 @@ def load_Ri18(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
     citation = ''
     models = {}
 
-    # 15Msun
-    load('15', 'M15.0Z2.0e-02.Ma.0020601.out.h5')
+    with mute_stdout():
+        # 15Msun
+        load('15', 'M15.0Z2.0e-02.Ma.0020601.out.h5')
 
-    # 20Msun
-    load('20', 'M20.0Z2.0e-02.Ma.0021101.out.h5')
+        # 20Msun
+        load('20', 'M20.0Z2.0e-02.Ma.0021101.out.h5')
 
-    # 25Msun
-    load('25', 'M25.0Z2.0e-02.Ma.0023601.out.h5')
+        # 25Msun
+        load('25', 'M25.0Z2.0e-02.Ma.0023601.out.h5')
 
     return models
 
-def load_Pi16(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
+def load_Pi16(fol2mod, ref_isoabu, ref_isomass, remove_Mrem = False): # pragma: no cover
     """Load the CCSNe models from Pignatari et al. (2016)."""
     from nugridpy import nugridse as mp
     def load(emass, modelname):
@@ -237,7 +254,17 @@ def load_Pi16(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
                     abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
-        data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        if np.any(data['zone'] == 'Mrem'):
+            if remove_Mrem:
+                logger.info(f"Removing datapoints from the Mrem zone")
+                keep = data['zone'] != 'Mrem'
+                data['zone'] = np.ascontiguousarray(data['zone'][keep])
+                data['masscoord'] = np.ascontiguousarray(data['masscoord'][keep])
+                data['masscoord_mass'] = np.ascontiguousarray(data['masscoord_mass'][keep])
+                data['abundance_values'] = np.ascontiguousarray(data['abundance_values'][keep])
+            else:
+                logger.warning(f"Model contains data points from the Mrem zone.")
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -246,18 +273,20 @@ def load_Pi16(fol2mod, ref_isoabu, ref_isomass): # pragma: no cover
     citation = ''
     models = {}
 
-    # 15Msun
-    load('15', 'M15.0')
 
-    # 20Msun
-    load('20', 'M20.0')
+    with mute_stdout():
+        # 15Msun
+        load('15', 'M15.0')
 
-    # 25Msun
-    load('25', 'M25.0')
+        # 20Msun
+        load('20', 'M20.0')
+
+        # 25Msun
+        load('25', 'M25.0')
 
     return models
 
-def load_La22(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
+def load_La22(data_dir, ref_isoabu, ref_isomass, remove_Mrem = False): # pragma: no cover
     """Load the CCSNe models from Lawson et al. (2022)."""
     def load(emass, model_name):
         mass_lines = []
@@ -317,7 +346,18 @@ def load_La22(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
                     abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
-        data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        if np.any(data['zone'] == 'Mrem'):
+            if remove_Mrem:
+                logger.info(f"Removing datapoints from the Mrem zone")
+                keep = data['zone'] != 'Mrem'
+
+                data['zone'] = np.ascontiguousarray(data['zone'][keep])
+                data['masscoord'] = np.ascontiguousarray(data['masscoord'][keep])
+                data['masscoord_mass'] = np.ascontiguousarray(data['masscoord_mass'][keep])
+                data['abundance_values'] = np.ascontiguousarray(data['abundance_values'][keep])
+            else:
+                logger.warning(f"Model contains data points from the Mrem zone.")
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -339,7 +379,7 @@ def load_La22(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
 
     return models
 
-def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False): # pragma: no cover
+def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False, remove_Mrem = False): # pragma: no cover
     """Load the CCSNe models from Sieverding et al. (2018)."""
     def load(emass, file_sie):
         with h5py.File(data_dir + file_sie) as data_file:
@@ -370,7 +410,17 @@ def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False): # pragma: no co
                     abundance_values=np.asarray(abu), abundance_keys=keys,
                     abundance_unit=unit)
 
-        data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+        if np.any(data['zone'] == 'Mrem'):
+            if remove_Mrem:
+                logger.info(f"Removing datapoints from the Mrem zone")
+                keep = data['zone'] != 'Mrem'
+                data['zone'] = np.ascontiguousarray(data['zone'][keep])
+                data['masscoord'] = np.ascontiguousarray(data['masscoord'][keep])
+                data['masscoord_mass'] = np.ascontiguousarray(data['masscoord_mass'][keep])
+                data['abundance_values'] = np.ascontiguousarray(data['abundance_values'][keep])
+            else:
+                logger.warning(f"Model contains data points from the Mrem zone.")
 
         models[f'{dataset}_m{emass}'] = data
         return data
@@ -390,7 +440,7 @@ def load_Si18(data_dir, ref_isoabu, ref_isomass, decayed=False): # pragma: no co
 
     return models
 
-def load_Ra02(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
+def load_Ra02(data_dir, ref_isoabu, ref_isomass, remove_Mrem = False): # pragma: no cover
     """Load the CCSNe models from Rauscher et al. (2002)."""
     def load(emass, model_name):
         filename = data_dir + model_name
@@ -422,7 +472,17 @@ def load_Ra02(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
                         abundance_values=np.asarray(abu), abundance_keys=keys,
                         abundance_unit=unit)
 
-            data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+            data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+            if np.any(data['zone'] == 'Mrem'):
+                if remove_Mrem:
+                    logger.info(f"Removing datapoints from the Mrem zone")
+                    keep = data['zone'] != 'Mrem'
+                    data['zone'] = np.ascontiguousarray(data['zone'][keep])
+                    data['masscoord'] = np.ascontiguousarray(data['masscoord'][keep])
+                    data['masscoord_mass'] = np.ascontiguousarray(data['masscoord_mass'][keep])
+                    data['abundance_values'] = np.ascontiguousarray(data['abundance_values'][keep])
+                else:
+                    logger.warning(f"Model contains data points from the Mrem zone.")
 
             models[f"{dataset}_m{emass}"] = data
             return data
@@ -442,7 +502,7 @@ def load_Ra02(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
 
     return models
 
-def load_LC18(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
+def load_LC18(data_dir, ref_isoabu, ref_isomass, remove_Mrem = False): # pragma: no cover
     """Load the CCSNe models from Limongi & Chieffi (2018)."""
     def load(emass, model_name):
         filename = data_dir + model_name
@@ -482,7 +542,17 @@ def load_LC18(data_dir, ref_isoabu, ref_isomass): # pragma: no cover
                         abundance_values=np.asarray(abu), abundance_keys=keys,
                         abundance_unit=unit)
 
-            data['onion_lbounds'], data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+            data['zone'] = calc_default_onion_structure(abu, keys, masscoord)
+            if np.any(data['zone'] == 'Mrem'):
+                if remove_Mrem:
+                    logger.info(f"Removing datapoints from the Mrem zone")
+                    keep = data['zone'] != 'Mrem'
+                    data['zone'] = np.ascontiguousarray(data['zone'][keep])
+                    data['masscoord'] = np.ascontiguousarray(data['masscoord'][keep])
+                    data['masscoord_mass'] = np.ascontiguousarray(data['masscoord_mass'][keep])
+                    data['abundance_values'] = np.ascontiguousarray(data['abundance_values'][keep])
+                else:
+                    logger.warning(f"Model contains data points from the Mrem zone.")
 
             models[f"{dataset}_m{emass}"] = data
             return data
@@ -532,12 +602,26 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
         kwargs.setdefault('ax_title', title)
     plotting.update_axes(ax, kwargs, update_ax=update_ax, update_fig=update_fig)
 
-    lower_bounds = getattr(model, 'onion_lbounds', None)
-    if lower_bounds is None:
-        logger.error('No zonal structure defined for this model')
-        return
-
     masscoord = model.masscoord
+    zone = model.zone
+    lbound_H = np.flatnonzero(zone == 'H')
+    lbound_H = masscoord[lbound_H[0] if lbound_H.size else -1]
+    lbound_HeN = np.flatnonzero(zone == 'He/N')
+    lbound_HeN = masscoord[lbound_HeN[0] if lbound_HeN.size else -1]
+    lbound_HeC = np.flatnonzero(zone == 'He/C')
+    lbound_HeC = masscoord[lbound_HeC[0] if lbound_HeC.size else -1]
+    lbound_OC = np.flatnonzero(zone == 'O/C')
+    lbound_OC = masscoord[lbound_OC[0] if lbound_OC.size else -1]
+    lbound_ONe = np.flatnonzero(zone == 'O/Ne')
+    lbound_ONe = masscoord[lbound_ONe[0] if lbound_ONe.size else -1]
+    lbound_OSi = np.flatnonzero(zone == 'O/Si')
+    lbound_OSi = masscoord[lbound_OSi[0] if lbound_OSi.size else -1]
+    lbound_Si = np.flatnonzero(zone == 'Si')
+    lbound_Si = masscoord[lbound_Si[0] if lbound_Si.size else -1]
+    lbound_Ni = np.flatnonzero(zone == 'Ni')
+    lbound_Ni = masscoord[lbound_Ni[0] if lbound_Ni.size else -1]
+
+    """
     lbound_H = masscoord[lower_bounds['H'][0]]
     lbound_HeN = masscoord[lower_bounds['He/N'][0]]
     lbound_HeC = masscoord[lower_bounds['He/C'][0]]
@@ -546,6 +630,7 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
     lbound_OSi = masscoord[lower_bounds['O/Si'][0]]
     lbound_Si = masscoord[lower_bounds['Si'][0]]
     lbound_Ni = masscoord[lower_bounds['Ni'][0]]
+    """
 
     default_line = kwargs.pop_many(prefix='default_line')
     default_text = kwargs.pop_many(prefix='default_text')

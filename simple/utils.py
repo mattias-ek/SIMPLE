@@ -6,7 +6,10 @@ import functools, itertools, inspect
 import collections
 
 SimpleLogger = logging.getLogger('SIMPLE')
-SimpleLogger.addHandler(logging.StreamHandler())
+SimpleHandler = logging.StreamHandler()
+SimpleHandler.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s'))
+SimpleLogger.addHandler(SimpleHandler)
+SimpleLogger.propagate = False
 
 logger = logging.getLogger('SIMPLE.utils')
 

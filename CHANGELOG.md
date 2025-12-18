@@ -31,12 +31,19 @@ The ``where`` method now return a model collection containing the original model
 
 Renamed ``ModelTemplate`` to ``ModelBase``.
 
+Added FILE_TYPE, VERSION, and CREATED attributes to the saved hdf5 file.
+
 ### CCSNe Models
 Added the *masscoord_mass* attribute to the mandatory attributes of the CCSNe models. 
 
 Added a ``zone`` attribute to CCSNe models with an onion shell structure. This is a ndarray with the name
 of the shell for each mass coordinate. Removed the ability to specify individual shells 
 in ``get_mask``. Instead use ``.zone == <name>`` instead. 
+
+Added warning if a model contains data points from the Mrem zone. And ability to skip these points.
+
+Removed the ``onion_lbound`` attribute from the CCSNe models. The reason is because the index was hardcoded it makes
+excluding datapoints tricky. This can be avoided by calculating the bounds using the ``zone`` attribute instead
 
 ### Plotting
 Added a new plot type - A traditional histogram. The new plot type can be accessed using 

@@ -103,6 +103,7 @@ class HDF5Dict(NamedDict):
             #group.attrs.create(f'_attr_type_{name}', attr_type)
 
             value = np.atleast_1d(value)
+            value = np.ascontiguousarray(value)
             if value.dtype.type is np.str_:
                 value = value.astype(np.bytes_)
 
@@ -174,6 +175,10 @@ class ModelCollection:
     """
     The main interface for working with a collection of models.
     """
+
+    # This is the version number for loading and saving files
+    # Increase Major on breaking changes and minor for backwards compatible changes
+    __version__ = "3.0"
     def __repr__(self):
         models = ", ".join([m.__repr__() for m in self.models])
         refs = ", ".join([m.__repr__() for m in self.refs])
@@ -258,14 +263,20 @@ References in collection:
 
         t0 = datetime.datetime.now()
         with h5py.File(filename, 'w') as file:
+            file.attrs['FILE_TYPE'] = "simple.ModelCollection"
+            file.attrs['VERSION'] = self.__version__
+            file.attrs['CREATED'] = datetime.datetime.now().isoformat()
+
+            logger.info(f'Saving ModelCollection(v{self.__version__}) as: {filename}')
+
             ref_group = file.create_group('refs', track_order=True)
             for ref in self.refs:
-                print(f'saving ref: {ref.name}')
+                logger.info(f'saving ref: {ref.name}')
                 self._save_model(ref_group, ref)
 
             model_group = file.create_group('models', track_order=True)
             for model in self.models:
-                print(f'saving model: {model.name}')
+                logger.info(f'saving model: {model.name}')
                 self._save_model(model_group, model)
 
         t = datetime.datetime.now() - t0
@@ -293,6 +304,14 @@ References in collection:
         logger.info(f'Loading file: {filename}')
         t0 = datetime.datetime.now()
         with h5py.File(filename, 'r') as efile:
+            file_type = efile.attrs.get('FILE_TYPE', None)
+            version = efile.attrs.get('VERSION', "-1")
+            created = efile.attrs.get('CREATED', None)
+            if file_type != "simple.ModelCollection":
+                logger.warning(f'File {filename} is not a simple.ModelCollection file')
+            if int(float(version)) != int(float(self.__version__)):
+                logger.warning(f'File {filename} was created with ModelCollection v{version}, but this version of simple uses ModelCollection v{self.__version__}')
+
             for name, group in efile['refs'].items():
                 ref = self._load_ref(group, name)
                 self.add_ref(ref)
@@ -520,13 +539,6 @@ References in collection:
             model.standard_normalisation(normiso, enrichment_factor=enrichment_factor,
                                          relative_enrichment=relative_enrichment,
                                          convert_unit=convert_unit, attrname=attrname)
-
-    @utils.deprecation_warning('``simple_normalisation`` has been deprecated. Use ``standard_normalisation`` instead')
-    def simple_normalisation(self, *args, **kwargs):
-        """
-        Deprecated Method. Use ``standard_normalisation`` instead.
-        """
-        return self.standard_normalisation(*args, **kwargs)
 
 # A dict containing all model classes that exist.
 # A model is automatically added to the dict when created.
