@@ -1,0 +1,80 @@
+name: PR Tests
+on:
+  pull_request:
+    branches:
+      - staging
+      - master
+
+jobs:
+  check-master-version:
+    name: Make sure version for master in unique
+    if: >
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip release]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed to switch branches
+          fetch-tags: true
+
+      - run: |
+          VERSION=$(cat VERSION.txt)
+          VERSION="v$VERSION"
+
+           if git tag -l "$VERSION" | grep -qx "$VERSION"; then
+            echo "Version $VERSION has already been released. Please update VERSION.txt."
+            exit 1
+          fi
+
+  run-test-matrix:
+    name: Test Matrix
+    if: >
+      github.actor != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip release]')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12" ]
+        include: # Latest only for Mac/Windows
+          - os: windows-latest
+            python-version: "3.12"
+          - os: macos-latest
+            python-version: "3.12"
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install nox
+        run: python -m pip install --upgrade pip nox
+
+      - name: Run tests via nox
+        env:
+          MPLBACKEND: Agg
+        run: nox --python ${{ matrix.python-version }} -- -q
+
+  test-notebooks:
+    name: Test Notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - run: pip install ".[test]"
+      - run: pip install nbmake
+
+      - name: Run tutorial notebooks
+        run: pytest --nbmake notebooks/ccsne_tutorial*.ipynb

@@ -13,4 +13,4 @@ pip install --upgrade git+https://github.com/mattias-ek/SIMPLE@master
 ```
 
 **Note** This will only install the SIMPLE package and does not include any notebooks. 
-You can download the example notebooks and associated files [here](https://github.com/mattias-ek/SIMPLE/tree/master/notebooks)[data.zip](..%2Fdata.zip)
+You can download the example notebooks and associated files [here](https://github.com/mattias-ek/SIMPLE/tree/master/notebooks).

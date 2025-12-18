@@ -1,0 +1,61 @@
+name: Tests
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  test-and-coverage:
+    name: Test and Coverage (py3.9)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      #- run: pip install setuptools_scm[toml]
+      - run: pip install ".[test]"
+
+      # Determine the installed path of the package
+      - name: Get package path
+        id: package-path
+        run: |
+          PKG_PATH=$(python -c "import simple, os; print(os.path.dirname(simple.__file__))")
+          echo "PKG_PATH=$PKG_PATH" >> "$GITHUB_ENV"
+
+      - name: Run tests with coverage
+        run: |
+          MPLBACKEND=Agg coverage run -m pytest -q
+          coverage report -m
+          coverage xml -o coverage.xml
+
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-notebooks:
+    name: Test Notebooks
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name != 'staging' && github.ref_name != 'master' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - run: pip install ".[test]"
+      - run: pip install nbmake
+
+      - name: Run tutorial notebooks
+        run: pytest --nbmake notebooks/ccsne_tutorial*.ipynb
+
+

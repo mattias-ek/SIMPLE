@@ -10,7 +10,7 @@ def collection():
 
 @pytest.fixture
 def test_model_cls():
-    class TestModel(models.ModelTemplate):
+    class TestModel(models.ModelBase):
         pass
 
     return TestModel
@@ -27,9 +27,8 @@ class TestModel:
 
         model.setattr('mass', 1, hdf5_compatible=True)
         assert 'mass' in model.hdf5_attrs
-        assert isinstance(model.mass, np.ndarray)
-        assert model.mass.shape == ()
-        assert model.mass.dtype == np.int64
+        assert 'mass' not in model.normal_attrs
+        assert type(model.mass) == int
         assert model.mass == 1
         assert model['mass'] is model.mass
 
@@ -40,9 +39,9 @@ class TestModel:
             model.setattr('mass', 1.5, hdf5_compatible=True)
 
         model.setattr('mass', 1.5, hdf5_compatible=True, overwrite=True)
-        assert isinstance(model.mass, np.ndarray)
-        assert model.mass.shape == ()
-        assert model.mass.dtype == np.float64
+        assert 'mass' in model.hdf5_attrs
+        assert 'mass' not in model.normal_attrs
+        assert type(model.mass) == float
         assert model.mass == 1.5
         assert model['mass'] is model.mass
 
@@ -53,6 +52,8 @@ class TestModel:
             model.mass = 2
 
         model.setattr('mass', 2, overwrite=True)
+        assert 'mass' not in model.hdf5_attrs
+        assert 'mass' in model.normal_attrs
         assert type(model.mass) is int
         assert model.mass == 2
         assert model['mass'] is model.mass
@@ -61,6 +62,8 @@ class TestModel:
             model.setattr('mass', 2.5)
 
         model.setattr('mass', 2.5, overwrite=True)
+        assert 'mass' not in model.hdf5_attrs
+        assert 'mass' in model.normal_attrs
         assert type(model.mass) is float
         assert model.mass == 2.5
         assert model['mass'] is model.mass
@@ -69,9 +72,9 @@ class TestModel:
             model.setattr('mass', 3, hdf5_compatible=True)
 
         model.setattr('mass', 3, hdf5_compatible=True, overwrite=True)
-        assert isinstance(model.mass, np.ndarray)
-        assert model.mass.shape == ()
-        assert model.mass.dtype == np.int64
+        assert 'mass' in model.hdf5_attrs
+        assert 'mass' not in model.normal_attrs
+        assert type(model.mass) is int
         assert model.mass == 3
         assert model['mass'] is model.mass
 
@@ -105,18 +108,12 @@ class TestModel:
         assert_equal(model.data, a)
 
     def test_names(self, collection, test_model_cls):
-        model = collection.new_model('TestModel', 'ModelTemplate')
-        assert model.name == 'ModelTemplate'
+        model = collection.new_model('TestModel', 'ModelBase')
+        assert model.name == 'ModelBase'
         assert type(model) is test_model_cls
 
         with pytest.raises(AttributeError):
-            model.name = 'Another ModelTemplate'
-
-        model.change_name('Yet Another ModelTemplate')
-        assert model.name == 'Yet Another ModelTemplate'
-
-    def test_copy(self):
-        pass
+            model.name = 'Another ModelBase'
 
     def test_save_load1(self, test_model_cls):
         filename = 'tests/savetest.hdf5'
@@ -125,14 +122,16 @@ class TestModel:
 
         saving = models.ModelCollection()
 
-        saved_model = saving.new_model('TestModel', 'ModelTemplate')
-        assert saved_model.name == 'ModelTemplate'
+        saved_model = saving.new_model('TestModel', 'ModelBase')
+        assert saved_model.name == 'ModelBase'
         assert type(saved_model) is test_model_cls
 
         mass = 1
         citation = 'Me'
         abc = ('a', 'b', 'c')
         note = 'note'
+        array0 = np.array(3.14)
+        array1 = np.array([1, 2, 3])
 
         keys = utils.asisotopes('Pd-102, Pd-104, Pd-105*')
         values = np.array([[21, 41, 51],
@@ -145,6 +144,8 @@ class TestModel:
         saved_model.setattr('citation', citation, hdf5_compatible=True)
         saved_model.setattr('abc', abc, hdf5_compatible=True)
         saved_model.setattr('note', note, hdf5_compatible=False)
+        saved_model.setattr('array0', array0, hdf5_compatible=True)
+        saved_model.setattr('array1', array1, hdf5_compatible=True)
         saved_model.setattr('data', data, hdf5_compatible=True)
 
         saving.save(filename)
@@ -152,12 +153,10 @@ class TestModel:
         loaded = models.ModelCollection()
         loaded.load_file(filename=filename)
 
-        loaded_model = loaded['ModelTemplate']
+        loaded_model = loaded['ModelBase']
 
         assert loaded_model.mass == mass
-        assert isinstance(loaded_model.mass, np.ndarray)
-        assert loaded_model.mass.dtype == np.int64
-        assert saved_model.mass.shape == ()
+        assert type(loaded_model.mass) is int
 
         assert loaded_model.citation == citation
         assert type(loaded_model.citation) is str
@@ -170,6 +169,16 @@ class TestModel:
         with pytest.raises(AttributeError):
             loaded_model.note
 
+        assert isinstance(loaded_model.array0, np.ndarray)
+        assert loaded_model.array0.size == 1
+        assert loaded_model.array0.ndim == 0
+        assert_equal(loaded_model.array0, array0)
+
+        assert isinstance(loaded_model.array1, np.ndarray)
+        assert loaded_model.array1.size == 3
+        assert loaded_model.array1.ndim == 1
+        assert_equal(loaded_model.array1, array1)
+
         assert_equal(loaded_model.data, data)
 
 
@@ -177,14 +186,15 @@ class TestModel:
         keys = utils.asisotopes('101Ru,102Ru,104Ru,103Rh,102Pd,104Pd,105Pd,106Pd,108Pd,110Pd,107Ag,109Ag')
         stdabu = np.array([0.304, 0.562, 0.332, 0.37, 0.0139, 0.1513, 0.3032, 0.371, 0.359, 0.159, 0.254, 0.236])
 
-        ref_abu = collection.new_model('IsoRef', 'abu',
+        ref_abu = collection.new_ref('IsoRef', 'abu',
                                        type='ABU', citation='',
                                        data_values=stdabu, data_keys=keys, data_unit='mass')
+
         model = collection.new_model('TestModel', 'testing',
                                      refid_isoabu='abu',
                                      )
-        assert 'abu' in collection.refs
-        assert collection.refs['abu'] is ref_abu
+
+        assert ref_abu in collection.refs
         assert collection.get_ref('abu') is ref_abu
-        assert model.get_ref('abu') is ref_abu
-        assert model.get_ref(model.refid_isoabu) is ref_abu
+        assert collection.get_ref(model.refid_isoabu) is ref_abu
+        assert model.ref_isoabu is ref_abu

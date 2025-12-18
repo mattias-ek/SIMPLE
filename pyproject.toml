@@ -1,24 +1,80 @@
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools >= 61.0", "wheel", "setuptools_scm[toml]>=6.4"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "simple-chetec"
+dynamic = ["version"]
+description = "Stellar Interpretation for Meteoritic data and PLotting (for Everyone)"
+authors = [{ name = "Mattias Ek", email = "mattias.ek@pm.me" }]
+license = "LGPL-3.0-or-later"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies= [
+    "numpy >=1.22",
+    "matplotlib >=3.5",
+    "scipy >=1.8",
+    "h5py >=3.6",
+    "pyyaml >=5.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ipykernel",
+    "nugridpy",
+    "pytest",
+    "pytest-cov",
+    "coverage[toml]",
+    "nox"
+]
+
+test = [
+    "pytest",
+    "pytest-cov",
+    "coverage[toml]"
+]
+
+docs = [
+    "mkdocs==1.6.1",
+    "mkdocs-material",
+    "mkdocstrings==0.26.1",
+    "mkdocstrings-python==1.11.1",
+    "mkdocs-gen-files",
+    "mkdocs-jupyter==0.25",
+    "pymdown-extensions"
+]
 
 [tool.setuptools.packages.find]
 include = ["simple", "simple.*"]
 
 [tool.pytest.ini_options]
 log_cli = true
-log_cli_level = "INFO"
 
-[project]
-name = "SIMPLE"
-version = "0.3.0"
+[tool.setuptools_scm]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
+write_to = "simple/__version__.py"
 
-# Developed using this. Not tested with lower versions.
-#requires-python = ">= 3.9"
-dependencies = [
-    "numpy",
-    "scipy",
-    "matplotlib",
-    "h5py",
-    "nugridpy"]
+[tool.coverage.run]
+branch = true
+source = ["simple"]
+relative_files = true
 
+[tool.coverage.report]
+omit = [
+  "*/tests/*",
+  "*/__init__.py",
+  "*__version__.py",
+]
+skip_empty = true
+exclude_lines = [
+  "pragma: no cover",
+]
+
+[tool.coverage.paths]
+source = [
+    "*/simple",
+    "*/site-packages/simple",
+    "*/dist-packages/simple",
+    "*/.venv/lib/python*/site-packages/simple",
+]

@@ -10,6 +10,7 @@ IntNormMethods = {}
 
 @utils.add_shortcut('better', mass_coef ='better')
 @utils.add_shortcut('simplified', mass_coef ='simplified')
+@utils.set_default_kwargs()
 def intnorm_linear(abu_i, abu_j, abu_k,
                    mass_i, mass_j, mass_k,
                    std_i, std_j, std_k,
@@ -96,6 +97,7 @@ def intnorm_linear(abu_i, abu_j, abu_k,
 
 
 
+@utils.set_default_kwargs()
 def intnorm_largest_offset(abu_i, abu_j, abu_k,
                            mass_i, mass_j, mass_k,
                            std_i, std_j, std_k,
@@ -212,17 +214,12 @@ def intnorm_largest_offset(abu_i, abu_j, abu_k,
                 largest_offset=largest_offset, min_dilution_factor=min_dilution_factor,
                 method='largest_offset')
 
-def intnorm_precision(abu_up, abu_down, abu_norm,
-                      mass_up, mass_down, mass_norm,
-                      solar_up, solar_down, solar_norm,
-                      dilution_step = 0.1, precision = 0.01, *, msg_prefix=''):
-    pass
-
 IntNormMethods['linear'] = intnorm_linear
 IntNormMethods['better_linear'] = intnorm_linear.better
 IntNormMethods['simplified_linear'] = intnorm_linear.simplified
 IntNormMethods['largest_offset'] = intnorm_largest_offset
 
+@utils.set_default_kwargs()
 def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
                            enrichment_factor=1, relative_enrichment=True,
                            std_enrichment_factor=1, std_relative_enrichment=True,
@@ -442,6 +439,7 @@ def internal_normalisation(abu, isotopes, normrat, stdmass, stdabu,
 
     return utils.NamedDict(result)
 
+@utils.set_default_kwargs()
 def standard_normalisation(abu, isotopes, normiso, stdabu,
                            enrichment_factor=1, relative_enrichment=True,
                            std_enrichment_factor=1, std_relative_enrichment=True,

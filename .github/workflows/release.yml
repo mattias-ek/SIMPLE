@@ -1,0 +1,210 @@
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - staging
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  get-version:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    outputs:
+      version: ${{ steps.choose-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - id: base-version
+        run: |
+          BASE=$(cat VERSION.txt)
+          BASE="v$BASE"
+          
+          if [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
+            LAST=$(git tag -l "${BASE}b*" | sort -V | tail -1)
+            if [ -z "$LAST" ]; then
+              VERSION="${BASE}b0"
+            else
+              VERSION="${LAST}"
+            fi
+          else
+            VERSION="${BASE}"
+          fi
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "base=$BASE" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - id: release-version
+        if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
+        run: |
+          VERSION=${{ steps.base-version.outputs.version }}
+          BASE=${{ steps.base-version.outputs.base }}
+          
+          if git tag -l "$BASE" | grep -qx "$BASE"; then
+            echo "Version $BASE has already been released. Please update VERSION.txt."
+            exit 1
+          fi
+          
+          if [[ "${GITHUB_REF}" == "refs/heads/staging" ]]; then
+            N=$(echo "$VERSION" | sed -E 's/.*b([0-9]+)$/\1/')
+            VERSION="${BASE}b$((N+1))"
+          fi
+          
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+          echo "Created Tag: $VERSION"
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - id: choose-version
+        run: |
+          echo "version=${{ steps.release-version.outputs.version || steps.base-version.outputs.version }}" >> "$GITHUB_OUTPUT"
+
+  docs:
+    name: Generate docs
+    if: >
+      github.actor != 'github-actions[bot]'
+    needs: get-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Copy files
+      - run: cp ./notebooks/*.ipynb ./docs/examples/
+      - run: cp CHANGELOG.md ./docs/changelog.md
+
+      # Replace placeholders
+      - name: Update docs with version and data
+        run: |
+          VERSION="${{ needs.get-version.outputs.version }}"
+          DATE="$(date +%Y-%m-%d)"
+          
+          sed -i "s|## \[Latest\]|## [$VERSION] - $DATE|" ./docs/changelog.md
+          sed -i "s|__VERSION__|$VERSION|" ./docs/index.md
+          sed -i "s|__DATE__|$DATE|" ./docs/index.md
+          sed -i "s|__VERSION__|$VERSION|" mkdocs.yml
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - run: pip install ".[docs]"
+
+      # For the master branch.
+      - run: mkdocs gh-deploy --force --clean --verbose
+        if: github.ref == 'refs/heads/master'
+
+      # For the staging branch.
+      - run: mkdocs build --site-dir site-pre
+        if: github.ref == 'refs/heads/staging'
+      - uses: peaceiris/actions-gh-pages@v4
+        if: github.ref == 'refs/heads/staging'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site-pre
+          destination_dir: pre-release
+  release:
+    name: Publish to PyPi
+    if: >
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    needs: get-version
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - run: pip install -U build wheel setuptools twine
+      - run: rm -rf build dist *.egg-info
+
+      - env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: ${{ needs.get-version.outputs.version }}
+        run: python -m build
+
+      - run: twine upload dist/*
+        if: github.ref == 'refs/heads/staging' # Remove once testing is complete
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "${{ needs.get-version.outputs.version }}"
+          name: "${{ needs.get-version.outputs.version }}"
+          prerelease: ${{ contains(needs.tag.outputs.version, 'b') }}
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+  update-changelog:
+    name: Update the root changelog file
+    if: github.actor != 'github-actions[bot]' && github.ref == 'refs/heads/master'
+
+    needs: [ docs, release ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update docs with version and data
+        id: update
+        run: |
+          VERSION='${{ needs.get-version.outputs.version }}'
+          DATE="$(date +%Y-%m-%d)"
+
+          if ! grep -qE '^## \[Latest\]\s*$' CHANGELOG.md; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          sed -i "s|^## \[Latest\]$|## \[Latest\]\n\n## [$VERSION] - $DATE|" CHANGELOG.md
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit changes on master
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore(changelog): replace [Latest] with version and data"
+          git push
+
+      - name: Sync CHANGELOG.md to staging
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          git fetch origin staging
+          # Save the just-updated file from the current working tree
+          cp CHANGELOG.md /tmp/CHANGELOG.md
+
+          # Switch to staging, update file, commit if changed
+          git checkout -B staging origin/staging
+          cp /tmp/CHANGELOG.md CHANGELOG.md
+
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "No CHANGELOG differences on staging; skipping commit."
+            exit 0
+          fi
+
+          git config user.name  "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore(changelog): replace [Latest] with version and data"
+          git push origin staging
