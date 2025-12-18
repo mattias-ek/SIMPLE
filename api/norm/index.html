@@ -1,0 +1,2844 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../plotting/">
+      
+      
+        <link rel="next" href="../models/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>simple.norm - SIMPLE v0.4.3</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-simplenorm-namespace" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SIMPLE v0.4.3" class="md-header__button md-logo" aria-label="SIMPLE v0.4.3" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SIMPLE v0.4.3
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              simple.norm
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SIMPLE v0.4.3" class="md-nav__button md-logo" aria-label="SIMPLE v0.4.3" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    SIMPLE v0.4.3
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ccsne_tutorial1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial 1 - Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ccsne_tutorial2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial 2 - Normalising abundances
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/ccsne_tutorial3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial 3 - Plotting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/create_simple_db/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Create CCSNe database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/rose_diagram/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction to rose diagrams
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../simple/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plotting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    simple.plotting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    simple.norm
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    simple.norm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.IntNormMethods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;IntNormMethods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.internal_normalisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;internal_normalisation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.intnorm_largest_offset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;intnorm_largest_offset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.intnorm_linear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;intnorm_linear
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.standard_normalisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;standard_normalisation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    simple.models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    simple.utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ccsne/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    simple.ccsne
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roseaxes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    simple.roseaxes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.IntNormMethods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;IntNormMethods
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.internal_normalisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;internal_normalisation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.intnorm_largest_offset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;intnorm_largest_offset
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.intnorm_linear" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;intnorm_linear
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#simple.norm.standard_normalisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;standard_normalisation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="the-simplenorm-namespace">The <code>simple.norm</code> Namespace</h1>
+<p>The <em>norm</em> submodule contains everything related to the different normalisation schemes.</p>
+<hr />
+
+
+<div class="doc doc-object doc-module">
+
+
+
+
+    <div class="doc doc-contents first">
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="simple.norm.IntNormMethods" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">simple.norm.IntNormMethods</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">IntNormMethods</span> <span class="o">=</span> <span class="p">{}</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+    </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="simple.norm.internal_normalisation" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">simple.norm.internal_normalisation</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">internal_normalisation</span><span class="p">(</span><span class="n">abu</span><span class="p">,</span> <span class="n">isotopes</span><span class="p">,</span> <span class="n">normrat</span><span class="p">,</span> <span class="n">stdmass</span><span class="p">,</span> <span class="n">stdabu</span><span class="p">,</span> <span class="n">enrichment_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">relative_enrichment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">std_enrichment_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">std_relative_enrichment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;largest_offset&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">msg_prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">method_kwargs</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Normalise the abundances of <code>abu</code> relative to the keys <code>normrat</code> using the internal normalisation procedure
+commonly used for data measured by mass spectrometers.</p>
+<p>Multiple normalisations can be done at once by supplying a list of normalising isotopes. If doing multiple
+elements at once then <code>isotopes</code>, if not <code>None</code>, and optionally <code>enrichment_factor</code> and
+<code>std_enrichement_factor</code>, must be lists with the same
+ length as <code>normiso</code>. If <code>enrichment_factor</code>/<code>std_enrichment_factor</code> is a single value it is applied to
+ all elements.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+          <b><code>abu</code></b>
+          –
+          <div class="doc-md-description">
+            <p>A <a class="autorefs autorefs-internal" href="../simple/#simple.askeyarray">keyarray</a> containing the abundances to be normalised.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>isotopes</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The numerator isotopes (i) in the calculation. If <code>None</code> all the isotopes in <code>abu</code> with the
+same element symbol and suffix as <code>normrat</code> will be selected.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>normrat</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The keys (kj) used for internal normalisation.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>stdmass</code></b>
+          –
+          <div class="doc-md-description">
+            <p>A <a class="autorefs autorefs-internal" href="../simple/#simple.askeyarray">keyarray</a> containing the isotope masses.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>stdabu</code></b>
+          –
+          <div class="doc-md-description">
+            <p>A <a class="autorefs autorefs-internal" href="../simple/#simple.askeyarray">keyarray</a> containing the reference abundances.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>enrichment_factor</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Enrichment factor applied to <code>abu</code>. Useful when doing multiple elements at once.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>relative_enrichment</code></b>
+          –
+          <div class="doc-md-description">
+            <p>If ''True'' the abundances of all <code>isotopes</code> in <code>abu</code> are multiplied by
+<code>enrichment_factor</code>. If <code>False</code> the abundances are first renormalised such that their sum = 1
+and <strong>then</strong> multiplied by <code>enrichment_factor</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_enrichment_factor</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Enrichment factor applied to <code>stdabu</code>. Useful when doing multiple elements at once.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_relative_enrichment</code></b>
+          –
+          <div class="doc-md-description">
+            <p>If ''True'' the abundances of all <code>isotopes</code> in <code>stdabu</code> are multiplied by
+<code>std_enrichment_factor</code>. If <code>False</code> the abundances are first renormalised such that their sum = 1
+and <strong>then</strong> multiplied by <code>std_enrichment_factor</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>method</code></b>
+              (<code><span title="string">string</span></code>, default:
+                  <code>&#39;largest_offset&#39;</code>
+)
+          –
+          <div class="doc-md-description">
+            <p>The method used. See options in section below.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>**method_kwargs</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Additional arguments for the chosen <code>method</code>.</p>
+          </div>
+        </li>
+    </ul>
+        <p><strong>Notes</strong></p>
+<p>The <code>normrat</code> numerator and denominator isotopes will be appended to <code>isotopes</code> if not initially included.
+This is done before the enrichment factor calculation.</p>
+<p>The enrichment factor should only be used in conjunction with the <code>largest_offset</code> method. It might not work as
+expected for other methods.</p>
+<p><strong>Methods</strong></p>
+<ul>
+<li>
+<p><code>largest_offset</code> This is the default method which internally normalises a synthetic sample such that
+    the largest offset, in epsilon units, is equal to a specified value, by default 1. For more details and
+    a list of additional arguments see <a class="autorefs autorefs-internal" href="#simple.norm.intnorm_largest_offset">intnorm_largest_offset</a>.</p>
+</li>
+<li>
+<p><code>linear</code> Internally normalise the abundances using the linearised internal normalisation procedure. For more
+    details anda list of additional arguments see <a class="autorefs autorefs-internal" href="#simple.norm.intnorm_linear">intnorm_linear</a>.</p>
+</li>
+</ul>
+
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+<b><code>dict</code></b>          –
+          <div class="doc-md-description">
+            <p>A dictionary containing the results of the normalisation. The dictionary at minimum contains the following attrs:</p>
+<ul>
+<li><code>eRi</code>: A key array containing the eRi values for each column in <code>eRi_keys</code>.</li>
+<li><code>eRi_keys</code>: The numerator isotopes for each column in <code>eRi_values</code>.</li>
+<li><code>ij_key</code>, <code>kj_key</code>: Dictionaries mapping <code>eRi_keys</code> to the numerator-denominator keys (ij) and the
+    normalising keys (kj) for each column in <code>eRi</code>.</li>
+<li><code>label_args</code>, <code>label_latex</code>: Dictionaries mapping <code>eRi_keys</code> to plain text and latex labels suitable
+    for plotting. Contains the ε symbol followed by the numerator isotope and the last digit of each mass in
+    the normalising keys, in brackets. E.g. ε104Pd(85) and <span class="arithmatex">\(\epsilon{}^{105}\mathrm{Pd}_{(85)}\)</span>,
+    where i=Pd-104, k=Pd-108 and j=Pd-105.</li>
+<li>Additional attrs might be supplied by the different methods.</li>
+</ul>
+          </div>
+        </li>
+    </ul>
+
+            <details class="quote">
+              <summary>Source code in <code>simple/norm.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span>
+<span class="normal">296</span>
+<span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span>
+<span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
+<span class="normal">331</span>
+<span class="normal">332</span>
+<span class="normal">333</span>
+<span class="normal">334</span>
+<span class="normal">335</span>
+<span class="normal">336</span>
+<span class="normal">337</span>
+<span class="normal">338</span>
+<span class="normal">339</span>
+<span class="normal">340</span>
+<span class="normal">341</span>
+<span class="normal">342</span>
+<span class="normal">343</span>
+<span class="normal">344</span>
+<span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span>
+<span class="normal">349</span>
+<span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span>
+<span class="normal">353</span>
+<span class="normal">354</span>
+<span class="normal">355</span>
+<span class="normal">356</span>
+<span class="normal">357</span>
+<span class="normal">358</span>
+<span class="normal">359</span>
+<span class="normal">360</span>
+<span class="normal">361</span>
+<span class="normal">362</span>
+<span class="normal">363</span>
+<span class="normal">364</span>
+<span class="normal">365</span>
+<span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
+<span class="normal">390</span>
+<span class="normal">391</span>
+<span class="normal">392</span>
+<span class="normal">393</span>
+<span class="normal">394</span>
+<span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
+<span class="normal">412</span>
+<span class="normal">413</span>
+<span class="normal">414</span>
+<span class="normal">415</span>
+<span class="normal">416</span>
+<span class="normal">417</span>
+<span class="normal">418</span>
+<span class="normal">419</span>
+<span class="normal">420</span>
+<span class="normal">421</span>
+<span class="normal">422</span>
+<span class="normal">423</span>
+<span class="normal">424</span>
+<span class="normal">425</span>
+<span class="normal">426</span>
+<span class="normal">427</span>
+<span class="normal">428</span>
+<span class="normal">429</span>
+<span class="normal">430</span>
+<span class="normal">431</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
+<span class="normal">434</span>
+<span class="normal">435</span>
+<span class="normal">436</span>
+<span class="normal">437</span>
+<span class="normal">438</span>
+<span class="normal">439</span>
+<span class="normal">440</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@utils</span><span class="o">.</span><span class="n">set_default_kwargs</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">internal_normalisation</span><span class="p">(</span><span class="n">abu</span><span class="p">,</span> <span class="n">isotopes</span><span class="p">,</span> <span class="n">normrat</span><span class="p">,</span> <span class="n">stdmass</span><span class="p">,</span> <span class="n">stdabu</span><span class="p">,</span>
+                           <span class="n">enrichment_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">relative_enrichment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                           <span class="n">std_enrichment_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">std_relative_enrichment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                           <span class="n">method</span><span class="o">=</span><span class="s1">&#39;largest_offset&#39;</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">msg_prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">method_kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalise the abundances of ``abu`` relative to the keys ``normrat`` using the internal normalisation procedure</span>
+<span class="sd">    commonly used for data measured by mass spectrometers.</span>
+
+<span class="sd">    Multiple normalisations can be done at once by supplying a list of normalising isotopes. If doing multiple</span>
+<span class="sd">    elements at once then ``isotopes``, if not ``None``, and optionally ``enrichment_factor`` and</span>
+<span class="sd">    ``std_enrichement_factor``, must be lists with the same</span>
+<span class="sd">     length as ``normiso``. If ``enrichment_factor``/``std_enrichment_factor`` is a single value it is applied to</span>
+<span class="sd">     all elements.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        abu (): A [keyarray][simple.askeyarray] containing the abundances to be normalised.</span>
+<span class="sd">        isotopes (): The numerator isotopes (i) in the calculation. If ``None`` all the isotopes in ``abu`` with the</span>
+<span class="sd">            same element symbol and suffix as ``normrat`` will be selected.</span>
+<span class="sd">        normrat (): The keys (kj) used for internal normalisation.</span>
+<span class="sd">        stdmass (): A [keyarray][simple.askeyarray] containing the isotope masses.</span>
+<span class="sd">        stdabu (): A [keyarray][simple.askeyarray] containing the reference abundances.</span>
+<span class="sd">        enrichment_factor (): Enrichment factor applied to ``abu``. Useful when doing multiple elements at once.</span>
+<span class="sd">        relative_enrichment (): If &#39;&#39;True&#39;&#39; the abundances of all ``isotopes`` in ``abu`` are multiplied by</span>
+<span class="sd">            ``enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1</span>
+<span class="sd">            and **then** multiplied by ``enrichment_factor``.</span>
+<span class="sd">        std_enrichment_factor (): Enrichment factor applied to ``stdabu``. Useful when doing multiple elements at once.</span>
+<span class="sd">        std_relative_enrichment (): If &#39;&#39;True&#39;&#39; the abundances of all ``isotopes`` in ``stdabu`` are multiplied by</span>
+<span class="sd">            ``std_enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1</span>
+<span class="sd">            and **then** multiplied by ``std_enrichment_factor``.</span>
+<span class="sd">        method (string): The method used. See options in section below.</span>
+<span class="sd">        **method_kwargs (): Additional arguments for the chosen ``method``.</span>
+
+<span class="sd">    **Notes**</span>
+
+<span class="sd">    The ``normrat`` numerator and denominator isotopes will be appended to ``isotopes`` if not initially included.</span>
+<span class="sd">    This is done before the enrichment factor calculation.</span>
+
+<span class="sd">    The enrichment factor should only be used in conjunction with the ``largest_offset`` method. It might not work as</span>
+<span class="sd">    expected for other methods.</span>
+
+<span class="sd">    **Methods**</span>
+
+<span class="sd">    - ``largest_offset`` This is the default method which internally normalises a synthetic sample such that</span>
+<span class="sd">        the largest offset, in epsilon units, is equal to a specified value, by default 1. For more details and</span>
+<span class="sd">        a list of additional arguments see [intnorm_largest_offset][simple.norm.intnorm_largest_offset].</span>
+
+<span class="sd">    - ``linear`` Internally normalise the abundances using the linearised internal normalisation procedure. For more</span>
+<span class="sd">        details anda list of additional arguments see [intnorm_linear][simple.norm.intnorm_linear].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the results of the normalisation. The dictionary at minimum contains the following attrs:</span>
+
+<span class="sd">            - ``eRi``: A key array containing the eRi values for each column in ``eRi_keys``.</span>
+<span class="sd">            - ``eRi_keys``: The numerator isotopes for each column in ``eRi_values``.</span>
+<span class="sd">            - ``ij_key``, ``kj_key``: Dictionaries mapping ``eRi_keys`` to the numerator-denominator keys (ij) and the</span>
+<span class="sd">                normalising keys (kj) for each column in ``eRi``.</span>
+<span class="sd">            - ``label_args``, ``label_latex``: Dictionaries mapping ``eRi_keys`` to plain text and latex labels suitable</span>
+<span class="sd">                for plotting. Contains the ε symbol followed by the numerator isotope and the last digit of each mass in</span>
+<span class="sd">                the normalising keys, in brackets. E.g. ε104Pd(85) and $\\epsilon{}^{105}\\mathrm{Pd}_{(85)}$,</span>
+<span class="sd">                where i=Pd-104, k=Pd-108 and j=Pd-105.</span>
+<span class="sd">            - Additional attrs might be supplied by the different methods.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">msg_prefix</span><span class="p">:</span>
+        <span class="n">msg_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">-intnorm&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg_prefix</span> <span class="o">=</span> <span class="s1">&#39;intnorm&#39;</span>
+
+    <span class="n">methodfunc</span> <span class="o">=</span> <span class="n">IntNormMethods</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">method</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">methodfunc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``method`` must be  &quot;largest_offset&quot; or &quot;linear&quot;&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">abu</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``abu`` must be a keyarray&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stdmass</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">stdmass</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``stdmass`` must be a keyarray&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stdabu</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">stdabu</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``stdabu`` must be a keyarray&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normrat</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">isotopes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">isotopes</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">normrat</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">isotopes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">isotopes</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">normrat</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``isotopes`` must be an iterable the same length as ``normrat``&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enrichment_factor</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">enrichment_factor</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">normrat</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``enrichment_factor`` must be an iterable the same length as ``normrat``&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">enrichment_factor</span> <span class="o">=</span> <span class="p">[</span><span class="n">enrichment_factor</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">normrat</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">std_enrichment_factor</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">std_enrichment_factor</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">normrat</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``solar_enrichment_factor`` must be an iterable the same length as ``normiso``&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">std_enrichment_factor</span> <span class="o">=</span> <span class="p">[</span><span class="n">std_enrichment_factor</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">normrat</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">isotopes</span> <span class="o">=</span> <span class="p">(</span><span class="n">isotopes</span><span class="p">,)</span>
+        <span class="n">normrat</span> <span class="o">=</span> <span class="p">(</span><span class="n">normrat</span><span class="p">,)</span>
+        <span class="n">enrichment_factor</span> <span class="o">=</span> <span class="p">(</span><span class="n">enrichment_factor</span><span class="p">,)</span>
+        <span class="n">std_enrichment_factor</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_enrichment_factor</span><span class="p">,)</span>
+
+    <span class="n">all_iso_up</span><span class="p">,</span> <span class="n">all_iso_down</span><span class="p">,</span> <span class="n">all_iso_norm</span> <span class="o">=</span> <span class="p">(),</span> <span class="p">(),</span> <span class="p">()</span>
+    <span class="n">all_abu_up</span><span class="p">,</span> <span class="n">all_abu_down</span><span class="p">,</span> <span class="n">all_abu_norm</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="n">all_mass_up</span><span class="p">,</span> <span class="n">all_mass_down</span><span class="p">,</span> <span class="n">all_mass_norm</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="n">all_solar_up</span><span class="p">,</span> <span class="n">all_solar_down</span><span class="p">,</span> <span class="n">all_solar_norm</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">numerators</span><span class="p">,</span> <span class="n">rat</span><span class="p">,</span> <span class="n">abu_factor</span><span class="p">,</span> <span class="n">solar_factor</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">isotopes</span><span class="p">,</span> <span class="n">normrat</span><span class="p">,</span> <span class="n">enrichment_factor</span><span class="p">,</span> <span class="n">std_enrichment_factor</span><span class="p">):</span>
+        <span class="n">rat</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">asratio</span><span class="p">(</span><span class="n">rat</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">rat</span><span class="o">.</span><span class="n">numer</span><span class="o">.</span><span class="n">symbol</span> <span class="o">!=</span> <span class="n">rat</span><span class="o">.</span><span class="n">denom</span><span class="o">.</span><span class="n">symbol</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: The ``normrat`` numerator and normiso isotopes must be of the same element&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">numerators</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">rat</span><span class="o">.</span><span class="n">numer</span><span class="o">.</span><span class="n">suffix</span> <span class="o">!=</span> <span class="n">rat</span><span class="o">.</span><span class="n">denom</span><span class="o">.</span><span class="n">suffix</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: The ``normrat`` numerator and normiso isotopes must have the same suffix &#39;</span>
+                                 <span class="s1">&#39;for auto discovery of numerator isotopes&#39;</span><span class="p">)</span>
+
+            <span class="n">numerators</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_isotopes_of_element</span><span class="p">(</span><span class="n">abu</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">,</span> <span class="n">rat</span><span class="o">.</span><span class="n">denom</span><span class="o">.</span><span class="n">element</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">numerators</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">asisotopes</span><span class="p">(</span><span class="n">numerators</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">rat</span><span class="o">.</span><span class="n">numer</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">:</span>
+            <span class="n">numerators</span> <span class="o">+=</span> <span class="p">(</span><span class="n">rat</span><span class="o">.</span><span class="n">numer</span><span class="p">,)</span>
+        <span class="k">if</span> <span class="n">rat</span><span class="o">.</span><span class="n">denom</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">:</span>
+            <span class="n">numerators</span> <span class="o">+=</span> <span class="p">(</span><span class="n">rat</span><span class="o">.</span><span class="n">denom</span><span class="p">,)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Internally normalising </span><span class="si">{</span><span class="n">numerators</span><span class="si">}</span><span class="s1"> to </span><span class="si">{</span><span class="n">rat</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">relative_enrichment</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Applying absolute enrichment factor to model abundances. &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Setting the sum of all isotopes to </span><span class="si">{</span><span class="n">abu_factor</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">abu_factor</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Applying relative enrichment factor to model abundances. &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Multiplying all isotopes by </span><span class="si">{</span><span class="n">abu_factor</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">std_relative_enrichment</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Applying absolute enrichment factor to standard abundances. &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Setting the sum of all isotopes to </span><span class="si">{</span><span class="n">solar_factor</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">solar_factor</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Applying relative enrichment factor to standard abundances. &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Multiplying all isotopes by </span><span class="si">{</span><span class="n">solar_factor</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="n">numeri</span> <span class="o">=</span> <span class="n">numerators</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rat</span><span class="o">.</span><span class="n">numer</span><span class="p">)</span>
+        <span class="n">denomi</span> <span class="o">=</span> <span class="n">numerators</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rat</span><span class="o">.</span><span class="n">denom</span><span class="p">)</span>
+
+        <span class="n">all_iso_up</span> <span class="o">+=</span> <span class="n">numerators</span>
+        <span class="n">all_iso_down</span> <span class="o">+=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">rat</span><span class="o">.</span><span class="n">denom</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">)</span>
+        <span class="n">all_iso_norm</span> <span class="o">+=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">rat</span><span class="o">.</span><span class="n">numer</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">)</span>
+
+        <span class="n">abu_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">abu</span><span class="p">[</span><span class="n">numerator</span><span class="p">]</span> <span class="k">for</span> <span class="n">numerator</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">relative_enrichment</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="c1"># Renormalise so that the sum of all isotopes = 1</span>
+            <span class="c1"># This works for both ndim = 1 &amp; 2 as long as it is done before transpose</span>
+            <span class="n">abu_up</span> <span class="o">=</span> <span class="n">abu_up</span> <span class="o">/</span> <span class="n">abu_up</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">abu_up</span> <span class="o">=</span> <span class="n">abu_up</span> <span class="o">*</span> <span class="n">abu_factor</span>
+        <span class="n">all_abu_up</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">abu_up</span><span class="p">)</span>
+
+        <span class="c1"># Same isotope for all isotopes</span>
+        <span class="n">all_abu_down</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">abu_up</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">abu_up</span><span class="p">[</span><span class="n">denomi</span><span class="p">])</span>
+        <span class="n">all_abu_norm</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">abu_up</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">abu_up</span><span class="p">[</span><span class="n">numeri</span><span class="p">])</span>
+
+        <span class="c1"># Ignore the suffix for the arrays containing standard values</span>
+        <span class="n">mass_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">stdmass</span><span class="p">[</span><span class="n">numerator</span><span class="o">.</span><span class="n">without_suffix</span><span class="p">()]</span> <span class="k">for</span> <span class="n">numerator</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">])</span>
+        <span class="n">all_mass_up</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mass_up</span><span class="p">)</span>
+        <span class="n">all_mass_down</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mass_up</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">mass_up</span><span class="p">[</span><span class="n">denomi</span><span class="p">])</span>
+        <span class="n">all_mass_norm</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mass_up</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">mass_up</span><span class="p">[</span><span class="n">numeri</span><span class="p">])</span>
+
+        <span class="n">solar_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">stdabu</span><span class="p">[</span><span class="n">numerator</span><span class="o">.</span><span class="n">without_suffix</span><span class="p">()]</span> <span class="k">for</span> <span class="n">numerator</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">std_relative_enrichment</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="c1"># Renormalise so that the sum of all isotopes = 1</span>
+            <span class="c1"># This works for both ndim = 1 &amp; 2 as long as it is done before transpose</span>
+            <span class="n">solar_up</span> <span class="o">=</span> <span class="n">solar_up</span> <span class="o">/</span> <span class="n">solar_up</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">solar_up</span> <span class="o">=</span> <span class="n">solar_up</span> <span class="o">*</span> <span class="n">solar_factor</span>
+        <span class="n">all_solar_up</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">solar_up</span><span class="p">)</span>
+        <span class="n">all_solar_down</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">solar_up</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">solar_up</span><span class="p">[</span><span class="n">denomi</span><span class="p">])</span>
+        <span class="n">all_solar_norm</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">solar_up</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">solar_up</span><span class="p">[</span><span class="n">numeri</span><span class="p">])</span>
+
+    <span class="c1"># Make one big values</span>
+    <span class="n">all_abu_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_abu_up</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+    <span class="n">all_abu_down</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_abu_down</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+    <span class="n">all_abu_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_abu_norm</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+
+    <span class="n">all_mass_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_mass_up</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+    <span class="n">all_mass_down</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_mass_down</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+    <span class="n">all_mass_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_mass_norm</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+
+    <span class="n">all_solar_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_solar_up</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+    <span class="n">all_solar_down</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_solar_down</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+    <span class="n">all_solar_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_solar_norm</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">methodfunc</span><span class="p">(</span><span class="n">all_abu_up</span><span class="p">,</span> <span class="n">all_abu_down</span><span class="p">,</span> <span class="n">all_abu_norm</span><span class="p">,</span>
+                        <span class="n">all_mass_up</span><span class="p">,</span> <span class="n">all_mass_down</span><span class="p">,</span> <span class="n">all_mass_norm</span><span class="p">,</span>
+                        <span class="n">all_solar_up</span><span class="p">,</span> <span class="n">all_solar_down</span><span class="p">,</span> <span class="n">all_solar_norm</span><span class="p">,</span>
+                        <span class="n">msg_prefix</span><span class="o">=</span><span class="n">msg_prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">method_kwargs</span><span class="p">)</span>
+
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;eRi&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">askeyarray</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;eRi_values&#39;</span><span class="p">],</span> <span class="n">all_iso_up</span><span class="p">)</span>
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;eRi_keys&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_iso_up</span>
+
+    <span class="c1"># Create mappings linking the values keys to the different isotopes used in the equations</span>
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;ij_keys&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="n">utils</span><span class="o">.</span><span class="n">asratios</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="n">all_iso_down</span><span class="p">)])))</span>
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;kj_keys&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="n">utils</span><span class="o">.</span><span class="n">asratios</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_norm</span><span class="p">,</span> <span class="n">all_iso_down</span><span class="p">)])))</span>
+
+    <span class="c1"># Labels suitable for plotting</span>
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;eRi_keylabels&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;ε</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s1">(</span><span class="si">{</span><span class="n">kj</span><span class="o">.</span><span class="n">numer</span><span class="o">.</span><span class="n">mass</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}{</span><span class="n">kj</span><span class="o">.</span><span class="n">denom</span><span class="o">.</span><span class="n">mass</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">)&#39;</span>
+                              <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">kj</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;kj_keys&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()]))</span>
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;eRi_keylabels_latex&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="p">[</span><span class="sa">fr</span><span class="s1">&#39;$\epsilon</span><span class="si">{</span><span class="n">i</span><span class="o">.</span><span class="n">latex</span><span class="p">(</span><span class="n">dollar</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="si">}</span><span class="se">{{}}</span><span class="s1">_</span><span class="se">{{</span><span class="s1">(</span><span class="si">{</span><span class="n">kj</span><span class="o">.</span><span class="n">numer</span><span class="o">.</span><span class="n">mass</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}{</span><span class="n">kj</span><span class="o">.</span><span class="n">denom</span><span class="o">.</span><span class="n">mass</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s1">)</span><span class="se">}}</span><span class="s1">$&#39;</span>
+                                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">kj</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;kj_keys&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()]))</span>
+
+    <span class="c1"># Flattens arrays that are meant for the second dimension, so they are compatible with keyarrays.</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">NamedDict</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="simple.norm.intnorm_largest_offset" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">simple.norm.intnorm_largest_offset</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">intnorm_largest_offset</span><span class="p">(</span><span class="n">abu_i</span><span class="p">,</span> <span class="n">abu_j</span><span class="p">,</span> <span class="n">abu_k</span><span class="p">,</span> <span class="n">mass_i</span><span class="p">,</span> <span class="n">mass_j</span><span class="p">,</span> <span class="n">mass_k</span><span class="p">,</span> <span class="n">std_i</span><span class="p">,</span> <span class="n">std_j</span><span class="p">,</span> <span class="n">std_k</span><span class="p">,</span> <span class="n">largest_offset</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">min_dilution_factor</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">largest_offset_rtol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">msg_prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Creates and internally normalises a synthetic sample such that the largest offset is equal to the specified value.</p>
+<p>The composition of the synthetic sample (<span class="arithmatex">\(\mathrm{SMP}\)</span>) is calculated by adding
+<span class="arithmatex">\(\mathrm{ABU}\)</span>,  divided by the dilution factor (<span class="arithmatex">\(\mathrm{df}\)</span>), to <span class="arithmatex">\(\mathrm{STD}\)</span>,</p>
+<div class="arithmatex">\[
+C_{SMP} = C_{\mathrm{STD}} +  \left(\frac{C_{ABU}}{\mathrm{df}}\right)
+\]</div>
+<p>The internal normalisation procedure uses Equation 6 from
+<a href="https://doi.org/10.1140/epja/s10050-023-00968-y">Lugaro et al. 2023</a>,</p>
+<div class="arithmatex">\[
+\epsilon R^{\mathrm{SMP}}_{ij} = {\left[{\left(\frac{r^{\mathrm{SMP}}_{ij}}{R^{\mathrm{STD}}_{ij}}\right)}
+{\left(\frac{r^{\mathrm{SMP}}_{kj}}{R^{\mathrm{STD}}_{kj}}\right)}^{-Q_i} - 1
+\right]} \times 10^4
+\]</div>
+<p>Where, <span class="arithmatex">\(Q\)</span> is the difference in the natural logarithm of the masses,</p>
+<div class="arithmatex">\[
+Q = \frac{\ln{(m_i)} - \ln{(m_j)}}{\ln{(m_k)} - \ln{(m_j)}}
+\]</div>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+          <b><code>abu_i</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Abundance of the numerator isotopes.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>abu_j</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Abundance of the denominator isotopes</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>abu_k</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Abundance of the normalising isotopes.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>mass_i</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The mass of each isotope in <code>abu_i</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>mass_j</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The mass of each isotope in <code>abu_j</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>mass_k</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The mass of each isotope in <code>abu_k</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_i</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The reference abundance of each isotope in <code>abu_i</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_j</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The reference abundance of each isotope in <code>abu_j</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_k</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The reference abundance of each isotope in <code>abu_k</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>largest_offset</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The absolute value of the largest offset for each row finished calculation, in epsilon units.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>min_dilution_factor</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The smallest dilution factor considered in the calculation. If the offset found
+at this dilution factor is smaller than <code>largest_offset</code> the result is set to <code>np.nan</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>max_iterations</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Any row for which the results have not converged after this number of iterations is set
+to <code>np.nan</code></p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>largest_offset_rtol</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The relative tolerance used to test for convergence of the largest offset value.</p>
+          </div>
+        </li>
+    </ul>
+
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+<b><code>dict</code></b>          –
+          <div class="doc-md-description">
+            <p>A dictionary containing the results of the normalisation. The dictionary contains the following attrs:</p>
+<ul>
+<li><code>eRi_values</code>: An 2dim values containing the eRi values for each isotope.</li>
+<li><code>dilution_factor</code>: The dilution factor for each row in <code>eRi_values</code>.</li>
+<li><code>largest_offset</code>: The <code>largest_offset</code> parameter.</li>
+<li><code>min_dilution_factor</code>: The <code>min_dilution_factor</code> parameter.</li>
+<li><code>method</code>: The method used to normalise the abundances. Always <code>"largest_offset"</code> for this method.</li>
+</ul>
+          </div>
+        </li>
+    </ul>
+
+            <details class="quote">
+              <summary>Source code in <code>simple/norm.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@utils</span><span class="o">.</span><span class="n">set_default_kwargs</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">intnorm_largest_offset</span><span class="p">(</span><span class="n">abu_i</span><span class="p">,</span> <span class="n">abu_j</span><span class="p">,</span> <span class="n">abu_k</span><span class="p">,</span>
+                           <span class="n">mass_i</span><span class="p">,</span> <span class="n">mass_j</span><span class="p">,</span> <span class="n">mass_k</span><span class="p">,</span>
+                           <span class="n">std_i</span><span class="p">,</span> <span class="n">std_j</span><span class="p">,</span> <span class="n">std_k</span><span class="p">,</span>
+                           <span class="n">largest_offset</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">min_dilution_factor</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                           <span class="n">largest_offset_rtol</span> <span class="o">=</span> <span class="mf">1E-4</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">msg_prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates and internally normalises a synthetic sample such that the largest offset is equal to the specified value.</span>
+
+<span class="sd">    The composition of the synthetic sample ($\\mathrm{SMP}$) is calculated by adding</span>
+<span class="sd">    $\\mathrm{ABU}$,  divided by the dilution factor ($\\mathrm{df}$), to $\\mathrm{STD}$,</span>
+
+<span class="sd">    $$</span>
+<span class="sd">    C_{SMP} = C_{\\mathrm{STD}} +  \\left(\\frac{C_{ABU}}{\\mathrm{df}}\\right)</span>
+<span class="sd">    $$</span>
+
+<span class="sd">    The internal normalisation procedure uses Equation 6 from</span>
+<span class="sd">    [Lugaro et al. 2023](https://doi.org/10.1140/epja/s10050-023-00968-y),</span>
+
+<span class="sd">    $$</span>
+<span class="sd">    \\epsilon R^{\\mathrm{SMP}}_{ij} = {\\left[{\\left(\\frac{r^{\\mathrm{SMP}}_{ij}}{R^{\\mathrm{STD}}_{ij}}\\right)}</span>
+<span class="sd">    {\\left(\\frac{r^{\\mathrm{SMP}}_{kj}}{R^{\\mathrm{STD}}_{kj}}\\right)}^{-Q_i} - 1</span>
+<span class="sd">    \\right]} \\times 10^4</span>
+<span class="sd">    $$</span>
+
+<span class="sd">    Where, $Q$ is the difference in the natural logarithm of the masses,</span>
+
+<span class="sd">    $$</span>
+<span class="sd">    Q = \\frac{\\ln{(m_i)} - \\ln{(m_j)}}{\\ln{(m_k)} - \\ln{(m_j)}}</span>
+<span class="sd">    $$</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        abu_i (): Abundance of the numerator isotopes.</span>
+<span class="sd">        abu_j (): Abundance of the denominator isotopes</span>
+<span class="sd">        abu_k (): Abundance of the normalising isotopes.</span>
+<span class="sd">        mass_i (): The mass of each isotope in ``abu_i``.</span>
+<span class="sd">        mass_j (): The mass of each isotope in ``abu_j``.</span>
+<span class="sd">        mass_k (): The mass of each isotope in ``abu_k``.</span>
+<span class="sd">        std_i (): The reference abundance of each isotope in ``abu_i``.</span>
+<span class="sd">        std_j (): The reference abundance of each isotope in ``abu_j``.</span>
+<span class="sd">        std_k (): The reference abundance of each isotope in ``abu_k``.</span>
+<span class="sd">        largest_offset (): The absolute value of the largest offset for each row finished calculation, in epsilon units.</span>
+<span class="sd">        min_dilution_factor (): The smallest dilution factor considered in the calculation. If the offset found</span>
+<span class="sd">            at this dilution factor is smaller than ``largest_offset`` the result is set to ``np.nan``.</span>
+<span class="sd">        max_iterations (): Any row for which the results have not converged after this number of iterations is set</span>
+<span class="sd">            to ``np.nan``</span>
+<span class="sd">        largest_offset_rtol (): The relative tolerance used to test for convergence of the largest offset value.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the results of the normalisation. The dictionary contains the following attrs:</span>
+
+<span class="sd">            - ``eRi_values``: An 2dim values containing the eRi values for each isotope.</span>
+<span class="sd">            - ``dilution_factor``: The dilution factor for each row in ``eRi_values``.</span>
+<span class="sd">            - ``largest_offset``: The ``largest_offset`` parameter.</span>
+<span class="sd">            - ``min_dilution_factor``: The ``min_dilution_factor`` parameter.</span>
+<span class="sd">            - ``method``: The method used to normalise the abundances. Always ``&quot;largest_offset&quot;`` for this method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">msg_prefix</span><span class="p">:</span>
+        <span class="n">msg_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">-largest_offset&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg_prefix</span> <span class="o">=</span> <span class="s1">&#39;largest_offset&#39;</span>
+
+    <span class="c1"># Make sure everything is at least 2d</span>
+    <span class="n">abu_i</span><span class="p">,</span>  <span class="n">abu_j</span><span class="p">,</span> <span class="n">abu_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">abu_i</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">abu_j</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">abu_k</span><span class="p">)</span>
+    <span class="n">mass_i</span><span class="p">,</span> <span class="n">mass_j</span><span class="p">,</span> <span class="n">mass_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">mass_i</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">mass_j</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">mass_k</span><span class="p">)</span>
+    <span class="n">std_i</span><span class="p">,</span> <span class="n">std_j</span><span class="p">,</span> <span class="n">std_k</span>  <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">std_i</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">std_j</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">std_k</span><span class="p">)</span>
+
+    <span class="n">negQ</span> <span class="o">=</span> <span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mass_i</span> <span class="o">/</span> <span class="n">mass_j</span><span class="p">)</span> <span class="o">/</span>
+             <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mass_k</span> <span class="o">/</span> <span class="n">mass_j</span><span class="p">)))</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span> <span class="c1"># Needs to be negative later</span>
+
+    <span class="n">R_solar_ij</span> <span class="o">=</span> <span class="n">std_i</span> <span class="o">/</span> <span class="n">std_j</span>
+    <span class="n">R_solar_kj</span> <span class="o">=</span> <span class="n">std_k</span> <span class="o">/</span> <span class="n">std_j</span>
+
+    <span class="c1"># Has to begin at largest offset or it might accidentally ignore rows</span>
+    <span class="n">dilution_factor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">abu_i</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">),</span> <span class="n">min_dilution_factor</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+
+    <span class="n">first_time</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Internally normalising </span><span class="si">{</span><span class="n">abu_i</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> rows using the largest offset method.&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span> <span class="p">(</span><span class="n">max_iterations</span><span class="p">):</span>
+        <span class="n">smp_up</span> <span class="o">=</span> <span class="n">std_i</span> <span class="o">+</span> <span class="p">(</span><span class="n">abu_i</span> <span class="o">/</span> <span class="n">dilution_factor</span><span class="p">)</span>
+        <span class="n">smp_down</span> <span class="o">=</span> <span class="n">std_j</span> <span class="o">+</span> <span class="p">(</span><span class="n">abu_j</span> <span class="o">/</span> <span class="n">dilution_factor</span><span class="p">)</span>
+        <span class="n">smp_norm</span> <span class="o">=</span> <span class="n">std_k</span> <span class="o">+</span> <span class="p">(</span><span class="n">abu_k</span> <span class="o">/</span> <span class="n">dilution_factor</span><span class="p">)</span>
+
+        <span class="n">r_smp_ij</span> <span class="o">=</span> <span class="n">smp_up</span> <span class="o">/</span> <span class="n">smp_down</span>
+        <span class="n">r_smp_kj</span> <span class="o">=</span> <span class="n">smp_norm</span> <span class="o">/</span> <span class="n">smp_down</span>
+
+        <span class="c1"># Equation 6 in Lugaro et al 2023</span>
+        <span class="n">eR_smp_ij</span> <span class="o">=</span> <span class="p">(((</span><span class="n">r_smp_ij</span> <span class="o">/</span> <span class="n">R_solar_ij</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">r_smp_kj</span> <span class="o">/</span> <span class="n">R_solar_kj</span><span class="p">)</span> <span class="o">**</span> <span class="n">negQ</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10_000</span>
+
+        <span class="n">offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">eR_smp_ij</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdims</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">first_time</span><span class="p">:</span>
+            <span class="n">ignore</span> <span class="o">=</span> <span class="n">offset</span> <span class="o">&lt;</span> <span class="n">largest_offset</span>
+            <span class="n">include</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">ignore</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ignore</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">ignore</span><span class="p">)</span><span class="si">}</span><span class="s1"> rows out of </span><span class="si">{</span><span class="n">ignore</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s1"> have largest offsets smaller than&#39;</span>
+                            <span class="sa">f</span><span class="s1">&#39; </span><span class="si">{</span><span class="n">largest_offset</span><span class="si">}</span><span class="s1"> ε-units at the minimum dilution factor of </span><span class="si">{</span><span class="n">min_dilution_factor</span><span class="si">}</span><span class="s1">. &#39;</span>
+                            <span class="sa">f</span><span class="s1">&#39;These rows are set to nan.&#39;</span><span class="p">)</span>
+            <span class="n">first_time</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">isclose</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">offset</span><span class="p">,</span> <span class="n">largest_offset</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="n">largest_offset_rtol</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">isclose</span><span class="p">[</span><span class="n">include</span><span class="p">]):</span>
+            <span class="n">dilution_factor</span><span class="p">[</span><span class="n">include</span><span class="p">]</span> <span class="o">=</span> <span class="n">dilution_factor</span><span class="p">[</span><span class="n">include</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">offset</span><span class="p">[</span><span class="n">include</span><span class="p">]</span><span class="o">/</span><span class="n">largest_offset</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Not all </span><span class="si">{</span><span class="n">abu_i</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s1"> rows converged after </span><span class="si">{</span><span class="n">max_iterations</span><span class="si">}</span><span class="s1">. &#39;</span>
+                       <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">count_nonzero</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span><span class="n">isclose</span><span class="p">))</span><span class="si">}</span><span class="s1"> non-converged rows set to nan.&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ignore</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="n">eR_smp_ij</span><span class="p">[</span><span class="n">ignore</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">dilution_factor</span><span class="p">[</span><span class="n">ignore</span><span class="o">.</span><span class="n">flatten</span><span class="p">()]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">eRi_values</span> <span class="o">=</span> <span class="n">eR_smp_ij</span><span class="p">,</span> <span class="n">dilution_factor</span> <span class="o">=</span> <span class="n">dilution_factor</span><span class="p">,</span>
+                <span class="n">largest_offset</span><span class="o">=</span><span class="n">largest_offset</span><span class="p">,</span> <span class="n">min_dilution_factor</span><span class="o">=</span><span class="n">min_dilution_factor</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="s1">&#39;largest_offset&#39;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="simple.norm.intnorm_linear" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">simple.norm.intnorm_linear</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">intnorm_linear</span><span class="p">(</span><span class="n">abu_i</span><span class="p">,</span> <span class="n">abu_j</span><span class="p">,</span> <span class="n">abu_k</span><span class="p">,</span> <span class="n">mass_i</span><span class="p">,</span> <span class="n">mass_j</span><span class="p">,</span> <span class="n">mass_k</span><span class="p">,</span> <span class="n">std_i</span><span class="p">,</span> <span class="n">std_j</span><span class="p">,</span> <span class="n">std_k</span><span class="p">,</span> <span class="n">mass_coef</span><span class="o">=</span><span class="s1">&#39;better&#39;</span><span class="p">,</span> <span class="n">dilution_factor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">msg_prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Internally normalise the abundances using the linearised internal normalisation procedure.</p>
+<p>The internal normalisation procedure uses Equation 7 from
+<a href="https://doi.org/10.1140/epja/s10050-023-00968-y">Lugaro et al. 2023</a>,</p>
+<div class="arithmatex">\[
+\epsilon R^{\mathrm{ABU}}_{ij} = {\left[{\left(\frac{r^{\mathrm{ABU}}_{ij}}{R^{\mathrm{STD}}_{ij}}-1\right)}
+-{Q}_{i} \times {\left(\frac{r^{\mathrm{ABU}}_{kj}}{R^{\mathrm{STD}}_{kj}}-1\right)}
+\right]} \times 10^4 \]</div>
+<p>Where, <span class="arithmatex">\(Q\)</span> is the difference of the masses calculated in one of two ways. If <code>mass_coeff="better"</code> the
+definition from e.g. Lugaro et al. (2023) is used,</p>
+<div class="arithmatex">\[
+{Q}^{\mathrm{better}} = \frac{\ln{(m_i)} - \ln{(m_j)}}{\ln{(m_k)} - \ln{(m_j)}}
+\]</div>
+<p>if <code>mass_coeff="simplified"</code> the definition from e.g. Dauphas et al. (2004) is used,</p>
+<div class="arithmatex">\[
+{Q}^{\rm{simplified}} = \frac{(m_i) - (m_j)}{(m_k) - (m_j)}
+\]</div>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+          <b><code>abu_i</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Abundance of the numerator isotopes.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>abu_j</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Abundance of the denominator isotopes</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>abu_k</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Abundance of the normalising isotopes.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>mass_i</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The mass of each isotope in <code>abu_i</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>mass_j</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The mass of each isotope in <code>abu_j</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>mass_k</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The mass of each isotope in <code>abu_k</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_i</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The reference abundance of each isotope in <code>abu_i</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_j</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The reference abundance of each isotope in <code>abu_j</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_k</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The reference abundance of each isotope in <code>abu_k</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>mass_coef</code></b>
+              (<code><span title="string">string</span></code>, default:
+                  <code>&#39;better&#39;</code>
+)
+          –
+          <div class="doc-md-description">
+            <p>Decides how the mass coefficient Q is calculated. Acceptable values are</p>
+          </div>
+        </li>
+    </ul>
+        <p><strong>Notes</strong>
+The epsilon values returned by this method will typically be very large as no dilution takes places.</p>
+<p>Enrichment factors will have no impact on the results from this method.</p>
+
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+<b><code>dict</code></b>          –
+          <div class="doc-md-description">
+            <p>A dictionary containing the results of the normalisation. The dictionary contains the following attrs:</p>
+<ul>
+<li><code>eRi_values</code>: An 2dim values containing the eRi values for each isotope.</li>
+<li><code>mass_coef</code>: The value of the <code>mass_coef</code> parameter.</li>
+<li><code>method</code>: The method used to normalise the abundances. Always <code>"linear"</code> for this method.</li>
+</ul>
+          </div>
+        </li>
+    </ul>
+
+            <details class="quote">
+              <summary>Source code in <code>simple/norm.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span>
+<span class="normal">94</span>
+<span class="normal">95</span>
+<span class="normal">96</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@utils</span><span class="o">.</span><span class="n">add_shortcut</span><span class="p">(</span><span class="s1">&#39;better&#39;</span><span class="p">,</span> <span class="n">mass_coef</span> <span class="o">=</span><span class="s1">&#39;better&#39;</span><span class="p">)</span>
+<span class="nd">@utils</span><span class="o">.</span><span class="n">add_shortcut</span><span class="p">(</span><span class="s1">&#39;simplified&#39;</span><span class="p">,</span> <span class="n">mass_coef</span> <span class="o">=</span><span class="s1">&#39;simplified&#39;</span><span class="p">)</span>
+<span class="nd">@utils</span><span class="o">.</span><span class="n">set_default_kwargs</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">intnorm_linear</span><span class="p">(</span><span class="n">abu_i</span><span class="p">,</span> <span class="n">abu_j</span><span class="p">,</span> <span class="n">abu_k</span><span class="p">,</span>
+                   <span class="n">mass_i</span><span class="p">,</span> <span class="n">mass_j</span><span class="p">,</span> <span class="n">mass_k</span><span class="p">,</span>
+                   <span class="n">std_i</span><span class="p">,</span> <span class="n">std_j</span><span class="p">,</span> <span class="n">std_k</span><span class="p">,</span>
+                   <span class="n">mass_coef</span> <span class="o">=</span> <span class="s1">&#39;better&#39;</span><span class="p">,</span> <span class="n">dilution_factor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">msg_prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Internally normalise the abundances using the linearised internal normalisation procedure.</span>
+
+<span class="sd">    The internal normalisation procedure uses Equation 7 from</span>
+<span class="sd">    [Lugaro et al. 2023](https://doi.org/10.1140/epja/s10050-023-00968-y),</span>
+
+<span class="sd">    $$</span>
+<span class="sd">    \\epsilon R^{\\mathrm{ABU}}_{ij} = {\\left[{\\left(\\frac{r^{\\mathrm{ABU}}_{ij}}{R^{\\mathrm{STD}}_{ij}}-1\\right)}</span>
+<span class="sd">    -{Q}_{i} \\times {\\left(\\frac{r^{\\mathrm{ABU}}_{kj}}{R^{\\mathrm{STD}}_{kj}}-1\\right)}</span>
+<span class="sd">    \\right]} \\times 10^4 $$</span>
+
+<span class="sd">    Where, $Q$ is the difference of the masses calculated in one of two ways. If ``mass_coeff=&quot;better&quot;`` the</span>
+<span class="sd">    definition from e.g. Lugaro et al. (2023) is used,</span>
+
+<span class="sd">    $$</span>
+<span class="sd">    {Q}^{\\mathrm{better}} = \\frac{\\ln{(m_i)} - \\ln{(m_j)}}{\\ln{(m_k)} - \\ln{(m_j)}}</span>
+<span class="sd">    $$</span>
+
+<span class="sd">    if ``mass_coeff=&quot;simplified&quot;`` the definition from e.g. Dauphas et al. (2004) is used,</span>
+
+<span class="sd">    $$</span>
+<span class="sd">    {Q}^{\\rm{simplified}} = \\frac{(m_i) - (m_j)}{(m_k) - (m_j)}</span>
+<span class="sd">    $$</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        abu_i (): Abundance of the numerator isotopes.</span>
+<span class="sd">        abu_j (): Abundance of the denominator isotopes</span>
+<span class="sd">        abu_k (): Abundance of the normalising isotopes.</span>
+<span class="sd">        mass_i (): The mass of each isotope in ``abu_i``.</span>
+<span class="sd">        mass_j (): The mass of each isotope in ``abu_j``.</span>
+<span class="sd">        mass_k (): The mass of each isotope in ``abu_k``.</span>
+<span class="sd">        std_i (): The reference abundance of each isotope in ``abu_i``.</span>
+<span class="sd">        std_j (): The reference abundance of each isotope in ``abu_j``.</span>
+<span class="sd">        std_k (): The reference abundance of each isotope in ``abu_k``.</span>
+<span class="sd">        mass_coef (string): Decides how the mass coefficient Q is calculated. Acceptable values are</span>
+<span class="sd">        ``better`` and ``simplified``.</span>
+
+<span class="sd">    **Notes**</span>
+<span class="sd">    The epsilon values returned by this method will typically be very large as no dilution takes places.</span>
+
+<span class="sd">    Enrichment factors will have no impact on the results from this method.</span>
+
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the results of the normalisation. The dictionary contains the following attrs:</span>
+
+<span class="sd">            - ``eRi_values``: An 2dim values containing the eRi values for each isotope.</span>
+<span class="sd">            - ``mass_coef``: The value of the ``mass_coef`` parameter.</span>
+<span class="sd">            - ``method``: The method used to normalise the abundances. Always ``&quot;linear&quot;`` for this method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">msg_prefix</span><span class="p">:</span>
+        <span class="n">msg_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">-linear&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;linear&#39;</span>
+    <span class="n">abu_i</span><span class="p">,</span> <span class="n">abu_j</span><span class="p">,</span> <span class="n">abu_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">abu_i</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">abu_j</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">abu_k</span><span class="p">)</span>
+    <span class="n">mass_i</span><span class="p">,</span> <span class="n">mass_j</span><span class="p">,</span> <span class="n">mass_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">mass_i</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">mass_j</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">mass_k</span><span class="p">)</span>
+    <span class="n">std_i</span><span class="p">,</span> <span class="n">std_j</span><span class="p">,</span> <span class="n">std_k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">std_i</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">std_j</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">std_k</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">dilution_factor</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">dilution_factor</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">abu_i</span> <span class="o">=</span> <span class="n">abu_i</span> <span class="o">/</span> <span class="n">dilution_factor</span> <span class="o">+</span> <span class="n">std_i</span>
+        <span class="n">abu_j</span> <span class="o">=</span> <span class="n">abu_j</span> <span class="o">/</span> <span class="n">dilution_factor</span> <span class="o">+</span> <span class="n">std_j</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">dilution_factor</span>
+
+    <span class="n">rho_ij</span> <span class="o">=</span> <span class="p">((</span><span class="n">abu_i</span> <span class="o">/</span> <span class="n">abu_j</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">std_i</span> <span class="o">/</span> <span class="n">std_j</span><span class="p">))</span> <span class="o">-</span> <span class="mf">1.0</span>
+    <span class="n">rho_kj</span> <span class="o">=</span> <span class="p">((</span><span class="n">abu_k</span> <span class="o">/</span> <span class="n">abu_j</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">std_k</span> <span class="o">/</span> <span class="n">std_j</span><span class="p">))</span> <span class="o">-</span> <span class="mf">1.0</span>
+
+    <span class="k">if</span> <span class="n">mass_coef</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;better&#39;</span><span class="p">:</span>
+        <span class="n">Q</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mass_i</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mass_j</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mass_k</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mass_j</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">mass_coef</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;simplified&#39;</span><span class="p">:</span>
+        <span class="n">Q</span> <span class="o">=</span> <span class="p">(</span><span class="n">mass_i</span> <span class="o">-</span> <span class="n">mass_j</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">mass_k</span> <span class="o">-</span> <span class="n">mass_j</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``mass_coef`` must be either &quot;better&quot; or &quot;simplified&quot;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Equation 7 in Lugaro et al., 2023</span>
+    <span class="n">eR_smp_ij</span> <span class="o">=</span> <span class="p">(</span><span class="n">rho_ij</span> <span class="o">-</span> <span class="n">Q</span> <span class="o">*</span> <span class="n">rho_kj</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10_000</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">eRi_values</span><span class="o">=</span><span class="n">eR_smp_ij</span><span class="p">,</span>
+                <span class="n">method</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">mass_coeff</span><span class="o">=</span><span class="n">mass_coef</span><span class="p">,</span> <span class="n">dilution_factor</span><span class="o">=</span><span class="n">df</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="simple.norm.standard_normalisation" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">simple.norm.standard_normalisation</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">standard_normalisation</span><span class="p">(</span><span class="n">abu</span><span class="p">,</span> <span class="n">isotopes</span><span class="p">,</span> <span class="n">normiso</span><span class="p">,</span> <span class="n">stdabu</span><span class="p">,</span> <span class="n">enrichment_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">relative_enrichment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">std_enrichment_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">std_relative_enrichment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dilution_factor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">msg_prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Normalise the abundances of <code>abu</code> relative to a specified isotope <code>normiso</code> as commonly done for
+stardust data.</p>
+<p>The equation used to normalise the data is,</p>
+<div class="arithmatex">\[
+R^{\mathrm{ABU}}_{ij} = {\left(\frac{r^{\mathrm{ABU}}_{ij}}{R^{\mathrm{STD}}_{ij}}\right)} - 1
+\]</div>
+<p>Multiple normalisations can be done at once by supplying a list of normalising isotopes. If doing multiple
+elements at once then <code>isotopes</code>, if not <code>None</code>, and optionally <code>enrichment_factor</code> and
+<code>std_enrichement_factor</code>, must be lists with the same
+ length as <code>normiso</code>. If <code>enrichment_factor</code>/<code>std_enrichment_factor</code> is a single value it is applied to
+ all elements.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+          <b><code>abu</code></b>
+          –
+          <div class="doc-md-description">
+            <p>A <a class="autorefs autorefs-internal" href="../simple/#simple.askeyarray">keyarray</a> containing the abundances to be normalised.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>isotopes</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The numerator isotopes (i) in the calculation. If <code>None</code> all the isotopes in <code>abu</code> with the
+same element symbol and suffix as <code>normiso</code> will be selected.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>normiso</code></b>
+          –
+          <div class="doc-md-description">
+            <p>The denominator isotope for the normalisation.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>stdmass</code></b>
+          –
+          <div class="doc-md-description">
+            <p>A <a class="autorefs autorefs-internal" href="../simple/#simple.askeyarray">keyarray</a> containing the isotope masses.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>stdabu</code></b>
+          –
+          <div class="doc-md-description">
+            <p>A <a class="autorefs autorefs-internal" href="../simple/#simple.askeyarray">keyarray</a> containing the reference abundances.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>enrichment_factor</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Enrichment factor applied to <code>abu</code>. Useful when doing multiple elements at once.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>relative_enrichment</code></b>
+          –
+          <div class="doc-md-description">
+            <p>If ''True'' the abundances of all <code>isotopes</code> in <code>abu</code> are multiplied by
+<code>enrichment_factor</code>. If <code>False</code> the abundances are first renormalised such that their sum = 1
+and <strong>then</strong> multiplied by <code>enrichment_factor</code>.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_enrichment_factor</code></b>
+          –
+          <div class="doc-md-description">
+            <p>Enrichment factor applied to <code>stdabu</code>. Useful when doing multiple elements at once.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+          <b><code>std_relative_enrichment</code></b>
+          –
+          <div class="doc-md-description">
+            <p>If ''True'' the abundances of all <code>isotopes</code> in <code>stdabu</code> are multiplied by
+<code>std_enrichment_factor</code>. If <code>False</code> the abundances are first renormalised such that their sum = 1
+and <strong>then</strong> multiplied by <code>std_enrichment_factor</code>.</p>
+          </div>
+        </li>
+    </ul>
+        <p><strong>Notes</strong>
+The <code>normiso</code> will be appended to <code>isotopes</code> if not initially included. This is done before the enrichment
+factor calculation.</p>
+
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+<b><code>dict</code></b>          –
+          <div class="doc-md-description">
+            <p>A dictionary containing the results of the normalisation. The dictionary at minimum contains the following attrs:</p>
+<ul>
+<li><code>Ri</code>: A key array containing the eRi values for each column in <code>Ri_keys</code>.</li>
+<li><code>Ri_keys</code>: The numerator isotopes for each column in <code>Ri_values</code>.</li>
+<li><code>ij_keys</code>: Dictionaries mapping <code>Ri_keys</code> to the numerator-denominator keys (ij) for each column
+    in <code>Ri</code>.</li>
+<li><code>Ri_keylabels</code>, <code>Ri_keylabels_latex</code>: Dictionaries mapping <code>Ri_keys</code> to plain text and latex labels suitable
+    for plotting. Consists of the ij mass keys followed by the element symbol of the numerator.
+    E.g. 104/105Pd and <span class="arithmatex">\({}^{104/105}\mathrm{Pd}\)</span>, where i=Pd-104 and j=Pd-105.</li>
+</ul>
+          </div>
+        </li>
+    </ul>
+
+            <details class="quote">
+              <summary>Source code in <code>simple/norm.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span>
+<span class="normal">457</span>
+<span class="normal">458</span>
+<span class="normal">459</span>
+<span class="normal">460</span>
+<span class="normal">461</span>
+<span class="normal">462</span>
+<span class="normal">463</span>
+<span class="normal">464</span>
+<span class="normal">465</span>
+<span class="normal">466</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span>
+<span class="normal">472</span>
+<span class="normal">473</span>
+<span class="normal">474</span>
+<span class="normal">475</span>
+<span class="normal">476</span>
+<span class="normal">477</span>
+<span class="normal">478</span>
+<span class="normal">479</span>
+<span class="normal">480</span>
+<span class="normal">481</span>
+<span class="normal">482</span>
+<span class="normal">483</span>
+<span class="normal">484</span>
+<span class="normal">485</span>
+<span class="normal">486</span>
+<span class="normal">487</span>
+<span class="normal">488</span>
+<span class="normal">489</span>
+<span class="normal">490</span>
+<span class="normal">491</span>
+<span class="normal">492</span>
+<span class="normal">493</span>
+<span class="normal">494</span>
+<span class="normal">495</span>
+<span class="normal">496</span>
+<span class="normal">497</span>
+<span class="normal">498</span>
+<span class="normal">499</span>
+<span class="normal">500</span>
+<span class="normal">501</span>
+<span class="normal">502</span>
+<span class="normal">503</span>
+<span class="normal">504</span>
+<span class="normal">505</span>
+<span class="normal">506</span>
+<span class="normal">507</span>
+<span class="normal">508</span>
+<span class="normal">509</span>
+<span class="normal">510</span>
+<span class="normal">511</span>
+<span class="normal">512</span>
+<span class="normal">513</span>
+<span class="normal">514</span>
+<span class="normal">515</span>
+<span class="normal">516</span>
+<span class="normal">517</span>
+<span class="normal">518</span>
+<span class="normal">519</span>
+<span class="normal">520</span>
+<span class="normal">521</span>
+<span class="normal">522</span>
+<span class="normal">523</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
+<span class="normal">526</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
+<span class="normal">540</span>
+<span class="normal">541</span>
+<span class="normal">542</span>
+<span class="normal">543</span>
+<span class="normal">544</span>
+<span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@utils</span><span class="o">.</span><span class="n">set_default_kwargs</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">standard_normalisation</span><span class="p">(</span><span class="n">abu</span><span class="p">,</span> <span class="n">isotopes</span><span class="p">,</span> <span class="n">normiso</span><span class="p">,</span> <span class="n">stdabu</span><span class="p">,</span>
+                           <span class="n">enrichment_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">relative_enrichment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                           <span class="n">std_enrichment_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">std_relative_enrichment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                           <span class="n">dilution_factor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">msg_prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalise the abundances of ``abu`` relative to a specified isotope ``normiso`` as commonly done for</span>
+<span class="sd">    stardust data.</span>
+
+<span class="sd">    The equation used to normalise the data is,</span>
+
+<span class="sd">    $$</span>
+<span class="sd">    R^{\\mathrm{ABU}}_{ij} = {\\left(\\frac{r^{\\mathrm{ABU}}_{ij}}{R^{\\mathrm{STD}}_{ij}}\\right)} - 1</span>
+<span class="sd">    $$</span>
+
+<span class="sd">    Multiple normalisations can be done at once by supplying a list of normalising isotopes. If doing multiple</span>
+<span class="sd">    elements at once then ``isotopes``, if not ``None``, and optionally ``enrichment_factor`` and</span>
+<span class="sd">    ``std_enrichement_factor``, must be lists with the same</span>
+<span class="sd">     length as ``normiso``. If ``enrichment_factor``/``std_enrichment_factor`` is a single value it is applied to</span>
+<span class="sd">     all elements.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        abu (): A [keyarray][simple.askeyarray] containing the abundances to be normalised.</span>
+<span class="sd">        isotopes (): The numerator isotopes (i) in the calculation. If ``None`` all the isotopes in ``abu`` with the</span>
+<span class="sd">            same element symbol and suffix as ``normiso`` will be selected.</span>
+<span class="sd">        normiso (): The denominator isotope for the normalisation.</span>
+<span class="sd">        stdmass (): A [keyarray][simple.askeyarray] containing the isotope masses.</span>
+<span class="sd">        stdabu (): A [keyarray][simple.askeyarray] containing the reference abundances.</span>
+<span class="sd">        enrichment_factor (): Enrichment factor applied to ``abu``. Useful when doing multiple elements at once.</span>
+<span class="sd">        relative_enrichment (): If &#39;&#39;True&#39;&#39; the abundances of all ``isotopes`` in ``abu`` are multiplied by</span>
+<span class="sd">            ``enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1</span>
+<span class="sd">            and **then** multiplied by ``enrichment_factor``.</span>
+<span class="sd">        std_enrichment_factor (): Enrichment factor applied to ``stdabu``. Useful when doing multiple elements at once.</span>
+<span class="sd">        std_relative_enrichment (): If &#39;&#39;True&#39;&#39; the abundances of all ``isotopes`` in ``stdabu`` are multiplied by</span>
+<span class="sd">            ``std_enrichment_factor``. If ``False`` the abundances are first renormalised such that their sum = 1</span>
+<span class="sd">            and **then** multiplied by ``std_enrichment_factor``.</span>
+
+
+<span class="sd">    **Notes**</span>
+<span class="sd">    The ``normiso`` will be appended to ``isotopes`` if not initially included. This is done before the enrichment</span>
+<span class="sd">    factor calculation.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: A dictionary containing the results of the normalisation. The dictionary at minimum contains the following attrs:</span>
+
+<span class="sd">            - ``Ri``: A key array containing the eRi values for each column in ``Ri_keys``.</span>
+<span class="sd">            - ``Ri_keys``: The numerator isotopes for each column in ``Ri_values``.</span>
+<span class="sd">            - ``ij_keys``: Dictionaries mapping ``Ri_keys`` to the numerator-denominator keys (ij) for each column</span>
+<span class="sd">                in ``Ri``.</span>
+<span class="sd">            - ``Ri_keylabels``, ``Ri_keylabels_latex``: Dictionaries mapping ``Ri_keys`` to plain text and latex labels suitable</span>
+<span class="sd">                for plotting. Consists of the ij mass keys followed by the element symbol of the numerator.</span>
+<span class="sd">                E.g. 104/105Pd and ${}^{104/105}\\mathrm{Pd}$, where i=Pd-104 and j=Pd-105.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">msg_prefix</span><span class="p">:</span>
+        <span class="n">msg_prefix</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">-ratnorm&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg_prefix</span> <span class="o">=</span> <span class="s1">&#39;ratnorm&#39;</span>
+
+    <span class="k">if</span> <span class="n">abu</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``abu`` must be a keyarray&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">stdabu</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``stdabu`` must be a keyarray&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normiso</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">isotopes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">isotopes</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">normiso</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">isotopes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">isotopes</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">normiso</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``isotopes`` must be an iterable the same length as ``normiso``&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">enrichment_factor</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">enrichment_factor</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">normiso</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``enrichment_factor`` must be an iterable the same length as ``normiso``&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">enrichment_factor</span> <span class="o">=</span> <span class="p">[</span><span class="n">enrichment_factor</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">normiso</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">std_enrichment_factor</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">std_enrichment_factor</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">normiso</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: ``solar_enrichment_factor`` must be an iterable the same length as ``normiso``&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">std_enrichment_factor</span> <span class="o">=</span> <span class="p">[</span><span class="n">std_enrichment_factor</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">normiso</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">isotopes</span> <span class="o">=</span> <span class="p">(</span><span class="n">isotopes</span><span class="p">,)</span>
+        <span class="n">normiso</span> <span class="o">=</span> <span class="p">(</span><span class="n">normiso</span><span class="p">,)</span>
+        <span class="n">enrichment_factor</span> <span class="o">=</span> <span class="p">(</span><span class="n">enrichment_factor</span><span class="p">,)</span>
+        <span class="n">std_enrichment_factor</span> <span class="o">=</span> <span class="p">(</span><span class="n">std_enrichment_factor</span><span class="p">,)</span>
+
+    <span class="n">all_abu_up</span><span class="p">,</span> <span class="n">all_abu_down</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="n">all_solar_up</span><span class="p">,</span> <span class="n">all_solar_down</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="n">all_iso_up</span><span class="p">,</span> <span class="n">all_iso_down</span> <span class="o">=</span> <span class="p">(),</span> <span class="p">()</span>
+    <span class="k">for</span> <span class="n">numerators</span><span class="p">,</span> <span class="n">denominator</span><span class="p">,</span> <span class="n">abu_factor</span><span class="p">,</span> <span class="n">solar_factor</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">isotopes</span><span class="p">,</span> <span class="n">normiso</span><span class="p">,</span> <span class="n">enrichment_factor</span><span class="p">,</span> <span class="n">std_enrichment_factor</span><span class="p">):</span>
+        <span class="n">denominator</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">asisotope</span><span class="p">(</span><span class="n">denominator</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">numerators</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">numerators</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_isotopes_of_element</span><span class="p">(</span><span class="n">abu</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">names</span><span class="p">,</span> <span class="n">denominator</span><span class="o">.</span><span class="n">element</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">numerators</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">asisotopes</span><span class="p">(</span><span class="n">numerators</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">denominator</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">:</span>
+            <span class="n">numerators</span> <span class="o">+=</span> <span class="p">(</span><span class="n">denominator</span><span class="p">,)</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Normalising </span><span class="si">{</span><span class="n">numerators</span><span class="si">}</span><span class="s1"> to </span><span class="si">{</span><span class="n">denominator</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">relative_enrichment</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Applying absolute enrichment factor to model abundances. &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Setting the sum of all isotopes to </span><span class="si">{</span><span class="n">abu_factor</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">abu_factor</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Applying relative enrichment factor to model abundances. &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Multiplying all isotopes by </span><span class="si">{</span><span class="n">abu_factor</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">std_relative_enrichment</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Applying absolute enrichment factor to standard abundances. &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Setting the sum of all isotopes to </span><span class="si">{</span><span class="n">solar_factor</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">solar_factor</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">msg_prefix</span><span class="si">}</span><span class="s1">: Applying relative enrichment factor to standard abundances. &#39;</span>
+                        <span class="sa">f</span><span class="s1">&#39;Multiplying all isotopes by </span><span class="si">{</span><span class="n">solar_factor</span><span class="si">}</span><span class="s1">.&#39;</span><span class="p">)</span>
+
+        <span class="n">denomi</span> <span class="o">=</span> <span class="n">numerators</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">denominator</span><span class="p">)</span>
+
+        <span class="n">all_iso_up</span> <span class="o">+=</span> <span class="n">numerators</span>
+        <span class="n">all_iso_down</span> <span class="o">+=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">denominator</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">)</span>
+
+        <span class="n">abu_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">abu</span><span class="p">[</span><span class="n">numerator</span><span class="p">]</span> <span class="k">for</span> <span class="n">numerator</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">relative_enrichment</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="c1"># Renormalise so that the sum of all isotopes = 1</span>
+            <span class="c1"># This works for both ndim = 1 &amp; 2 as long as it is done before transpose</span>
+            <span class="n">abu_up</span> <span class="o">=</span> <span class="n">abu_up</span> <span class="o">/</span> <span class="n">abu_up</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">abu_up</span> <span class="o">=</span> <span class="n">abu_up</span> <span class="o">*</span> <span class="n">abu_factor</span>
+        <span class="n">all_abu_up</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">abu_up</span><span class="p">)</span>
+
+        <span class="c1"># Same isotope for all isotopes</span>
+        <span class="n">all_abu_down</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">abu_up</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">abu_up</span><span class="p">[</span><span class="n">denomi</span><span class="p">])</span>
+
+        <span class="n">solar_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">stdabu</span><span class="p">[</span><span class="n">numerator</span><span class="o">.</span><span class="n">without_suffix</span><span class="p">()]</span> <span class="k">for</span> <span class="n">numerator</span> <span class="ow">in</span> <span class="n">numerators</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">std_relative_enrichment</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="c1"># Renormalise so that the sum of all isotopes = 1</span>
+            <span class="c1"># This works for both ndim = 1 &amp; 2 as long as it is done before transpose</span>
+            <span class="n">solar_up</span> <span class="o">=</span> <span class="n">solar_up</span> <span class="o">/</span> <span class="n">solar_up</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="n">solar_up</span> <span class="o">=</span> <span class="n">solar_up</span> <span class="o">*</span> <span class="n">solar_factor</span>
+        <span class="n">all_solar_up</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">solar_up</span><span class="p">)</span>
+        <span class="n">all_solar_down</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">solar_up</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">solar_up</span><span class="p">[</span><span class="n">denomi</span><span class="p">])</span>
+
+    <span class="c1"># Joins all arrays and makes sure dimensions line up</span>
+    <span class="n">all_abu_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_abu_up</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+    <span class="n">all_abu_down</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_abu_down</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+
+    <span class="n">all_solar_up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_solar_up</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+    <span class="n">all_solar_down</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">all_solar_down</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="n">dilution_factor</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">dilution_factor</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">all_smp_up</span> <span class="o">=</span> <span class="n">all_abu_up</span>
+        <span class="n">all_smp_down</span> <span class="o">=</span> <span class="n">all_abu_down</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">all_smp_up</span> <span class="o">=</span> <span class="n">all_abu_up</span> <span class="o">/</span> <span class="n">dilution_factor</span> <span class="o">+</span> <span class="n">all_solar_up</span>
+        <span class="n">all_smp_down</span> <span class="o">=</span> <span class="n">all_abu_down</span> <span class="o">/</span> <span class="n">dilution_factor</span> <span class="o">+</span> <span class="n">all_solar_down</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">dilution_factor</span>
+
+    <span class="c1"># There is only one way to do this so no need for a separate function</span>
+    <span class="n">Rij</span> <span class="o">=</span> <span class="p">(</span><span class="n">all_smp_up</span><span class="o">/</span><span class="n">all_smp_down</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">all_solar_up</span><span class="o">/</span><span class="n">all_solar_down</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Ri_values</span> <span class="o">=</span> <span class="n">Rij</span><span class="p">,</span> <span class="n">Ri_keys</span><span class="o">=</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="n">Ri</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">askeyarray</span><span class="p">(</span><span class="n">Rij</span><span class="p">,</span> <span class="n">all_iso_up</span><span class="p">),</span> <span class="n">dilution_factor</span> <span class="o">=</span> <span class="n">df</span><span class="p">)</span>
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;ij_keys&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="n">utils</span><span class="o">.</span><span class="n">asratios</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">d</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="n">all_iso_down</span><span class="p">)])))</span>
+
+    <span class="c1"># The labels assume that both the numerator and denominator is the same element.</span>
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;Ri_keylabels&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">ij</span><span class="o">.</span><span class="n">numer</span><span class="o">.</span><span class="n">mass</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">ij</span><span class="o">.</span><span class="n">denom</span><span class="o">.</span><span class="n">mass</span><span class="si">}{</span><span class="n">ij</span><span class="o">.</span><span class="n">numer</span><span class="o">.</span><span class="n">element</span><span class="si">}</span><span class="s1">&#39;</span> <span class="k">for</span> <span class="n">ij</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;ij_keys&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()]))</span>
+    <span class="n">result</span><span class="p">[</span><span class="s1">&#39;Ri_keylabels_latex&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="nb">zip</span><span class="p">(</span><span class="n">all_iso_up</span><span class="p">,</span> <span class="p">[</span><span class="sa">fr</span><span class="s1">&#39;$</span><span class="se">{{}}</span><span class="s1">^</span><span class="se">{{</span><span class="si">{</span><span class="n">ij</span><span class="o">.</span><span class="n">numer</span><span class="o">.</span><span class="n">mass</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">ij</span><span class="o">.</span><span class="n">denom</span><span class="o">.</span><span class="n">mass</span><span class="si">}</span><span class="se">}}</span><span class="s1">\mathrm</span><span class="se">{{</span><span class="si">{</span><span class="n">ij</span><span class="o">.</span><span class="n">numer</span><span class="o">.</span><span class="n">element</span><span class="si">}</span><span class="se">}}</span><span class="s1">$&#39;</span>
+                         <span class="k">for</span> <span class="n">ij</span> <span class="ow">in</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;ij_keys&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()]))</span>
+
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">NamedDict</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
