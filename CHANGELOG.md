@@ -2,6 +2,8 @@
 
 ## [Latest] 
 
+## [v0.4.3] - 2025-12-18
+
 Added the LGPL-3.0+ licence
 
 Updated GitHub workflows.
