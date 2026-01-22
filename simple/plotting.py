@@ -19,7 +19,7 @@ logger = logging.getLogger('SIMPLE.plot')
 __all__ = ['create_rose_plot', 'create_subplots',
            'get_data', 'add_weights',
            'plot', 'slope', 'hist',
-           'create_legend', 'update_axes',]
+           'create_legend', 'update_axes']
 
 
 # colours appropriate for colour blindness
@@ -142,9 +142,10 @@ def parse_lscm(linestyle = False, color = False, marker=False):
     return linestyles, colors, markers
 
 @add_shortcut('AB', mosaic='AB', fig_size=(12, 5.5))
+@add_shortcut('A_B', mosaic='A;B', fig_size=(6, 11))
 @add_shortcut('AB_CD', mosaic='AB;CD', fig_size=(12, 11))
 @set_default_kwargs(layout='constrained')
-def create_subplots(mosaic, update_fig=True, kwargs=None):
+def create_subplots(mosaic, update_fig=True, hspace = None, wspace = None, kwargs=None):
     """
     Create a series of subplots.
 
@@ -154,8 +155,10 @@ def create_subplots(mosaic, update_fig=True, kwargs=None):
     Args:
         mosaic (): A visual layout of how you want your subplots to be arranged. This can either
             be a nested list of strings or a single string with each subplot represented by a single character, where
-            `;` represent a new row.
+            `;` represents a new row.
         update_fig (): If ``True`` (default), the figure will be updated using any *kwargs* prefixed with ``fig_``.
+        hspace (): The space between rows. Given as a fraction of the average row height.
+        wspace (): The space between columns. Given as a fraction of the average column width.
         kwargs (): Keyword arguments to go with the ``mosaic`` argument. Kwargs prefixed with ``fig_`` will be used with
             [`update_figure`][simple.plot.update_figure] to update the figure.
 
@@ -163,6 +166,12 @@ def create_subplots(mosaic, update_fig=True, kwargs=None):
         dict: A dictionary containing the subplots.
     """
     fig_kwargs = kwargs.pop_many(prefix='fig', remove_prefix=False)
+
+    if hspace is not None or wspace is not None:
+        gridspec_kw = kwargs.pop('gridspec_kw', {})
+        gridspec_kw.setdefault('hspace', hspace)
+        gridspec_kw.setdefault('wspace', wspace)
+        kwargs['gridspec_kw'] = gridspec_kw
 
     fig, subplots = plt.subplot_mosaic(mosaic, **kwargs)
 
@@ -986,7 +995,14 @@ def update_figure(fig, kwargs, *, update_fig=True):
     figure_kw = figure_meth.pop_many(prefix='kw')
 
     # Special cases
-    if 'size' in figure_meth: figure_meth.setdefault('size_inches', figure_meth.pop('size'))
+    if 'size' in figure_meth:
+        figure_meth.setdefault('size_inches', figure_meth.pop('size'))
+    if 'size_cm' in figure_meth:
+        size_cm = figure_meth.pop('size_cm')
+        if type(size_cm) is tuple:
+            figure_meth['size_inches'] = (size_cm[0] / 2.54, size_cm[1] / 2.54)
+        else:
+            figure_meth['size_inches'] = size_cm
 
     if update_fig:
         _update_fig_or_ax(fig, 'fig', figure_meth, figure_kw)
@@ -1272,7 +1288,7 @@ def plot_draw(modeldata, axis_labels, *, ax=None, legend=None,
     )
 def hist(models, xkey=None, ykey=None, weights=1, r=None, *,
          sum_weights=True, norm_weights=True,
-         bins = True, fill=None, rescale=False,
+         bins = None, fill=None, scale='weight',
          default_attrname=None, unit=None,
          weights_default_attrname = None, weights_unit=None, weights_default_value=0,
          where=None, mask=None, mask_na = True, ax=None,
@@ -1305,6 +1321,12 @@ def hist(models, xkey=None, ykey=None, weights=1, r=None, *,
             [`add_weights`][simple.add_weights] for details.
         norm_weights (bool): Whether to normalise the weights to sum to 1. See [`add_weights`][simple.add_weights]
             for details.
+        bins (int or sequence of scalars): Number of histogram bins or a sequence of the bin edges. If ``None`` the
+            default number of bins is used. For 1d this is 20 and for 2d this is 72 bins.
+        fill (bool): Whether to fill the area under the histogram.
+        scale (str): If ``'max'`` all bin heights will be scaled relative to the heaviest bin. If ``'sum'`` they are
+                scaled relative to the sum of all bin weights. If ``'weights'`` the height if the bin is equal to the
+                weight of the bin (Or whatever is returned by the histogram function).
         default_attrname (str): Name of the default attribute used when *xkey* or *ykey* is an index.
         unit (str or tuple): Desired unit(s) for the x and y axes. Use a tuple `(xunit, yunit)` for different units.
         where (str): Filter expression to select a subset of *models*. See
@@ -1373,12 +1395,12 @@ def hist(models, xkey=None, ykey=None, weights=1, r=None, *,
 
     if axis == 'xy':
         # 2d - circular histogram
-        return hist_draw2d(modeldata, axis_labels, r, bins=bins, fill=fill, rescale=rescale,
+        return hist_draw2d(modeldata, axis_labels, r, bins=bins, fill=fill, scale=scale,
                              legend=legend, update_ax=update_ax, update_fig=update_fig,
                              ax=ax, kwargs=kwargs)
     else:
         # 1d - traditional histogram
-        return hist_draw1d(modeldata, axis_labels, axis, bins=bins, fill=fill, rescale=rescale,
+        return hist_draw1d(modeldata, axis_labels, axis, bins=bins, fill=fill, scale=scale,
                              legend=legend, update_ax=update_ax, update_fig=update_fig,
                              ax=ax, kwargs=kwargs)
 
@@ -1420,7 +1442,7 @@ def hist_get_data(models, xkey, ykey, weights=1, *,
                                       where=where,
                                       default_attrname=default_attrname, unit=unit,
                                       mask=mask, mask_na=mask_na,
-                                      kwargs=None)
+                                      kwargs=kwargs)
 
     func_weights = kwargs.pop('SIMPLE_add_weights', add_weights)
 
@@ -1428,13 +1450,13 @@ def hist_get_data(models, xkey, ykey, weights=1, *,
     weights_kwargs.pop_many('mask, mask_na, axisname')
 
     func_weights(modeldata, axis[0], sum_weights=sum_weights, norm_weights=norm_weights,
-                 weights=weights, mask=mask, mask_na=False, kwargs=weights_kwargs)
+                 weights=weights, mask=mask, mask_na=mask_na, kwargs=weights_kwargs)
 
     return modeldata, axis_labels, axis
 
 
 @utils.set_default_kwargs(inherits_=hist)
-def hist_draw1d(modeldata, axis_labels, axis, *, bins=20, fill=None, rescale=False,
+def hist_draw1d(modeldata, axis_labels, axis, *, bins=20, fill=None, scale='weight', offset=0,
               ax=None, legend=None, update_ax=True, update_fig=True,
               kwargs=None):
     """
@@ -1448,7 +1470,7 @@ def hist_draw1d(modeldata, axis_labels, axis, *, bins=20, fill=None, rescale=Fal
     """
     ax = get_axes(ax)
 
-    if bins is True: bins = hist_draw1d.kwargs.get('bins', 20)
+    if bins is None: bins = hist_draw1d.kwargs.get('bins', 20)
 
     # Get the kwargs to be used with the plotting function
     plt_kwargs = kwargs.pop_many(keys='color, linestyle, marker', prefix='plt')
@@ -1463,6 +1485,8 @@ def hist_draw1d(modeldata, axis_labels, axis, *, bins=20, fill=None, rescale=Fal
 
     legend_kwargs = kwargs.pop_many(prefix='legend')
 
+    histogram_kwargs = kwargs.pop_many(prefix='histogram')
+
     if fill is None:
         if len(modeldata) > 1 or (len(modeldata) > 0 and len(next(iter(modeldata.values()))) > 1):
             fill = False
@@ -1470,18 +1494,24 @@ def hist_draw1d(modeldata, axis_labels, axis, *, bins=20, fill=None, rescale=Fal
             fill = True
 
     if axis == 'y':
+        histogram_kwargs.setdefault('range', kwargs.get('ax_ylim', None))
         plt_kwargs.setdefault('orientation', 'horizontal')
         kwargs.setdefault('ax_ylabel', axis_labels['y'])
     else:
+        histogram_kwargs.setdefault('range', kwargs.get('ax_xlim', None))
         plt_kwargs.setdefault('orientation', 'vertical')
         kwargs.setdefault('ax_xlabel', axis_labels['x'])
 
     update_axes(ax, kwargs, update_ax=update_ax, update_fig=update_fig)
 
-    if rescale:
+    if scale == 'max':
         logger.info('Normalising all bin values to the largest bin value.')
-
-    histogram_kwargs = kwargs.pop_many(prefix='histogram')
+    elif scale == 'sum':
+        logger.info('Normalising all bin values to the sum of all bins.')
+    elif scale == 'weight':
+        pass
+    else:
+        raise ValueError(f"Invalid scale {scale}. Accepted values are 'max', 'sum', and 'weight'.")
 
     plt_label = plt_kwargs.pop('label', True)
     has_labels = True if type(plt_label) is str else False
@@ -1503,8 +1533,12 @@ def hist_draw1d(modeldata, axis_labels, axis, *, bins=20, fill=None, rescale=Fal
                 label = plt_label if plt_label is not True else datapoint.get('label', None)
                 finite_mask = np.isfinite(datapoint[axis]) & np.isfinite(datapoint['w'])
                 values, edges = np.histogram(datapoint[axis][finite_mask], bins=bins, weights=datapoint['w'][finite_mask], **histogram_kwargs)
-                if rescale:
-                    values = values/np.max(values)
+                if scale == 'max':
+                    values = values/np.nanmax(values)
+                elif scale == 'sum':
+                    values = values/np.nansum(values)
+                values = values + offset
+                plt_kwargs.setdefault('baseline', offset)
 
                 ax.stairs(values, edges,
                         label=label,
@@ -1522,7 +1556,7 @@ def hist_draw1d(modeldata, axis_labels, axis, *, bins=20, fill=None, rescale=Fal
     return ax
 
 @utils.set_default_kwargs(inherits_=hist, ax_kw_ylabel_labelpad=20)
-def hist_draw2d(modeldata, axis_labels, r=None, *, bins=72, fill=None, rescale=False,
+def hist_draw2d(modeldata, axis_labels, r=None, *, bins=72, fill=None, scale='weight',
                    ax = None, legend=None, update_ax = True, update_fig = True,
                    kwargs=None):
     """
@@ -1536,7 +1570,7 @@ def hist_draw2d(modeldata, axis_labels, r=None, *, bins=72, fill=None, rescale=F
     """
     ax = get_axes(ax)
 
-    if bins is True: bins = hist_draw2d.kwargs.get('bins', 20)
+    if bins is None: bins = hist_draw2d.kwargs.get('bins', 72)
 
     # Get the kwargs to be used with the plotting function
     plt_kwargs = kwargs.pop_many(keys='color, linestyle, marker', prefix='plt')
@@ -1573,8 +1607,15 @@ def hist_draw2d(modeldata, axis_labels, r=None, *, bins=72, fill=None, rescale=F
     legend_kwargs = kwargs.pop_many(prefix='legend')
     update_axes(ax, kwargs, update_ax=update_ax, update_fig=update_fig)
 
-    if rescale:
+    if scale == 'max':
         logger.info('Normalising all bin values to the largest bin value.')
+    elif scale == 'sum':
+        logger.info('Normalising all bin values to the sum of all bins.')
+    elif scale == 'weight':
+        if ax._vrel:
+            logger.info('Normalising all bin values to the sum of all bins.')
+    else:
+        raise ValueError(f"Invalid scale {scale}. Accepted values are 'max', 'sum', and 'weight'.")
 
     plt_label = plt_kwargs.pop('label', True)
     has_labels = True if type(plt_label) is str else False
@@ -1597,7 +1638,7 @@ def hist_draw2d(modeldata, axis_labels, r=None, *, bins=72, fill=None, rescale=F
                 finite_mask = np.isfinite(datapoint['x']) & np.isfinite(datapoint['y']) & np.isfinite(datapoint['w'])
                 ax.mhist((datapoint['x'][finite_mask], datapoint['y'][finite_mask]), r=r[mi], weights=datapoint['w'][finite_mask],
                          label=label, bins=bins, fill=fill,
-                         color=c, linestyle=ls, rescale=rescale, **plt_kwargs)
+                         color=c, linestyle=ls, scale=scale, **plt_kwargs)
 
     if legend or (legend is None and has_labels):
         if ax._colorbar is not None:

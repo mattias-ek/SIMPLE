@@ -583,6 +583,8 @@ def load_LC18(data_dir, ref_isoabu, ref_isomass, remove_Mrem = False): # pragma:
     default_line_color='black', default_line_linestyle='--', default_line_lw=2, default_line_alpha=0.75,
     default_text_fontsize=10., default_text_color='black',
     default_text_horizontalalignment='center', default_text_xycoords=('data', 'axes fraction'), default_text_y = 1.01,
+    default_text_arrow = None, default_text_offset = None, default_text_arrowprops = {'arrowstyle': '->'},
+    default_text_bbox={'boxstyle': "Square,pad=0", 'fc': "none", 'ec': "none"},
     default_fill_color='lightblue', default_fill_alpha=0.25,
 
     # For the rest we only need to give the values that differ from the default
@@ -645,8 +647,26 @@ def plot_zonal_structure(model, *, ax=None, update_ax=True, update_fig=True, kwa
         text_kwargs = kwargs.pop_many(prefix=f'{name}_text', **default_text)
         if text_kwargs.pop('show', True):
             # Using annotate instead of text as we can then specify x in absolute, and y coordinates relative, in space.
-            ax.annotate(text_kwargs.pop('xytext', text), (x, text_kwargs.pop('y', 1.01)),
-                        **text_kwargs)
+            xy = text_kwargs.pop('xy', None)
+            x_y = (text_kwargs.pop('x', x), text_kwargs.pop('y', 1.01))
+            if xy is None: xy = x_y
+            xytext = text_kwargs.pop('xytext', None)
+            xycoord = text_kwargs.pop('xycoords', ('data', 'axes fraction'))
+            textcoords = text_kwargs.pop('textcoords', xycoord)
+            arrowprops = text_kwargs.pop('arrowprops', {'arrowstyle': '->'})
+
+            # Custom args - do not pass to annotate
+            offset = text_kwargs.pop('offset', None)
+            arrow = text_kwargs.pop('arrow', None)
+            if offset is not None:
+                xytext = (xy[0] + offset[0], xy[1] + offset[1])
+                if arrow is None: arrow = True
+            if arrow is not True:
+                arrowprops = None
+
+            ax.annotate(text_kwargs.pop('xytext', text), xy, xytext=xytext,
+                        xycoords=xycoord, textcoords=textcoords,
+                        arrowprops=arrowprops, **text_kwargs)
 
     def add_fill(name, x):
         fill_kwargs = kwargs.pop_many(prefix=f'{name}_fill', **default_fill)
@@ -789,7 +809,8 @@ def plot_ccsne(models, ykey, *,
     description of the optional arguments.
 
     If a single model is shown, then by default the onion shell structure is also drawn if
-    `onion=True` or if `onion=None`.
+    `onion=True` or if `onion=None`. Kwargs can be passed to [`plot_zonal_structure`][simple.plot_zonal_structure] using
+    the prefix `zone_`.
 
     The y-axis is drawn on a logarithmic scale if `semilog=True`.
 

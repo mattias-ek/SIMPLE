@@ -305,12 +305,15 @@ References in collection:
         t0 = datetime.datetime.now()
         with h5py.File(filename, 'r') as efile:
             file_type = efile.attrs.get('FILE_TYPE', None)
-            version = efile.attrs.get('VERSION', "-1")
+            version = efile.attrs.get('VERSION', "-1") # Version of the file format
+            data_version = efile.attrs.get('DATA_VERSION', "-1") # Version of the content
             created = efile.attrs.get('CREATED', None)
             if file_type != "simple.ModelCollection":
                 logger.warning(f'File {filename} is not a simple.ModelCollection file')
             if int(float(version)) != int(float(self.__version__)):
                 logger.warning(f'File {filename} was created with ModelCollection v{version}, but this version of simple uses ModelCollection v{self.__version__}')
+            else:
+                logger.info(f'File {filename} was created with ModelCollection v{version}')
 
             for name, group in efile['refs'].items():
                 ref = self._load_ref(group, name)
@@ -584,6 +587,9 @@ class ModelBase:
 
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return f'<{self.name} ({self.__class__.__name__})>'
 
     def _repr_markdown_(self):
         """Markdown representation used by Jupyter notebooks."""

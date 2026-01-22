@@ -2,6 +2,22 @@
 
 ## [Latest] 
 
+Added __repr__ method to models. It gives name and model class.
+
+Removed the `rescale` argument from the histogram functions. Replaced it with `scale` which allows more options for scaling
+the histogram bins.
+
+Added `offset` argument to the hist function. It allows you to set the baseline for the histogram bins. 
+
+If `ax_<x|y>lim` argument is passed to a hist function it is used as the default `range` argument for
+numpys histogram function.
+
+Added more options to customise the placement of the CCSNe zone labels.
+
+Added `hspace` and `wspace` arguments to the `create_subplots` function.
+
+Added `fig_size_cm` as an option for the plotting function. This allows you to set the figure size in centimeters.
+
 ## [v0.4.3] - 2025-12-18
 
 Added the LGPL-3.0+ licence

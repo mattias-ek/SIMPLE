@@ -624,7 +624,7 @@ class TestPlotting:
 
             default_kwargs['ax_xlabel'] = axis_labels['x']
             default_kwargs['ax_ylabel'] = axis_labels['y']
-            simple.update_axes(plt, default_kwargs)
+            simple.plotting.update_axes(plt, default_kwargs)
 
             # Get the default linestyles and colours, and disable markers
             ls, c, m = parse_lscm(linestyle=default_kwargs.get('linestyle', True),
