@@ -55,6 +55,11 @@ jobs:
       - run: pip install ".[test]"
       - run: pip install nbmake
 
+      - run: |
+          ls
+          cd notebooks
+          ls
+
       - name: Run tutorial notebooks
         run: |
           cd notebooks
