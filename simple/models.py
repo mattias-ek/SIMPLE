@@ -8,7 +8,7 @@ import simple.utils as utils
 import simple.norm as norm
 from simple.utils import NamedDict
 
-__all__ = ['load_collection', 'load_models', 'new_collection']
+__all__ = ['load_collection', 'new_collection']
 
 logger = logging.getLogger('SIMPLE.models')
 
@@ -162,10 +162,6 @@ def load_collection(filename, dbfilename=None, *, default_isolist=None, convert_
         raise ValueError(f'Neither "{filename}" or "{dbfilename}" exist')
     return mc
 
-def load_models(*args, **kwargs):
-    # Keeps for legacy reasons. Use load_collection instead
-    return load_collection(*args, **kwargs)
-
 def new_collection(name = "", version = "", citation = ""):
     """
     Return an empty [ModelCollection][simple.models.ModelCollection] object.
@@ -191,7 +187,7 @@ class ModelCollection:
         header = ""
         if self.name: header += f'"{self.name}", '
         if self.version != -1: header += f"{self.version}, "
-        return f'{self.__class__.__name__}(models=[{models}], refs=[{refs}])'
+        return f'{self.__class__.__name__}({header.strip()}models=[{models}], refs=[{refs}])'
 
     def _repr_markdown_(self):
         models = "\n".join([f'- **[{i}]** ``{m.name}`` ({m.clsname})' for i, m in enumerate(self.models)])

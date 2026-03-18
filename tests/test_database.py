@@ -281,5 +281,26 @@ class TestModel:
         for ref in selection.refs:
             assert ref in ccsne_models_v2.refs
 
+    def test_repr(self, ccsne_models_v2):
+        repr = ccsne_models_v2.__repr__()
+        markdown = ccsne_models_v2._repr_markdown_()
+
+        assert repr.startswith('ModelCollection')
+        assert ccsne_models_v2.name in repr
+        assert ccsne_models_v2.name in markdown
+        assert ccsne_models_v2.version in repr
+        assert ccsne_models_v2.version in markdown
+        assert ccsne_models_v2.citation in markdown
+
+        for model in ccsne_models_v2.models:
+            assert model.name in repr
+            assert model.name in markdown
+
+        for ref in ccsne_models_v2.refs:
+            assert ref.name in repr
+            assert ref.name in markdown
+
+
+
 
 
