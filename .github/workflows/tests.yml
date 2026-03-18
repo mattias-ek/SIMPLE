@@ -56,6 +56,8 @@ jobs:
       - run: pip install nbmake
 
       - name: Run tutorial notebooks
-        run: pytest --nbmake notebooks/ccsne_tutorial*.ipynb
+        run: |
+          cd notebooks
+          pytest --nbmake ccsne_tutorial*.ipynb
 
 
