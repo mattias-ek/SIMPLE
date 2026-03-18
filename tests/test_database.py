@@ -4,6 +4,8 @@ import numpy as np
 from numpy.testing import assert_equal
 from simple import models, utils
 
+from fixtures import ccsne_models_v2
+
 @pytest.fixture
 def collection():
     return models.ModelCollection()
@@ -181,7 +183,6 @@ class TestModel:
 
         assert_equal(loaded_model.data, data)
 
-
     def test_ref(self, collection, test_model_cls):
         keys = utils.asisotopes('101Ru,102Ru,104Ru,103Rh,102Pd,104Pd,105Pd,106Pd,108Pd,110Pd,107Ag,109Ag')
         stdabu = np.array([0.304, 0.562, 0.332, 0.37, 0.0139, 0.1513, 0.3032, 0.371, 0.359, 0.159, 0.254, 0.236])
@@ -198,3 +199,87 @@ class TestModel:
         assert collection.get_ref('abu') is ref_abu
         assert collection.get_ref(model.refid_isoabu) is ref_abu
         assert model.ref_isoabu is ref_abu
+
+    def test_collection_attrs(self):
+        filename = 'tests/savetest.hdf5'
+
+        collection = models.ModelCollection()
+        assert collection.name == ''
+        assert collection.version == ''
+        assert collection.citation == ''
+        assert collection.created == ''
+
+        if os.path.exists(filename):
+            os.remove(filename)
+
+        collection.save(filename)
+
+        loaded = models.ModelCollection()
+        loaded.load_file(filename=filename)
+
+        assert loaded.name == collection.name
+        assert loaded.version == collection.version
+        assert loaded.citation == collection.citation
+        assert loaded.created != collection.created
+
+        ###
+
+        collection = models.ModelCollection('Test Collection', '1.0', 'Test Citation')
+        assert collection.name == 'Test Collection'
+        assert collection.version == '1.0'
+        assert collection.citation == 'Test Citation'
+        assert collection.created == ''
+
+        if os.path.exists(filename):
+            os.remove(filename)
+
+        collection.save(filename)
+
+        loaded = models.ModelCollection()
+        loaded.load_file(filename=filename)
+
+        assert loaded.name == collection.name
+        assert loaded.version == collection.version
+        assert loaded.citation == collection.citation
+        assert loaded.created != collection.created
+
+        if os.path.exists(filename):
+            os.remove(filename)
+
+    def test_collection_version(self):
+        collection_v1 = models.ModelCollection()
+        collection_v1.load_file(filename='tests/data/CCSNe_FeNi_v1.hdf5')
+
+        assert collection_v1.__cls_version__ == '2.0'
+        assert collection_v1.name == ''
+        assert collection_v1.version == ''
+        assert collection_v1.citation == ''
+        assert collection_v1.created != ''
+
+        collection_v2 = models.ModelCollection()
+        collection_v2.load_file(filename='tests/data/CCSNe_FeNi_v2.hdf5')
+
+        assert collection_v2.__cls_version__ == '2.0'
+        assert collection_v2.name == 'CCSNe Database for SIMPLE'
+        assert collection_v2.version == '3.1'
+        assert collection_v2.citation == 'doi: 10.5281/zenodo.19063105'
+        assert collection_v2.created != ''
+
+    def test_where(self, ccsne_models_v2):
+        selection = ccsne_models_v2.where('.dataset==Ra02')
+        assert selection is not ccsne_models_v2
+        assert len(selection) == 3
+        assert selection.name == ccsne_models_v2.name
+        assert selection.version == ccsne_models_v2.version
+        assert selection.citation == ccsne_models_v2.citation
+        assert selection.created != ccsne_models_v2.created
+
+        for model in selection:
+            assert model in ccsne_models_v2
+
+        assert len(selection.refs) == 2 # Should only have the two required by Ra02
+        for ref in selection.refs:
+            assert ref in ccsne_models_v2.refs
+
+
+

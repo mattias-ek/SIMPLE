@@ -609,7 +609,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         return bin_weights, bin_edges, bin_heights
 
     def mhist(self, m, r=None, weights=1, color=None, *,
-              rheight=0.9, scale='weights', antipodal=None, bins=72, rtext=None, fill=True, outline=None,
+              rheight=0.9, scale='weight', antipodal=None, bins=72, rtext=None, fill=True, outline=None,
               update_rticks=True, minor_rticks=2, rscale=True, cmap=False, **kwargs):
         """
         Create a histogram of the given slopes.
@@ -624,7 +624,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             rheight (): The height of the histogram. If ``rscale=True`` this is the relative height of the histogram.
                 Otherwise the cumulative height of all the bins will total to this value.
             scale (): If ``'max'`` all bin heights will be scaled relative to the heaviest bin. If ``'sum'`` they are
-                scaled relative to the sum of all bin weights. If ``'weights'`` they are scaled to the range set by
+                scaled relative to the sum of all bin weights. If ``'weight'`` they are scaled to the range set by
                 the colormap. If no range is set, they are scaled the same as ``'sum'``.
             antipodal (): Whether the antipodal data points will be included in the histogram. By default,
             ``antipodal=True`` when ``m`` is a slope and ``antipodal=False`` when ``m`` is *x,y* coordinates.

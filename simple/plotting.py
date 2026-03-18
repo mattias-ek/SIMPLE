@@ -1325,7 +1325,7 @@ def hist(models, xkey=None, ykey=None, weights=1, r=None, *,
             default number of bins is used. For 1d this is 20 and for 2d this is 72 bins.
         fill (bool): Whether to fill the area under the histogram.
         scale (str): If ``'max'`` all bin heights will be scaled relative to the heaviest bin. If ``'sum'`` they are
-                scaled relative to the sum of all bin weights. If ``'weights'`` the height if the bin is equal to the
+                scaled relative to the sum of all bin weights. If ``'weight'`` the height of the bin is equal to the
                 weight of the bin (Or whatever is returned by the histogram function).
         default_attrname (str): Name of the default attribute used when *xkey* or *ykey* is an index.
         unit (str or tuple): Desired unit(s) for the x and y axes. Use a tuple `(xunit, yunit)` for different units.

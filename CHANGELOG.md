@@ -4,6 +4,14 @@
 
 Added __repr__ method to models. It gives name and model class.
 
+Added `name`, `version`, and `citation` attributes to model collections. 
+
+Added `created` attribute to model collections. This is a timestamp set when the collection is saved to disk.
+
+Added an internal class version attribute to model collections.
+
+Strings in model attributes are now stored as unicode.
+
 Removed the `rescale` argument from the histogram functions. Replaced it with `scale` which allows more options for scaling
 the histogram bins.
 

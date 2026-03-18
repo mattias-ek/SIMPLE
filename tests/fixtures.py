@@ -101,5 +101,8 @@ def model3b(collection, input_values):
 
 
 @pytest.fixture
-def ccsne_models():
-    return simple.load_collection('tests/data/CCSNe_FeNi.hdf5')
+def ccsne_models_v2():
+    return simple.load_collection('tests/data/CCSNe_FeNi_v2.hdf5')
+
+def ccsne_models_v1():
+    return simple.load_collection('tests/data/CCSNe_FeNi_v1.hdf5')
