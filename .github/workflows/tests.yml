@@ -56,8 +56,9 @@ jobs:
       - run: pip install nbmake
 
       - run: |
-          ls
           cd notebooks
+          ls
+          cd data
           ls
 
       - name: Run tutorial notebooks
