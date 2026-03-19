@@ -57,7 +57,7 @@ jobs:
 
       - name: Run tutorial notebooks
         run: |
-          pytest --nbmake ccsne_tutorial*.ipynb
-          pytest --nbmake rose_diagram.ipynb
+          pytest --nbmake notebooks/ccsne_tutorial*.ipynb
+          pytest --nbmake notebooks/rose_diagram.ipynb
 
 
