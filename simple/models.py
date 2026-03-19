@@ -8,7 +8,7 @@ import simple.utils as utils
 import simple.norm as norm
 from simple.utils import NamedDict
 
-__all__ = ['load_collection', 'load_models', 'new_collection']
+__all__ = ['load_collection', 'new_collection']
 
 logger = logging.getLogger('SIMPLE.models')
 
@@ -65,7 +65,7 @@ class HDF5Dict(NamedDict):
             value = np.asarray(dataset)
 
             if value.dtype.type is np.bytes_:
-                value = value.astype(np.str_)
+                value = np.char.decode(value, 'utf-8')
 
             try:
                 attr_type = dataset.attrs['attr_type']
@@ -104,8 +104,9 @@ class HDF5Dict(NamedDict):
 
             value = np.atleast_1d(value)
             value = np.ascontiguousarray(value)
+
             if value.dtype.type is np.str_:
-                value = value.astype(np.bytes_)
+                value = np.char.encode(value, 'utf-8')
 
             dataset = group.create_dataset(name, data=value, compression='gzip', compression_opts=9, track_order=True)
             dataset.attrs.create('attr_type', attr_type)
@@ -145,31 +146,55 @@ def load_collection(filename, dbfilename=None, *, default_isolist=None, convert_
         A [ModelCollection][simple.models.ModelCollection] object containing all the loaded models.
     """
     mc = ModelCollection()
-    if os.path.exists(filename) and not overwrite:
+
+    if os.path.exists(filename):
+        file_exists = True
+    elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5'):
+        file_exists = True
+        filename += '.hdf5'
+    else:
+        file_exists = False
+
+    if dbfilename is None:
+        db_exits = False
+    elif os.path.exists(dbfilename):
+        db_exits = True
+    elif dbfilename[-5:].lower() != '.hdf5' and os.path.exists(f'{dbfilename}.hdf5'):
+        db_exits = True
+        dbfilename += '.hdf5'
+    else:
+        db_exits = False
+
+    if file_exists is False and db_exits is False:
+        if dbfilename is None:
+            raise ValueError(f'"{filename}" does not exist')
+        else:
+            raise ValueError(f'Neither "{filename}" nor "{dbfilename}" exists')
+
+    if overwrite and not db_exits:
+        logger.warning(f'Overwrite not possible, database file does not exist. Loading existing file instead')
+        overwrite = False
+
+    if file_exists and not overwrite:
         logger.info(f'Loading existing file: {filename}')
         mc.load_file(filename, where=where, **where_kwargs)
-    elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5') and not overwrite:
-        logger.info(f'Loading existing file: {filename}.hdf5')
-        mc.load_file(f'{filename}.hdf5', where=where, **where_kwargs)
-    elif dbfilename is None:
-        raise ValueError(f'File {filename} does not exist')
-    elif os.path.exists(dbfilename):
+    else:
         logger.info(f'Creating: "{filename}" from database: "{dbfilename}"')
         mc.load_file(dbfilename, isolist=default_isolist, convert_unit=convert_unit, where=where, **where_kwargs)
         mc.save(filename)
-    else:
-        raise ValueError(f'Neither "{filename}" or "{dbfilename}" exist')
+
     return mc
 
-def load_models(*args, **kwargs):
-    # Keeps for legacy reasons. Use load_collection instead
-    return load_collection(*args, **kwargs)
-
-def new_collection():
+def new_collection(name = "", version = "", citation = ""):
     """
     Return an empty [ModelCollection][simple.models.ModelCollection] object.
+
+    Args:
+        name (str): Name of the collection.
+        version (str): Version of the data.
+        citation (str): Citation of the data.
     """
-    return ModelCollection()
+    return ModelCollection(name, version, citation)
 
 class ModelCollection:
     """
@@ -178,16 +203,27 @@ class ModelCollection:
 
     # This is the version number for loading and saving files
     # Increase Major on breaking changes and minor for backwards compatible changes
-    __version__ = "3.0"
+    __cls_version__ = "2.0"
     def __repr__(self):
         models = ", ".join([m.__repr__() for m in self.models])
         refs = ", ".join([m.__repr__() for m in self.refs])
-        return f'{self.__class__.__name__}(models=[{models}], refs=[{refs}])'
+        header = ""
+        if self.name: header += f'"{self.name}", '
+        if self.version != -1: header += f"{self.version}, "
+        return f'{self.__class__.__name__}({header.strip()}models=[{models}], refs=[{refs}])'
 
     def _repr_markdown_(self):
         models = "\n".join([f'- **[{i}]** ``{m.name}`` ({m.clsname})' for i, m in enumerate(self.models)])
         refs = "\n".join([f'- ``{m.name}`` ({m.clsname})' for m in self.refs])
+        header = ""
+        if self.name: header += f'# {self.name}'
+        if self.version != -1: header += f' (v{self.version})'
+        if header: header += "\n\n"
+        if self.citation: header += f'**Citation:** {self.citation}'
+        header = header.strip()
         return f"""
+{header}
+
 Models in collection:
 
 {models}
@@ -198,10 +234,17 @@ References in collection:
 
 """.strip()
 
-    def __init__(self):
+    def __init__(self,
+                 name: str = "",
+                 version: str = "",
+                 citation: str = "",):
         """Create an empty model collection."""
         self.refs = []
         self.models = []
+        self.name = name
+        self.version = version
+        self.citation = citation
+        self.created = "" # Do not set manually. This is set when saving a file.
 
     def __iter__(self):
         return self.models.__iter__()
@@ -250,7 +293,7 @@ References in collection:
     ###################
     ### Load / Save ###
     ###################
-
+    # Verify type of metadata
     def save(self, filename):
         """
         Save the current selection of models.
@@ -264,10 +307,13 @@ References in collection:
         t0 = datetime.datetime.now()
         with h5py.File(filename, 'w') as file:
             file.attrs['FILE_TYPE'] = "simple.ModelCollection"
-            file.attrs['VERSION'] = self.__version__
+            file.attrs['CLS_VERSION'] = self.__cls_version__
+            file.attrs['NAME'] = str(self.name)
+            file.attrs['DATA_VERSION'] = str(self.version)
+            file.attrs['CITATION'] = str(self.citation)
             file.attrs['CREATED'] = datetime.datetime.now().isoformat()
 
-            logger.info(f'Saving ModelCollection(v{self.__version__}) as: {filename}')
+            logger.info(f'Saving ModelCollection(v{self.__cls_version__}) as: {filename}')
 
             ref_group = file.create_group('refs', track_order=True)
             for ref in self.refs:
@@ -305,12 +351,31 @@ References in collection:
         t0 = datetime.datetime.now()
         with h5py.File(filename, 'r') as efile:
             file_type = efile.attrs.get('FILE_TYPE', None)
-            version = efile.attrs.get('VERSION', "-1")
-            created = efile.attrs.get('CREATED', None)
+            cls_version = efile.attrs.get('CLS_VERSION', "1") # Version of the file format
+            data_version = efile.attrs.get('DATA_VERSION', "") # Version of the content
+            created = efile.attrs.get('CREATED', "")
+            citation = efile.attrs.get('CITATION', "")
+            name = efile.attrs.get('NAME', "")
             if file_type != "simple.ModelCollection":
                 logger.warning(f'File {filename} is not a simple.ModelCollection file')
-            if int(float(version)) != int(float(self.__version__)):
-                logger.warning(f'File {filename} was created with ModelCollection v{version}, but this version of simple uses ModelCollection v{self.__version__}')
+            if int(float(cls_version)) != int(float(self.__cls_version__)):
+                logger.warning(f'File {filename} was created with ModelCollection v{cls_version}, but this version of simple uses ModelCollection v{self.__cls_version__}')
+            else:
+                logger.info(f'File {filename} was created with ModelCollection v{cls_version}')
+            if not self.name:
+                self.name = name
+            else:
+                logger.warning(f'Model collection already has a name ({self.name}), ignoring name from file')
+            if not self.version:
+                self.version = data_version
+            else:
+                logger.warning(f'Model collection already has a version ({self.version}), ignoring version from file')
+            if not self.citation:
+                self.citation = citation
+            else:
+                logger.warning('Model collection already has a citation, ignoring citation from file')
+
+            self.created = created
 
             for name, group in efile['refs'].items():
                 ref = self._load_ref(group, name)
@@ -497,7 +562,7 @@ References in collection:
         """
         models = utils.models_where(self.models, where, **where_kwargs)
 
-        new_collection = self.__class__()
+        new_collection = self.__class__(name=self.name, version=self.version, citation=self.citation)
         for model in models:
             new_collection.add_model(model)
 
@@ -584,6 +649,9 @@ class ModelBase:
 
     def __str__(self):
         return self.name
+
+    def __repr__(self):
+        return f'<{self.name} ({self.__class__.__name__})>'
 
     def _repr_markdown_(self):
         """Markdown representation used by Jupyter notebooks."""

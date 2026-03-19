@@ -497,77 +497,82 @@ class TestWeights:
 class TestPlotting:
     # Largely based on Tutorial 3
     # Does not verify the resulting plot. Only that no errors are thrown while creating it.
-    def test_xy_plot(self, ccsne_models):
+    def test_xy_plot(self, ccsne_models_v2):
         with fresh_plt() as plt:
-            simple.plot(ccsne_models, '.abundance[o16/c12]', 'o16',
+            simple.plot(ccsne_models_v2, '.abundance[o16/c12]', 'o16',
                         ax_xscale='log', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.plot(ccsne_models, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
+            simple.plot(ccsne_models_v2, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
                         ax_xscale='log', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.plot_ccsne(ccsne_models, 'o16',  default_attrname='abundance');
+            simple.plot_ccsne(ccsne_models_v2, 'o16', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.plot_ccsne(ccsne_models, 'o16', where='.dataset==Ra02', default_attrname='abundance');
-
-    def test_histograms(self, ccsne_models):
-        with fresh_plt() as plt:
-            simple.hist(ccsne_models, 'o16/c12',  default_attrname='abundance');
+            simple.plot_ccsne(ccsne_models_v2, 'o16', where='.dataset==Ra02', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.hist(ccsne_models, 'o16/c12', where='.dataset==Ra02', default_attrname='abundance');
+            simple.plot_ccsne.abundance(ccsne_models_v2, 'Ni-60*/Ni-58*, Ni-61*/Ni-58*, Ni-62*/Ni-58*, Ni-64*/Ni-58*',
+                                        where='.dataset==Ra02 & .mass==25',
+                                        ax_yscale='log', fig_size=(10, 5));
+
+    def test_histograms(self, ccsne_models_v2):
+        with fresh_plt() as plt:
+            simple.hist(ccsne_models_v2, 'o16/c12', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.hist(ccsne_models, ykey='o16/c12', default_attrname='abundance');
+            simple.hist(ccsne_models_v2, 'o16/c12', where='.dataset==Ra02', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.hist(ccsne_models, ykey='o16/c12', where='.dataset==Ra02', default_attrname='abundance');
+            simple.hist(ccsne_models_v2, ykey='o16/c12', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.hist(ccsne_models, xkey='c12', ykey='o16', default_attrname='abundance');
+            simple.hist(ccsne_models_v2, ykey='o16/c12', where='.dataset==Ra02', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.hist(ccsne_models, xkey='c12', ykey='o16', where='.dataset==Ra02', default_attrname='abundance');
-
-    def test_slope(self, ccsne_models):
-        with fresh_plt() as plt:
-            simple.slope(ccsne_models, xkey='c12', ykey='o16', default_attrname='abundance');
+            simple.hist(ccsne_models_v2, xkey='c12', ykey='o16', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.slope(ccsne_models, xkey='c12', ykey='o16', where='.dataset==Ra02', default_attrname='abundance');
+            simple.hist(ccsne_models_v2, xkey='c12', ykey='o16', where='.dataset==Ra02', default_attrname='abundance');
 
-    def test_subplots(self, ccsne_models):
+    def test_slope(self, ccsne_models_v2):
+        with fresh_plt() as plt:
+            simple.slope(ccsne_models_v2, xkey='c12', ykey='o16', default_attrname='abundance');
+
+        with fresh_plt() as plt:
+            simple.slope(ccsne_models_v2, xkey='c12', ykey='o16', where='.dataset==Ra02', default_attrname='abundance');
+
+    def test_subplots(self, ccsne_models_v2):
         with fresh_plt() as plt:
             subplots = simple.create_subplots('AB', fig_size=(12, 5.5));
-            simple.slope(ccsne_models, xkey='c12', ykey='o16', where='.dataset==Ra02', default_attrname='abundance',
+            simple.slope(ccsne_models_v2, xkey='c12', ykey='o16', where='.dataset==Ra02', default_attrname='abundance',
                          ax=subplots['A'], legend=False, ax_xlim=(0, 1), ax_ylim=(0, 1));
-            simple.hist(ccsne_models, xkey='c12', ykey='o16', where='.dataset==Ra02', default_attrname='abundance',
+            simple.hist(ccsne_models_v2, xkey='c12', ykey='o16', where='.dataset==Ra02', default_attrname='abundance',
                         rose_segment='NE', ax=subplots['B']);
 
         with fresh_plt() as plt:
-            simple.plot(ccsne_models, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
+            simple.plot(ccsne_models_v2, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
                         ax_xscale='log', default_attrname='abundance', hist=True);
 
         with fresh_plt() as plt:
-            simple.plot_ccsne(ccsne_models, 'o16', where='.dataset==Ra02', default_attrname='abundance', hist=True,
+            simple.plot_ccsne(ccsne_models_v2, 'o16', where='.dataset==Ra02', default_attrname='abundance', hist=True,
                               yhist_ax_xlabel='Something');
 
-    def test_custom_labels(self, ccsne_models):
+    def test_custom_labels(self, ccsne_models_v2):
         with fresh_plt() as plt:
-            simple.plot(ccsne_models, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
+            simple.plot(ccsne_models_v2, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
                         ax_xscale='log', default_attrname='abundance');
 
         with fresh_plt() as plt:
-            simple.plot(ccsne_models, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
+            simple.plot(ccsne_models_v2, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
                         ax_xscale='log', attrname_in_label=False, xunit_in_label=False);
 
         with fresh_plt() as plt:
-            simple.plot(ccsne_models, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
+            simple.plot(ccsne_models_v2, '.abundance[o16/c12]', 'o16', where='.dataset==Ra02',
                         ax_xscale='log', label=['a', 'b', 'c'], xlabel='X-axis', ylabel='Y-axis');
 
-    def test_style(self, ccsne_models):
+    def test_style(self, ccsne_models_v2):
         from matplotlib.ticker import AutoMinorLocator, LogLocator
 
         with fresh_plt() as plt:
@@ -577,10 +582,10 @@ class TestPlotting:
                                 'yax_minor_locator': LogLocator(numticks=999, subs='auto'),
                                 'ax_yscale': 'log'}
 
-            simple.plot_ccsne.abundance(ccsne_models, 'o16/c12', where='.dataset==Ra02', unit='mol',
+            simple.plot_ccsne.abundance(ccsne_models_v2, 'o16/c12', where='.dataset==Ra02', unit='mol',
                                         **abundance_kwargs);
 
-    def test_default_kwargs(self, ccsne_models):
+    def test_default_kwargs(self, ccsne_models_v2):
         with fresh_plt() as plt:
             simple.plot.kwargs
             simple.plot_ccsne.kwargs
@@ -589,16 +594,16 @@ class TestPlotting:
             simple.plot.update_kwargs(ax_tick_params=dict(left=True, right=True, top=True, labelleft=True, which='both'),
                                ax_grid=(True,))
 
-            simple.plot_ccsne.abundance(ccsne_models, 'o16/c12', where='.dataset==Ra02', unit='mol');
+            simple.plot_ccsne.abundance(ccsne_models_v2, 'o16/c12', where='.dataset==Ra02', unit='mol');
 
-    def test_shortcuts(self, ccsne_models):
+    def test_shortcuts(self, ccsne_models_v2):
         with fresh_plt() as plt:
             simple.plot_ccsne.add_shortcut('abulogy', ax_yscale='log', default_attrname='abundance')
-            simple.plot_ccsne.abulogy(ccsne_models, 'o16/c12', where='.dataset==Ra02', unit='mol');
+            simple.plot_ccsne.abulogy(ccsne_models_v2, 'o16/c12', where='.dataset==Ra02', unit='mol');
 
-    def test_custom_plots(self, ccsne_models):
+    def test_custom_plots(self, ccsne_models_v2):
         with fresh_plt() as plt:
-            model_datapoints, axis_labels = simple.get_data(ccsne_models, 'x, y', xkey='.masscoord',
+            model_datapoints, axis_labels = simple.get_data(ccsne_models_v2, 'x, y', xkey='.masscoord',
                                                             ykey='.abundance[o16/c12]',
                                                             where='.dataset==Ra02', yunit='mol')
 
@@ -615,7 +620,7 @@ class TestPlotting:
         with fresh_plt() as plt:
             from simple.plotting import parse_lscm
 
-            model_datapoints, axis_labels = simple.get_data(ccsne_models, 'x, y', xkey='.masscoord',
+            model_datapoints, axis_labels = simple.get_data(ccsne_models_v2, 'x, y', xkey='.masscoord',
                                                             ykey='.abundance[o16/c12]',
                                                             where='.dataset==Ra02', yunit='mol')
 
@@ -624,7 +629,7 @@ class TestPlotting:
 
             default_kwargs['ax_xlabel'] = axis_labels['x']
             default_kwargs['ax_ylabel'] = axis_labels['y']
-            simple.update_axes(plt, default_kwargs)
+            simple.plotting.update_axes(plt, default_kwargs)
 
             # Get the default linestyles and colours, and disable markers
             ls, c, m = parse_lscm(linestyle=default_kwargs.get('linestyle', True),

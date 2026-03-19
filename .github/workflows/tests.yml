@@ -9,12 +9,12 @@ jobs:
     name: Test and Coverage (py3.9)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.9'
 
@@ -44,11 +44,11 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.ref_name != 'staging' && github.ref_name != 'master' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.9'
 
@@ -56,6 +56,11 @@ jobs:
       - run: pip install nbmake
 
       - name: Run tutorial notebooks
-        run: pytest --nbmake notebooks/ccsne_tutorial*.ipynb
+        run: |
+          cd notebooks
+          pwd
+          ls
+          pytest --nbmake ccsne_tutorial*.ipynb
+          pytest --nbmake rose_diagram.ipynb
 
 

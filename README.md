@@ -1,11 +1,12 @@
-# Stellar Interpretation for Meteoritic data and PLotting (for Everyone) - SIMPLE
-This is a development version of the SIMPLE package.
+# SIMPLE: Stellar Interpretation for Meteoritic data and PLotting (for Everyone)
+A Python package for modelling nucleosynthetic isotopic variations and comparing stellar model outputs to meteoritic data.
 
 This project is licensed under the GNU Lesser General Public License v3.0 or later (LGPLv3+).
 
 ## Stable
 [![Tests](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml)
 [![Build & Release](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml)
+[![codecov](https://codecov.io/gh/mattias-ek/SIMPLE/graph/badge.svg?token=tOp92fxmeF)](https://codecov.io/gh/mattias-ek/SIMPLE)
 [![PyPI](https://img.shields.io/pypi/v/simple-chetec.svg)](https://pypi.org/project/simple-chetec/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/simple-chetec.svg)
 ![PyPI - License](https://img.shields.io/pypi/l/simple-chetec.svg)
