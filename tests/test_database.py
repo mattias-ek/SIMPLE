@@ -2,7 +2,7 @@ import pytest
 import os
 import numpy as np
 from numpy.testing import assert_equal
-from simple import models, utils
+from simple import models, utils, ccsne
 
 from fixtures import ccsne_models_v2
 
@@ -300,7 +300,78 @@ class TestModel:
             assert ref.name in repr
             assert ref.name in markdown
 
+        model = ccsne_models_v2[0]
+        repr = model.__repr__()
+        markdown = model._repr_markdown_()
+        assert model.name in repr
+        assert model.name in markdown
 
+        ref = ccsne_models_v2.refs[0]
+        repr = ref.__repr__()
+        markdown = ref._repr_markdown_()
+        assert ref.name in repr
+        assert ref.name in markdown
 
+    def test_loadcollection(self):
+        models.load_collection('tests/data/CCSNe_FeNi_v1.hdf5')
+        models.load_collection('tests/data/CCSNe_FeNi_v1')
 
+        with pytest.raises(ValueError):
+            models.load_collection('tests/data/does_not_exist.hdf5')
+
+        # db
+        models.load_collection('tests/data/CCSNe_FeNi_v1.hdf5', dbfilename='tests/data/CCSNe_FeNi_v2.hdf5')
+        models.load_collection('tests/data/CCSNe_FeNi_v1.hdf5', dbfilename='tests/data/CCSNe_FeNi_v2')
+        models.load_collection('tests/data/CCSNe_FeNi_v1.hdf5', dbfilename='tests/data/does_not_exist.hdf5')
+        models.load_collection('tests/data/CCSNe_FeNi_v1.hdf5', dbfilename='tests/data/does_not_exist.hdf5', overwrite=True)
+
+        with pytest.raises(ValueError):
+            models.load_collection('tests/data/does_not_exist.hdf5', dbfilename='tests/data/does_not_exist.hdf5')
+
+    def test_indexing(self, ccsne_models_v2):
+        # Returns single models/refs
+        select = ccsne_models_v2['Ra02_m15']
+        assert type(select) is ccsne.CCSNe
+        assert select.name == 'Ra02_m15'
+
+        select2 = ccsne_models_v2[select]
+        assert select2 is select
+
+        select = ccsne_models_v2['W17']
+        assert type(select) is models.IsoRef
+        assert select.name == 'W17'
+
+        select2 = ccsne_models_v2[select]
+        assert select2 is select
+
+        # Only models can be retrieved by index
+        select = ccsne_models_v2[12]
+        assert type(select) is ccsne.CCSNe
+        assert select.name == 'Ra02_m15'
+
+        # Return multiple models
+        select = ccsne_models_v2[('Ra02_m15', 'Ra02_m20', 'Ra02_m25')]
+        assert type(select) is models.ModelCollection
+        assert select is not ccsne_models_v2
+        assert len(select) == 3
+        assert select[0].name == 'Ra02_m15'
+        assert select[1].name == 'Ra02_m20'
+        assert select[2].name == 'Ra02_m25'
+        assert len(select.refs) == 2
+        assert ccsne_models_v2['W17'] in select.refs
+        assert ccsne_models_v2['rau_solar_ref'] in select.refs
+
+        select = ccsne_models_v2[12:15]
+        assert type(select) is models.ModelCollection
+        assert select is not ccsne_models_v2
+        assert len(select) == 3
+        assert select[0].name == 'Ra02_m15'
+        assert select[1].name == 'Ra02_m20'
+        assert select[2].name == 'Ra02_m25'
+        assert len(select.refs) == 2
+        assert ccsne_models_v2['W17'] in select.refs
+        assert ccsne_models_v2['rau_solar_ref'] in select.refs
+
+        with pytest.raises(TypeError):
+            ccsne_models_v2[3.14]
 

@@ -512,6 +512,11 @@ class TestPlotting:
         with fresh_plt() as plt:
             simple.plot_ccsne(ccsne_models_v2, 'o16', where='.dataset==Ra02', default_attrname='abundance');
 
+        with fresh_plt() as plt:
+            simple.plot_ccsne.abundance(ccsne_models_v2, 'Ni-60*/Ni-58*, Ni-61*/Ni-58*, Ni-62*/Ni-58*, Ni-64*/Ni-58*',
+                                        where='.dataset==Ra02 & .mass==25',
+                                        ax_yscale='log', fig_size=(10, 5));
+
     def test_histograms(self, ccsne_models_v2):
         with fresh_plt() as plt:
             simple.hist(ccsne_models_v2, 'o16/c12', default_attrname='abundance');
