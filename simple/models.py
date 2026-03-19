@@ -146,20 +146,43 @@ def load_collection(filename, dbfilename=None, *, default_isolist=None, convert_
         A [ModelCollection][simple.models.ModelCollection] object containing all the loaded models.
     """
     mc = ModelCollection()
-    if os.path.exists(filename) and not overwrite:
+
+    if os.path.exists(filename):
+        file_exists = True
+    elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5'):
+        file_exists = True
+        filename += '.hdf5'
+    else:
+        file_exists = False
+
+    if dbfilename is None:
+        db_exits = False
+    elif os.path.exists(dbfilename):
+        db_exits = True
+    elif dbfilename[-5:].lower() != '.hdf5' and os.path.exists(f'{dbfilename}.hdf5'):
+        db_exits = True
+        dbfilename += '.hdf5'
+    else:
+        db_exits = False
+
+    if file_exists is False and db_exits is False:
+        if dbfilename is None:
+            raise ValueError(f'"{filename}" does not exist')
+        else:
+            raise ValueError(f'Neither "{filename}" nor "{dbfilename}" exists')
+
+    if overwrite and not db_exits:
+        logger.warning(f'Overwrite not possible, database file does not exist. Loading existing file instead')
+        overwrite = False
+
+    if file_exists and not overwrite:
         logger.info(f'Loading existing file: {filename}')
         mc.load_file(filename, where=where, **where_kwargs)
-    elif filename[-5:].lower() != '.hdf5' and os.path.exists(f'{filename}.hdf5') and not overwrite:
-        logger.info(f'Loading existing file: {filename}.hdf5')
-        mc.load_file(f'{filename}.hdf5', where=where, **where_kwargs)
-    elif dbfilename is None:
-        raise ValueError(f'File {filename} does not exist')
-    elif os.path.exists(dbfilename):
+    else:
         logger.info(f'Creating: "{filename}" from database: "{dbfilename}"')
         mc.load_file(dbfilename, isolist=default_isolist, convert_unit=convert_unit, where=where, **where_kwargs)
         mc.save(filename)
-    else:
-        raise ValueError(f'Neither "{filename}" or "{dbfilename}" exist')
+
     return mc
 
 def new_collection(name = "", version = "", citation = ""):
