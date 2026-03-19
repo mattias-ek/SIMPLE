@@ -1,0 +1,35 @@
+{
+  "title": "SIMPLE: Stellar Interpretation for Meteoritic Data and Plotting (for Everyone)",
+  "upload_type": "software",
+  "description": "A Python package for modelling nucleosynthetic isotopic variations and comparing stellar model outputs to meteoritic data. Source code and documentation are available at https://github.com/mattias-ek/simple-chetec.",
+  "license": "LGPL-3.0-or-later",
+  "keywords": [
+    "cosmochemistry",
+    "astrophysics",
+    "isotopes",
+    "nucleosynthesis",
+    "meteorites",
+    "python"
+  ],
+  "creators": [
+    {
+      "name": "Ek, Mattias",
+      "affiliation": "ETH Zurich",
+      "orcid": "0000-0002-2327-7286"
+    },
+    {
+      "name": "Pignatari, Marco",
+      "affiliation": "Konkoly Observatory",
+      "orcid": "0000-0002-9048-6010"
+    },
+    {
+      "name": "Balázs, Gábor"
+    },
+    {
+      "name": "Makhatadze, Georgy V."
+    },
+    {
+      "name": "Incollingo, Chiara"
+    }
+  ]
+}
