@@ -6,6 +6,7 @@ This project is licensed under the GNU Lesser General Public License v3.0 or lat
 ## Stable
 [![Tests](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/tests.yml)
 [![Build & Release](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/mattias-ek/SIMPLE/actions/workflows/release.yml)
+[![codecov](https://codecov.io/gh/mattias-ek/SIMPLE/graph/badge.svg?token=tOp92fxmeF)](https://codecov.io/gh/mattias-ek/SIMPLE)
 [![PyPI](https://img.shields.io/pypi/v/simple-chetec.svg)](https://pypi.org/project/simple-chetec/)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/simple-chetec.svg)
 ![PyPI - License](https://img.shields.io/pypi/l/simple-chetec.svg)

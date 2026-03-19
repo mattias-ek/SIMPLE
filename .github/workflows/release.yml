@@ -70,7 +70,7 @@ jobs:
           echo "version=${{ steps.release-version.outputs.version || steps.base-version.outputs.version }}" >> "$GITHUB_OUTPUT"
 
   docs:
-    name: Generate docs
+    name: Generate docs, copy files and update placeholders
     if: >
       github.actor != 'github-actions[bot]'
     needs: get-version
