@@ -3,11 +3,11 @@
 The SIMPLE package was created as a part of the [ChETEC-INFRA](https://www.chetec-infra.eu) research network.
 
 ## Developers
-- Gábor Balázs
 - Mattias Ek (Maintainer)
-- Chiara Incollingo
-- Georgy V. Makhatadze
 - Marco Pignatari
+- Gábor Balázs
+- Georgy V. Makhatadze
+- Chiara Incollingo
 
 ## License
 Code licensed under the [GNU Lesser General Public License v3.0 or later (LGPLv3+)](https://github.com/mattias-ek/SIMPLE/blob/master/LICENSE.md)
