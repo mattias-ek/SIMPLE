@@ -556,7 +556,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
     ####################
     ### Hist Methods ###
     ####################
-    def _mbins(self, m, r, weights, rwidth, rscale, rescale, antipodal, bins, update_rticks, minor_rticks):
+    def _mbins(self, m, r, weights, rwidth, rscale, scale, antipodal, bins, update_rticks, minor_rticks):
         if type(m) is tuple and len(m) == 2:
             x, y = m
             if antipodal is None:
@@ -574,10 +574,15 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
 
         bin_weights, bin_edges = np.histogram(theta, bins=bins, range=(0, np.pi * 2), weights=weights, density=False)
 
-        if rescale:
+        if scale == 'max':
             bin_weights = bin_weights / np.max(bin_weights)
-        elif self._vrel:
+        elif scale =='sum':
             bin_weights = bin_weights / np.sum(bin_weights)
+        elif scale == 'weight':
+            if self._vrel:
+                bin_weights = bin_weights / np.sum(bin_weights)
+        else:
+            raise ValueError(f"Invalid scale {scale}. Accepted values are 'max', 'sum', and 'weight'.")
 
         if rscale:
             bin_heights = np.array([self._norm(bw, clip=True) for bw in bin_weights])
@@ -604,7 +609,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         return bin_weights, bin_edges, bin_heights
 
     def mhist(self, m, r=None, weights=1, color=None, *,
-              rheight=0.9, rescale=False, antipodal=None, bins=72, rtext=None, fill=True, outline=None,
+              rheight=0.9, scale='weight', antipodal=None, bins=72, rtext=None, fill=True, outline=None,
               update_rticks=True, minor_rticks=2, rscale=True, cmap=False, **kwargs):
         """
         Create a histogram of the given slopes.
@@ -618,8 +623,9 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
             weights (): The weight assigned to each slope.
             rheight (): The height of the histogram. If ``rscale=True`` this is the relative height of the histogram.
                 Otherwise the cumulative height of all the bins will total to this value.
-            rescale (): If ``True`` all bin heights will be scaled relative to the heaviest bin. Otherwise, they are
-                scaled relative to the sum of all bin weights or the range set by the colormap.
+            scale (): If ``'max'`` all bin heights will be scaled relative to the heaviest bin. If ``'sum'`` they are
+                scaled relative to the sum of all bin weights. If ``'weight'`` they are scaled to the range set by
+                the colormap. If no range is set, they are scaled the same as ``'sum'``.
             antipodal (): Whether the antipodal data points will be included in the histogram. By default,
             ``antipodal=True`` when ``m`` is a slope and ``antipodal=False`` when ``m`` is *x,y* coordinates.
             bins (): The number of even sized bin in the histogram.
@@ -680,10 +686,20 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
                                          zorder=zorder + 0.001)
         baseline_kwargs = kwargs.pop_many(prefix='baseline', **outline_kwargs)
 
-        bin_weights, bin_edges, bin_heights = self._mbins(m, r, weights, rheight, rscale, rescale, antipodal, bins,
+        bin_weights, bin_edges, bin_heights = self._mbins(m, r, weights, rheight, rscale, scale, antipodal, bins,
                                                           update_rticks, minor_rticks)
+        if np.all(np.isfinite(bin_weights)):
+
+            draw = True
+        else:
+            # all values are nan if there is no data within the bin range
+            # So dont try to draw anything
+            draw = False
+
+
         label = kwargs.pop('label', None)
         if (fill and not cmap) or outline:
+            # Creates a mock item for the legend label
             label_fill_kwargs = fill_kwargs.copy()
             if outline:
                 label_fill_kwargs['linestyle'] = outline_kwargs['linestyle']
@@ -698,7 +714,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
         elif (fill and cmap) and rtext is None:
             rtext = label
 
-        if fill:
+        if fill and draw:
             for i in range(bin_weights.size):
                 if cmap:
                     bin_color = self._cmap(self._norm(bin_weights[i]))
@@ -708,7 +724,7 @@ class RoseAxes(mpl.projections.polar.PolarAxes):
                 self._rfill(bin_edges[i], bin_edges[i + 1], r, r + bin_heights[i],
                             color=bin_color, **fill_kwargs)
 
-        if outline:
+        if outline and draw:
             theta_, r_ = np.array([]), np.array([])
             for i in range(bin_weights.size):
                 tr = self._rline(bin_edges[i], bin_edges[i + 1], r + bin_heights[i])
