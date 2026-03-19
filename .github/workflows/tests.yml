@@ -55,15 +55,10 @@ jobs:
       - run: pip install ".[test]"
       - run: pip install nbmake
 
-      - run: |
-          cd notebooks
-          ls
-          cd data
-          ls
-
       - name: Run tutorial notebooks
         run: |
           cd notebooks
           pytest --nbmake ccsne_tutorial*.ipynb
+          pytest --nbmake rose_diagram.ipynb
 
 

@@ -248,7 +248,7 @@ class TestModel:
 
     def test_collection_version(self):
         collection_v1 = models.ModelCollection()
-        collection_v1.load_file(filename='tests/data/CCSNe_FeNi_v1.hdf5')
+        collection_v1.load_file(filename='tests/data/CCSNe_FeNi_v3p0.hdf5')
 
         assert collection_v1.__cls_version__ == '2.0'
         assert collection_v1.name == ''
@@ -257,7 +257,7 @@ class TestModel:
         assert collection_v1.created != ''
 
         collection_v2 = models.ModelCollection()
-        collection_v2.load_file(filename='tests/data/CCSNe_FeNi_v2.hdf5')
+        collection_v2.load_file(filename='tests/data/CCSNe_FeNi_v3p1.hdf5')
 
         assert collection_v2.__cls_version__ == '2.0'
         assert collection_v2.name == 'CCSNe Database for SIMPLE'
